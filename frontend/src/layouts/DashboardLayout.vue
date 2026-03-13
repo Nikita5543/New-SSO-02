@@ -1,0 +1,124 @@
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import Sidebar from '@/components/layout/Sidebar.vue'
+import ThemeToggle from '@/components/ui/ThemeToggle.vue'
+import DropdownMenu from '@/components/ui/DropdownMenu.vue'
+import DropdownMenuItem from '@/components/ui/DropdownMenuItem.vue'
+import DropdownMenuSeparator from '@/components/ui/DropdownMenuSeparator.vue'
+import Avatar from '@/components/ui/Avatar.vue'
+import { Menu, X, LogOut, User, Settings } from 'lucide-vue-next'
+
+const authStore = useAuthStore()
+const router = useRouter()
+const sidebarOpen = ref(false)
+
+async function handleLogout() {
+  await authStore.logout()
+  router.push('/auth/signin')
+}
+</script>
+
+<template>
+  <div class="flex h-screen overflow-hidden bg-background">
+    <!-- Sidebar (desktop) -->
+    <aside class="hidden w-64 shrink-0 border-r bg-card lg:block">
+      <Sidebar />
+    </aside>
+
+    <!-- Mobile sidebar overlay -->
+    <Transition
+      enter-active-class="transition-opacity duration-300"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition-opacity duration-300"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="sidebarOpen"
+        class="fixed inset-0 z-40 bg-black/50 lg:hidden"
+        @click="sidebarOpen = false"
+      />
+    </Transition>
+
+    <!-- Mobile sidebar -->
+    <Transition
+      enter-active-class="transition-transform duration-300 ease-out"
+      enter-from-class="-translate-x-full"
+      enter-to-class="translate-x-0"
+      leave-active-class="transition-transform duration-300 ease-in"
+      leave-from-class="translate-x-0"
+      leave-to-class="-translate-x-full"
+    >
+      <aside
+        v-if="sidebarOpen"
+        class="fixed inset-y-0 left-0 z-50 w-64 border-r bg-card lg:hidden"
+      >
+        <Sidebar @close="sidebarOpen = false" />
+      </aside>
+    </Transition>
+
+    <!-- Main content -->
+    <div class="flex flex-1 flex-col overflow-hidden">
+      <!-- Header -->
+      <header class="flex h-14 items-center gap-4 border-b bg-card px-4 lg:px-6">
+        <!-- Mobile menu button -->
+        <button
+          class="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground lg:hidden"
+          @click="sidebarOpen = !sidebarOpen"
+        >
+          <Menu v-if="!sidebarOpen" class="h-5 w-5" />
+          <X v-else class="h-5 w-5" />
+        </button>
+
+        <div class="flex-1" />
+
+        <!-- Theme toggle -->
+        <ThemeToggle />
+
+        <!-- User dropdown -->
+        <DropdownMenu>
+          <template #trigger>
+            <button class="flex items-center gap-2 rounded-md p-1 hover:bg-accent">
+              <Avatar
+                :alt="authStore.user?.full_name || authStore.user?.username"
+                size="sm"
+              />
+            </button>
+          </template>
+          <template #default="{ close }">
+            <div class="px-2 py-1.5">
+              <p class="text-sm font-medium">
+                {{ authStore.user?.full_name || authStore.user?.username }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                {{ authStore.user?.email }}
+              </p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem @click="router.push('/settings/profile'); close()">
+              <User class="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="router.push('/settings'); close()">
+              <Settings class="mr-2 h-4 w-4" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem @click="handleLogout(); close()">
+              <LogOut class="mr-2 h-4 w-4" />
+              Log out
+            </DropdownMenuItem>
+          </template>
+        </DropdownMenu>
+      </header>
+
+      <!-- Page content -->
+      <main class="flex-1 overflow-auto p-4 lg:p-6">
+        <RouterView />
+      </main>
+    </div>
+  </div>
+</template>
