@@ -82,14 +82,35 @@ async def list_services(
     
     query = db.query(CustomerService)
     
-    # Apply filters
+    # Apply filters - search across all columns
     if search:
         search_filter = or_(
-            CustomerService.client.ilike(f"%{search}%"),
-            CustomerService.activity.ilike(f"%{search}%"),
             CustomerService.base_id.ilike(f"%{search}%"),
+            CustomerService.activity.ilike(f"%{search}%"),
+            CustomerService.client.ilike(f"%{search}%"),
+            CustomerService.contract.ilike(f"%{search}%"),
+            CustomerService.type_of_service.ilike(f"%{search}%"),
+            CustomerService.status.ilike(f"%{search}%"),
+            CustomerService.order_num.ilike(f"%{search}%"),
             CustomerService.first_point.ilike(f"%{search}%"),
             CustomerService.second_point.ilike(f"%{search}%"),
+            CustomerService.speed.ilike(f"%{search}%"),
+            CustomerService.vlan_id.ilike(f"%{search}%"),
+            CustomerService.switchboard_first_point.ilike(f"%{search}%"),
+            CustomerService.switch_port_first_point.ilike(f"%{search}%"),
+            CustomerService.port_settings_first_point.ilike(f"%{search}%"),
+            CustomerService.switchboard_second_point.ilike(f"%{search}%"),
+            CustomerService.switch_port_second_point.ilike(f"%{search}%"),
+            CustomerService.port_settings_second_point.ilike(f"%{search}%"),
+            CustomerService.subnets.ilike(f"%{search}%"),
+            CustomerService.router.ilike(f"%{search}%"),
+            CustomerService.interface.ilike(f"%{search}%"),
+            CustomerService.auto_network.ilike(f"%{search}%"),
+            CustomerService.end_client.ilike(f"%{search}%"),
+            CustomerService.last_mile.ilike(f"%{search}%"),
+            CustomerService.id_servicepipe.ilike(f"%{search}%"),
+            CustomerService.comment.ilike(f"%{search}%"),
+            CustomerService.responsible_department.ilike(f"%{search}%"),
         )
         query = query.filter(search_filter)
     

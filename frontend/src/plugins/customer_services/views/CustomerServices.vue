@@ -185,7 +185,7 @@ onMounted(() => {
             <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               v-model="searchQuery"
-              placeholder="Search by client, activity, ID..."
+              placeholder="Search by any field (VLAN, address, client, etc.)..."
               class="pl-9"
               @keyup.enter="fetchServices"
             />
@@ -268,10 +268,50 @@ onMounted(() => {
         </div>
 
         <!-- Pagination -->
-        <div v-if="services.length > 0" class="flex items-center justify-between mt-4">
+        <div v-if="services.length > 0" class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
           <div class="text-sm text-muted-foreground">
-            Page {{ currentPage }} of {{ Math.ceil(totalItems / pageSize) }}
+            Showing {{ ((currentPage - 1) * pageSize) + 1 }} - {{ Math.min(currentPage * pageSize, totalItems) }} of {{ totalItems }} entries
           </div>
+          
+          <!-- Page Numbers -->
+          <div class="flex items-center gap-1">
+            <!-- First Page -->
+            <Button
+              v-if="currentPage > 3"
+              variant="ghost"
+              size="sm"
+              @click="currentPage = 1; fetchServices()"
+            >
+              1
+            </Button>
+            <span v-if="currentPage > 4" class="text-muted-foreground px-1">...</span>
+            
+            <!-- Page Numbers Around Current -->
+            <Button
+              v-for="page in Math.ceil(totalItems / pageSize)"
+              :key="page"
+              :variant="page === currentPage ? 'default' : 'ghost'"
+              size="sm"
+              :class="page === currentPage ? 'font-bold' : ''"
+              @click="currentPage = page; fetchServices()"
+              v-show="page >= currentPage - 2 && page <= currentPage + 2 && page <= Math.ceil(totalItems / pageSize)"
+            >
+              {{ page }}
+            </Button>
+            
+            <!-- Last Page -->
+            <span v-if="currentPage < Math.ceil(totalItems / pageSize) - 3" class="text-muted-foreground px-1">...</span>
+            <Button
+              v-if="currentPage < Math.ceil(totalItems / pageSize) - 2"
+              variant="ghost"
+              size="sm"
+              @click="currentPage = Math.ceil(totalItems / pageSize); fetchServices()"
+            >
+              {{ Math.ceil(totalItems / pageSize) }}
+            </Button>
+          </div>
+          
+          <!-- Navigation Arrows -->
           <div class="flex items-center gap-2">
             <Button
               variant="outline"
