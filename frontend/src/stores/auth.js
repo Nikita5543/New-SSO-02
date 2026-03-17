@@ -16,7 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
     return now < parseInt(tokenExpiry.value)
   })
   
-  const isAdmin = computed(() => user.value?.role === 'admin')
+  const isAdmin = computed(() => user.value?.role === 'superuser')
   const userRole = computed(() => user.value?.role || 'user')
 
   function hasRole(role) {

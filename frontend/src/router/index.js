@@ -69,7 +69,7 @@ const routes = [
         path: 'users',
         name: 'Users',
         component: Users,
-        meta: { requiresAdmin: true }
+        meta: { requiresSuperuser: true }
       },
       {
         path: 'settings',
@@ -169,7 +169,7 @@ router.beforeEach((to, from, next) => {
     next('/auth/signin')
   } else if (to.meta.guest && authStore.isAuthenticated) {
     next('/dashboard')
-  } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
+  } else if (to.meta.requiresSuperuser && authStore.userRole !== 'superuser') {
     next('/dashboard')
   } else {
     next()
