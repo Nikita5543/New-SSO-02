@@ -349,7 +349,7 @@ onMounted(() => {
                 @keyup.enter="fetchDatabaseData"
               />
             </div>
-            <Button variant="outline" @click="fetchDatabaseData">
+            <Button variant="outline" @click="fetchDatabaseData" :disabled="databaseLoading">
               <Search class="h-4 w-4" />
             </Button>
             <Button variant="ghost" @click="resetFilters">
