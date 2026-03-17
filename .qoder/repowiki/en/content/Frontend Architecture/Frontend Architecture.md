@@ -11,10 +11,12 @@
 - [layouts/DashboardLayout.vue](file://frontend/src/layouts/DashboardLayout.vue)
 - [components/layout/Sidebar.vue](file://frontend/src/components/layout/Sidebar.vue)
 - [components/layout/SidebarItem.vue](file://frontend/src/components/layout/SidebarItem.vue)
+- [components/ui/Avatar.vue](file://frontend/src/components/ui/Avatar.vue)
 - [components/ui/Button.vue](file://frontend/src/components/ui/Button.vue)
 - [components/ui/ThemeToggle.vue](file://frontend/src/components/ui/ThemeToggle.vue)
 - [plugins/incidents/views/IncidentsList.vue](file://frontend/src/plugins/incidents/views/IncidentsList.vue)
 - [views/users/Users.vue](file://frontend/src/views/users/Users.vue)
+- [views/settings/Profile.vue](file://frontend/src/views/settings/Profile.vue)
 - [assets/css/main.css](file://frontend/src/assets/css/main.css)
 - [lib/utils.js](file://frontend/src/lib/utils.js)
 - [tailwind.config.js](file://frontend/tailwind.config.js)
@@ -24,14 +26,13 @@
 
 ## Update Summary
 **Changes Made**
-- Updated Application Bootstrap section to reflect improved initialization sequence
-- Enhanced Core Components section with detailed initialization flow
-- Added new section on Application Initialization Sequence
-- Updated Architecture Overview to show proper initialization order
-- Modified Detailed Component Analysis to include initialization sequence details
-- Added comprehensive User Management Interface section
-- Updated Route Protection section with requiresSuperuser implementation
-- Enhanced Sidebar Navigation section with role-based visibility rules
+- Added comprehensive Avatar System section documenting the new Avatar.vue component and avatar display logic
+- Updated Layout System section to include avatar integration in DashboardLayout.vue
+- Enhanced Sidebar Navigation section with avatar display logic and system avatar support
+- Updated User Management Interface section to include avatar management functionality
+- Removed references to inline SVG logo implementation as the code reverted to external PNG file approach
+- Added avatar URL handling and system avatar configuration
+- Updated route protection section to reflect avatar-related user data handling
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -40,21 +41,22 @@
 4. [Core Components](#core-components)
 5. [Architecture Overview](#architecture-overview)
 6. [Detailed Component Analysis](#detailed-component-analysis)
-7. [User Management Interface](#user-management-interface)
-8. [Route Protection and Access Control](#route-protection-and-access-control)
-9. [Dependency Analysis](#dependency-analysis)
-10. [Performance Considerations](#performance-considerations)
-11. [Troubleshooting Guide](#troubleshooting-guide)
-12. [Conclusion](#conclusion)
-13. [Appendices](#appendices)
+7. [Avatar System](#avatar-system)
+8. [User Management Interface](#user-management-interface)
+9. [Route Protection and Access Control](#route-protection-and-access-control)
+10. [Dependency Analysis](#dependency-analysis)
+11. [Performance Considerations](#performance-considerations)
+12. [Troubleshooting Guide](#troubleshooting-guide)
+13. [Conclusion](#conclusion)
+14. [Appendices](#appendices)
 
 ## Introduction
-This document describes the frontend architecture of the Vue 3 application. It covers the component-based architecture, state management with Pinia, routing with Vue Router, and the plugin registry system. It also documents the layout system, reusable UI components, integration with backend APIs, component hierarchy, data flow patterns, and communication between the frontend and backend. Additional topics include the plugin view integration system, dynamic component loading, theme management, responsive design principles, accessibility considerations, and performance optimization strategies.
+This document describes the frontend architecture of the Vue 3 application. It covers the component-based architecture, state management with Pinia, routing with Vue Router, and the plugin registry system. It also documents the layout system, reusable UI components, integration with backend APIs, component hierarchy, data flow patterns, and communication between the frontend and backend. Additional topics include the plugin view integration system, dynamic component loading, theme management, responsive design principles, accessibility considerations, performance optimization strategies, and the comprehensive avatar system integration.
 
-**Updated** The application now implements an improved initialization sequence that ensures consistent visual presentation from the moment users access the interface, along with a comprehensive user management system and enhanced role-based access control.
+**Updated** The application now implements an enhanced avatar system with support for both custom uploaded avatars and system-generated avatars, integrated throughout the layout components and user management interface.
 
 ## Project Structure
-The frontend is organized around a clear separation of concerns with an optimized initialization sequence:
+The frontend is organized around a clear separation of concerns with an optimized initialization sequence and comprehensive avatar system:
 - Application bootstrap and initialization in main.js with proper ordering
 - Root component rendering via App.vue
 - Routing configuration and navigation guards in router/index.js
@@ -65,6 +67,7 @@ The frontend is organized around a clear separation of concerns with an optimize
 - State management stores under stores/
 - Utility helpers under lib/
 - Styling via Tailwind CSS and global CSS
+- Avatar system with Avatar.vue component and avatar display logic
 
 ```mermaid
 graph TB
@@ -83,6 +86,7 @@ subgraph "Layout"
 DL["layouts/DashboardLayout.vue"]
 SB["components/layout/Sidebar.vue"]
 SBI["components/layout/SidebarItem.vue"]
+AV["components/ui/Avatar.vue"]
 end
 subgraph "UI Components"
 BTN["components/ui/Button.vue"]
@@ -90,6 +94,7 @@ TT["components/ui/ThemeToggle.vue"]
 end
 subgraph "User Management"
 USERS["views/users/Users.vue"]
+PROFILE["views/settings/Profile.vue"]
 end
 MJS --> INIT
 INIT --> THEME
@@ -101,11 +106,14 @@ APP --> ROUTER
 ROUTER --> DL
 DL --> SB
 SB --> SBI
+DL --> AV
+SB --> AV
 DL --> BTN
 DL --> TT
 SB --> REG
 DL --> AUTH
 USERS --> AUTH
+PROFILE --> AUTH
 ```
 
 **Diagram sources**
@@ -114,6 +122,7 @@ USERS --> AUTH
 - [stores/auth.js:91-103](file://frontend/src/stores/auth.js#L91-L103)
 - [stores/pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [views/users/Users.vue:1-407](file://frontend/src/views/users/Users.vue#L1-L407)
+- [views/settings/Profile.vue:1-199](file://frontend/src/views/settings/Profile.vue#L1-L199)
 
 **Section sources**
 - [main.js:1-146](file://frontend/src/main.js#L1-L146)
@@ -133,6 +142,7 @@ The application implements a carefully orchestrated initialization sequence to e
    - Checks for existing access tokens
    - Restores user session if tokens are valid
    - Handles expired or invalid tokens gracefully
+   - Loads user avatar data if available
 
 3. **Plugin Registry Setup**
    - Fetches plugin metadata from backend
@@ -155,6 +165,7 @@ TS->>TS : "Set default theme"
 TS->>TS : "Apply CSS classes"
 M->>AS : "fetchUser() if tokens exist"
 AS->>AS : "Restore user session"
+AS->>AS : "Load avatar data"
 M->>PR : "initializePlugins()"
 PR->>PR : "Fetch plugin list"
 PR->>PR : "Register plugins"
@@ -173,13 +184,13 @@ M->>M : "app.mount('#app')"
 ## Core Components
 - **Application bootstrap** initializes Pinia, Vue Router, and performs pre-mount tasks in the correct order:
   - **Critical improvement**: Theme store is initialized first to ensure consistent visual presentation
-  - Authentication state restoration with proper error handling
+  - Authentication state restoration with proper error handling and avatar data loading
   - Dynamic plugin metadata loading and registration
   - Mounts the root application
 - Root component renders the active route via RouterView
 - Router defines core routes, nested settings routes, help pages, and plugin routes with lazy loading
 - Stores:
-  - Authentication store manages tokens, roles, and secure fetches
+  - Authentication store manages tokens, roles, avatar URLs, and secure fetches
   - Plugin registry aggregates plugin manifests and menu items
   - Theme store manages light/dark/system themes and applies CSS classes
 
@@ -187,9 +198,9 @@ Key responsibilities:
 - main.js orchestrates initialization with proper ordering and error handling
 - router/index.js controls navigation and guards
 - stores provide centralized state for auth, plugins, and theme
-- views and components consume stores and render UI
+- views and components consume stores and render UI with avatar support
 
-**Updated** The initialization sequence now prioritizes theme setup before authentication to prevent visual inconsistencies during the loading process.
+**Updated** The initialization sequence now prioritizes theme setup before authentication to prevent visual inconsistencies during the loading process, and includes avatar data loading as part of the authentication restoration.
 
 **Section sources**
 - [main.js:1-146](file://frontend/src/main.js#L1-L146)
@@ -200,26 +211,28 @@ Key responsibilities:
 - [stores/theme.js:1-59](file://frontend/src/stores/theme.js#L1-L59)
 
 ## Architecture Overview
-The frontend follows a layered architecture with optimized initialization:
-- Presentation Layer: Views and components
-- Layout Layer: DashboardLayout and Sidebar
-- State Management: Pinia stores with proper initialization order
+The frontend follows a layered architecture with optimized initialization and comprehensive avatar system integration:
+- Presentation Layer: Views and components with avatar support
+- Layout Layer: DashboardLayout and Sidebar with avatar display
+- State Management: Pinia stores with proper initialization order and avatar data handling
 - Routing: Vue Router with lazy-loaded plugin routes and enhanced access control
 - Styling: Tailwind CSS with CSS custom properties and dark mode support
-- Backend Integration: REST endpoints accessed via fetch wrappers
+- Backend Integration: REST endpoints accessed via fetch wrappers with avatar management
+- Avatar System: Dedicated avatar component and avatar display logic throughout the application
 
 ```mermaid
 graph TB
 subgraph "Initialization Phase"
 INIT["initApp() sequence"]
 THEME["Theme Store<br/>initTheme()"]
-AUTH["Auth Store<br/>fetchUser()"]
+AUTH["Auth Store<br/>fetchUser() + avatar"]
 REG["Plugin Registry<br/>initializePlugins()"]
 end
 subgraph "Presentation"
 VIEWS["Views (Dashboard, Settings, Help, Plugins, Users)"]
-UI["UI Components (Button, Card, Input, Dropdown, etc.)"]
+UI["UI Components (Button, Card, Input, Dropdown, Avatar)"]
 UM["User Management Interface"]
+AV["Avatar System"]
 end
 subgraph "Layout"
 DL["DashboardLayout"]
@@ -243,6 +256,7 @@ USERSAPI["/api/v1/users/* endpoints"]
 ENDPOINTS["/api/v1/auth/* endpoints"]
 ENDPOINTS2["/api/v1/plugins endpoints"]
 ENDPOINTS3["/api/v1/settings endpoints"]
+AVAPI["/api/v1/users/me/avatar endpoint"]
 end
 INIT --> THEME
 INIT --> AUTH
@@ -256,11 +270,14 @@ VIEWS --> UI
 VIEWS --> AUTHSTORE
 SB --> REGSTORE
 DL --> THEMESTORE
+DL --> AV
+SB --> AV
 ROUTER --> VIEWS
 ROUTER --> GUARDS
 VIEWS --> API
 AUTHSTORE --> ENDPOINTS
 AUTHSTORE --> USERSAPI
+AUTHSTORE --> AVAPI
 REGSTORE --> ENDPOINTS2
 UM --> USERSAPI
 CSS --> UI
@@ -273,6 +290,7 @@ CSS --> DL
 - [stores/auth.js:91-103](file://frontend/src/stores/auth.js#L91-L103)
 - [stores/pluginRegistry.js:19-52](file://frontend/src/stores/pluginRegistry.js#L19-L52)
 - [views/users/Users.vue:32-104](file://frontend/src/views/users/Users.vue#L32-L104)
+- [views/settings/Profile.vue:26-33](file://frontend/src/views/settings/Profile.vue#L26-L33)
 
 ## Detailed Component Analysis
 
@@ -290,6 +308,7 @@ The main application file implements a sophisticated initialization sequence:
    - Checks for existing access tokens in localStorage
    - Validates token expiration
    - Restores user session if tokens are valid
+   - Loads avatar data from user object
    - Handles expired or invalid tokens gracefully
 
 3. **Plugin Registration**
@@ -308,7 +327,8 @@ Start(["Application Start"]) --> InitTheme["initTheme()"]
 InitTheme --> CheckTokens{"Access token exists?"}
 CheckTokens --> |Yes| RestoreUser["fetchUser()"]
 CheckTokens --> |No| LoadPlugins["initializePlugins()"]
-RestoreUser --> ValidateToken{"Token valid?"}
+RestoreUser --> LoadAvatar["Load avatar data"]
+LoadAvatar --> ValidateToken{"Token valid?"}
 ValidateToken --> |Yes| LoadPlugins
 ValidateToken --> |No| LoadPlugins
 LoadPlugins --> RegisterPlugins["Register plugin manifests"]
@@ -331,6 +351,7 @@ The authentication store encapsulates:
 - Role-based access (admin/user/superuser)
 - Secure fetch wrapper that automatically retries on 401 with token refresh
 - Logout with backend cleanup
+- **Updated**: Avatar URL handling in user object for avatar system integration
 
 ```mermaid
 sequenceDiagram
@@ -341,8 +362,9 @@ participant BE as "Backend API"
 U->>C : "Submit login form"
 C->>AS : "login(credentials)"
 AS->>BE : "POST /api/v1/auth/login"
-BE-->>AS : "200 {access_token, refresh_token, user}"
+BE-->>AS : "200 {access_token, refresh_token, user with avatar_url}"
 AS->>AS : "Persist tokens and expiry"
+AS->>AS : "Load avatar data"
 AS-->>C : "Success"
 C->>BE : "Protected request"
 BE-->>C : "401 Unauthorized"
@@ -423,7 +445,7 @@ CheckAdmin --> |No| Proceed["next()"]
 ### Layout System and Sidebar
 DashboardLayout coordinates:
 - Desktop sidebar and mobile overlay/slide
-- Header with theme toggle and user dropdown
+- Header with theme toggle and user dropdown featuring avatar display
 - Main content area via RouterView
 
 Sidebar composes:
@@ -431,6 +453,7 @@ Sidebar composes:
 - Plugin sections (Operations, Analytics, Security, Admin, Pages, Other)
 - Visibility controlled by roles and computed aggregations from plugin registry
 - Collapsible groups for parent items with children
+- **Updated**: Avatar display logic with system avatar support and initials fallback
 
 ```mermaid
 classDiagram
@@ -452,18 +475,28 @@ class SidebarItem {
 +isActive
 +hasChildren
 }
+class Avatar {
++src : String
++alt : String
++fallback : String
++size : String
++class : String
+}
 DashboardLayout --> Sidebar : "renders"
 Sidebar --> SidebarItem : "iterates"
+DashboardLayout --> Avatar : "uses for user dropdown"
+Sidebar --> Avatar : "uses for user info"
 ```
 
 **Diagram sources**
-- [layouts/DashboardLayout.vue:1-125](file://frontend/src/layouts/DashboardLayout.vue#L1-L125)
-- [components/layout/Sidebar.vue:1-277](file://frontend/src/components/layout/Sidebar.vue#L1-L277)
+- [layouts/DashboardLayout.vue:1-134](file://frontend/src/layouts/DashboardLayout.vue#L1-L134)
+- [components/layout/Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
 - [components/layout/SidebarItem.vue:1-74](file://frontend/src/components/layout/SidebarItem.vue#L1-L74)
+- [components/ui/Avatar.vue:1-58](file://frontend/src/components/ui/Avatar.vue#L1-L58)
 
 **Section sources**
-- [layouts/DashboardLayout.vue:1-125](file://frontend/src/layouts/DashboardLayout.vue#L1-L125)
-- [components/layout/Sidebar.vue:1-277](file://frontend/src/components/layout/Sidebar.vue#L1-L277)
+- [layouts/DashboardLayout.vue:1-134](file://frontend/src/layouts/DashboardLayout.vue#L1-L134)
+- [components/layout/Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
 - [components/layout/SidebarItem.vue:1-74](file://frontend/src/components/layout/SidebarItem.vue#L1-L74)
 
 ### Reusable UI Components
@@ -475,6 +508,8 @@ Button component demonstrates:
 ThemeToggle integrates:
 - Dropdown menu for theme selection
 - Delegates to theme store to apply CSS classes
+
+**Updated** The Avatar component provides comprehensive avatar functionality with size variants, fallback initials, and system avatar support.
 
 ```mermaid
 classDiagram
@@ -488,17 +523,28 @@ class Button {
 class ThemeToggle {
 +toggle theme options
 }
+class Avatar {
++src : String
++alt : String
++fallback : String
++size : String
++class : String
++initials : ComputedRef
+}
 ThemeToggle --> ThemeStore : "uses"
+Avatar --> Utils : "uses cn"
 ```
 
 **Diagram sources**
 - [components/ui/Button.vue:1-66](file://frontend/src/components/ui/Button.vue#L1-L66)
 - [components/ui/ThemeToggle.vue:1-36](file://frontend/src/components/ui/ThemeToggle.vue#L1-L36)
+- [components/ui/Avatar.vue:1-58](file://frontend/src/components/ui/Avatar.vue#L1-L58)
 - [stores/theme.js:1-59](file://frontend/src/stores/theme.js#L1-L59)
 
 **Section sources**
 - [components/ui/Button.vue:1-66](file://frontend/src/components/ui/Button.vue#L1-L66)
 - [components/ui/ThemeToggle.vue:1-36](file://frontend/src/components/ui/ThemeToggle.vue#L1-L36)
+- [components/ui/Avatar.vue:1-58](file://frontend/src/components/ui/Avatar.vue#L1-L58)
 - [stores/theme.js:1-59](file://frontend/src/stores/theme.js#L1-L59)
 
 ### Plugin View Integration and Data Flow
@@ -562,9 +608,67 @@ Apply --> Render["Components re-render with new theme"]
 - [stores/theme.js:1-59](file://frontend/src/stores/theme.js#L1-L59)
 - [assets/css/main.css:31-51](file://frontend/src/assets/css/main.css#L31-L51)
 
+## Avatar System
+
+The application implements a comprehensive avatar system with support for both custom uploaded avatars and system-generated avatars:
+
+### Avatar Component Architecture
+The Avatar.vue component provides:
+- **Size variants**: sm, md, lg with appropriate sizing classes
+- **Fallback mechanism**: initials extraction from user name/username
+- **Image support**: custom avatar URLs with proper aspect ratio handling
+- **Accessibility**: alt text support and proper semantic markup
+- **Utility integration**: uses cn utility for class merging
+
+### Avatar Display Logic
+Avatar display is implemented across multiple components:
+
+**Dashboard Layout User Dropdown**:
+- System avatars: displays SVG avatars from `/avatars/avatar-{id}.svg`
+- Custom avatars: displays uploaded images from avatar_url
+- Fallback: uses Avatar component with initials when no avatar is set
+
+**Sidebar User Panel**:
+- System avatars: displays SVG avatars with proper sizing
+- Custom avatars: displays uploaded images with object-cover
+- Fallback: shows initials in circular container
+
+**Avatar Management Interface**:
+- System avatar selection with preview
+- Custom avatar upload with file handling
+- Avatar URL persistence via `/api/v1/users/me/avatar`
+
+### Avatar URL Handling
+The system supports multiple avatar URL formats:
+- **System avatars**: `system:{id}` format for built-in SVG avatars
+- **Custom avatars**: Direct image URLs for uploaded images
+- **Fallback**: Initials extracted from user's full_name or username
+
+```mermaid
+flowchart TD
+AvatarURL["Avatar URL"] --> CheckFormat{"Check format"}
+CheckFormat --> |system:*| SystemAvatar["Display SVG avatar<br/>/avatars/avatar-{id}.svg"]
+CheckFormat --> |custom URL| CustomAvatar["Display uploaded image"]
+CheckFormat --> |no avatar| Fallback["Display initials<br/>Avatar component"]
+SystemAvatar --> Display["Render avatar"]
+CustomAvatar --> Display
+Fallback --> Display
+```
+
+**Diagram sources**
+- [components/layout/Sidebar.vue:262-278](file://frontend/src/components/layout/Sidebar.vue#L262-L278)
+- [layouts/DashboardLayout.vue:86-98](file://frontend/src/layouts/DashboardLayout.vue#L86-L98)
+- [views/settings/Profile.vue:26-33](file://frontend/src/views/settings/Profile.vue#L26-L33)
+
+**Section sources**
+- [components/ui/Avatar.vue:1-58](file://frontend/src/components/ui/Avatar.vue#L1-L58)
+- [components/layout/Sidebar.vue:262-278](file://frontend/src/components/layout/Sidebar.vue#L262-L278)
+- [layouts/DashboardLayout.vue:86-98](file://frontend/src/layouts/DashboardLayout.vue#L86-L98)
+- [views/settings/Profile.vue:18-39](file://frontend/src/views/settings/Profile.vue#L18-L39)
+
 ## User Management Interface
 
-The application now includes a comprehensive user management system designed for superuser access:
+The application now includes a comprehensive user management system designed for superuser access with enhanced avatar support:
 
 ### Features
 - **User Listing**: Displays all system users with filtering and sorting capabilities
@@ -573,14 +677,21 @@ The application now includes a comprehensive user management system designed for
 - **User Deletion**: Confirmation-based deletion with safety checks
 - **Role Management**: Distinct role-based UI elements (user vs superuser badges)
 - **Status Management**: Active/inactive user toggles
+- **Avatar Management**: Complete avatar system integration with user profiles
 - **Real-time Updates**: Automatic refresh of user lists after operations
 
+### Avatar Integration in User Management
+- **User listing**: Displays avatars for all users with fallback initials
+- **User editing**: Supports avatar URL updates for user profiles
+- **Avatar consistency**: Maintains avatar display uniformity across the application
+
 ### Implementation Details
-- **Data Flow**: Uses authStore.authFetch for all user operations
-- **Form Handling**: Comprehensive form validation and error handling
-- **Modal System**: Separate modals for create and edit operations
-- **Role-Based UI**: Different badge variants for user roles
+- **Data Flow**: Uses authStore.authFetch for all user operations including avatar updates
+- **Form Handling**: Comprehensive form validation and error handling with avatar support
+- **Modal System**: Separate modals for create and edit operations with avatar previews
+- **Role-Based UI**: Different badge variants for user roles with avatar considerations
 - **Security**: Prevents self-deletion and restricts role changes
+- **Avatar Persistence**: Integrates with `/api/v1/users/me/avatar` endpoint for avatar updates
 
 ```mermaid
 sequenceDiagram
@@ -596,7 +707,7 @@ AS-->>V : "User created"
 V->>V : "fetchUsers()"
 V->>BE : "GET /api/v1/users/"
 BE-->>AS : "200 [users]"
-AS-->>V : "Updated user list"
+AS-->>V : "Updated user list with avatars"
 V->>U : "Display success message"
 ```
 
@@ -616,12 +727,14 @@ The application implements a multi-layered access control system:
 - **Authenticated Routes**: Require valid authentication
 - **Superuser Routes**: Restricted to superuser role only
 - **Role Checking**: Centralized role validation through auth store
+- **Avatar Access**: Users can access their own avatar management, others require appropriate permissions
 
 ### Implementation Details
 - **requiresAuth**: Basic authentication requirement
 - **guest**: Prevents authenticated users from accessing auth pages
 - **requiresSuperuser**: Advanced role-based restriction
 - **Dynamic Role Checking**: Computed properties for role evaluation
+- **Avatar Route Protection**: Avatar management routes protected by authentication
 
 ```mermaid
 flowchart TD
@@ -683,8 +796,8 @@ Vite --> Proxy["/api proxy -> 8000"]
 - Local storage caching for tokens avoids repeated network requests during sessions
 - Dark mode via CSS classes avoids expensive runtime computations
 - Vite's development server with proxy enables efficient local iteration
-
-**Updated** The improved initialization sequence prevents visual flickering and ensures consistent theme application from page load.
+- **Updated**: Avatar system optimized with proper image loading and fallback mechanisms
+- **Updated**: Avatar URLs cached locally to avoid repeated backend requests
 
 Recommendations:
 - Keep plugin manifests minimal; defer heavy assets to plugin views
@@ -692,6 +805,8 @@ Recommendations:
 - Debounce frequent UI interactions (filters, search) in plugin views
 - Consider pagination for large datasets in plugin views
 - Audit Tailwind classes to remove unused styles in production builds
+- **Updated**: Implement avatar caching strategy for frequently accessed avatars
+- **Updated**: Optimize avatar image loading with proper aspect ratios and sizes
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -712,6 +827,11 @@ Common issues and resolutions:
   - Verify theme store initializes before authentication
   - Check for proper error handling in initApp()
   - Ensure plugin initialization completes before mounting
+- **New**: Avatar system issues:
+  - Verify avatar URLs are properly formatted (system: or custom URL)
+  - Check avatar file accessibility and CORS configuration
+  - Ensure avatar endpoints are reachable via proxy
+  - Confirm avatar data is properly stored in user object
 - **New**: User management issues:
   - Verify superuser role for accessing user management
   - Check backend user endpoints availability
@@ -727,9 +847,10 @@ Common issues and resolutions:
 - [stores/theme.js:23-46](file://frontend/src/stores/theme.js#L23-L46)
 - [assets/css/main.css:1-77](file://frontend/src/assets/css/main.css#L1-L77)
 - [views/users/Users.vue:32-104](file://frontend/src/views/users/Users.vue#L32-L104)
+- [views/settings/Profile.vue:64-80](file://frontend/src/views/settings/Profile.vue#L64-L80)
 
 ## Conclusion
-The frontend employs a clean, modular architecture centered on Vue 3, Pinia, and Vue Router. The recent improvements to the application initialization sequence ensure consistent visual presentation from the moment users access the interface. The addition of a comprehensive user management system provides superuser access to manage system users with role-based restrictions. The enhanced route protection system with requiresSuperuser meta field ensures proper access control across the application. The plugin registry system enables dynamic integration of features, while the layout and UI components provide a consistent, accessible, and responsive experience. Theme management and Tailwind CSS support both light and dark modes. The authentication store ensures secure, resilient communication with backend APIs. Together, these patterns deliver a scalable and maintainable frontend foundation with improved user experience and robust access control.
+The frontend employs a clean, modular architecture centered on Vue 3, Pinia, and Vue Router. The recent improvements to the application initialization sequence ensure consistent visual presentation from the moment users access the interface. The addition of a comprehensive user management system provides superuser access to manage system users with role-based restrictions. The enhanced route protection system with requiresSuperuser meta field ensures proper access control across the application. The plugin registry system enables dynamic integration of features, while the layout and UI components provide a consistent, accessible, and responsive experience. Theme management and Tailwind CSS support both light and dark modes. The authentication store ensures secure, resilient communication with backend APIs. The new avatar system provides comprehensive avatar support with both custom and system-generated avatars, integrated throughout the application. Together, these patterns deliver a scalable and maintainable frontend foundation with improved user experience, robust access control, and enhanced personalization capabilities.
 
 ## Appendices
 
@@ -738,6 +859,7 @@ The frontend employs a clean, modular architecture centered on Vue 3, Pinia, and
 - Collapsible sidebar for small screens with overlay and slide transitions
 - Grid-based plugin views adapt to screen size
 - Accessible focus states and semantic markup
+- **Updated**: Avatar components adapt to different screen sizes and orientations
 
 **Section sources**
 - [layouts/DashboardLayout.vue:23-124](file://frontend/src/layouts/DashboardLayout.vue#L23-L124)
@@ -750,8 +872,11 @@ The frontend employs a clean, modular architecture centered on Vue 3, Pinia, and
 - Focus-visible outlines and visible focus states
 - Color contrast compliant with Tailwind color tokens
 - ARIA-friendly component composition
+- **Updated**: Avatar components include proper alt text and accessibility attributes
+- **Updated**: Avatar fallback initials provide accessible text alternatives
 
 **Section sources**
 - [components/ui/Button.vue:25-53](file://frontend/src/components/ui/Button.vue#L25-L53)
 - [components/layout/SidebarItem.vue:34-72](file://frontend/src/components/layout/SidebarItem.vue#L34-L72)
 - [views/users/Users.vue:145-407](file://frontend/src/views/users/Users.vue#L145-L407)
+- [components/ui/Avatar.vue:44-56](file://frontend/src/components/ui/Avatar.vue#L44-L56)

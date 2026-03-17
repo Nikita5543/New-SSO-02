@@ -10,15 +10,20 @@
 - [security.py](file://backend/app/core/security.py)
 - [main.py](file://backend/app/main.py)
 - [auth.py](file://backend/app/api/v1/endpoints/auth.py)
+- [user_service.py](file://backend/app/services/user_service.py)
+- [Avatar.vue](file://frontend/src/components/ui/Avatar.vue)
+- [Profile.vue](file://frontend/src/views/settings/Profile.vue)
+- [auth.js](file://frontend/src/stores/auth.js)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added new permission endpoints for user access control
-- Enhanced role-based access control with superuser privileges
-- Updated authorization requirements to reflect new security model
-- Modified user role definitions and validation logic
-- Added plugin access control functionality
+- Added new avatar management endpoint: PUT /api/v1/users/me/avatar
+- Enhanced UserResponse schema with avatar_url field
+- Updated UserUpdate schema with avatar_url field
+- Added avatar_url field to User model with system avatar support
+- Integrated frontend avatar selection and upload functionality
+- Enhanced user profile management with avatar customization options
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -32,15 +37,16 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document provides comprehensive API documentation for user management endpoints within the NOC Vision platform. It covers HTTP methods, URL patterns, request/response schemas, authorization requirements, role-based access control, and practical usage examples for user CRUD operations, bulk operations, and user search/filtering. The documentation focuses on the `/api/v1/users/` endpoint group and related authentication endpoints that support user lifecycle management, including new permission endpoints for enhanced access control.
+This document provides comprehensive API documentation for user management endpoints within the NOC Vision platform. It covers HTTP methods, URL patterns, request/response schemas, authorization requirements, role-based access control, and practical usage examples for user CRUD operations, bulk operations, user search/filtering, and avatar management functionality. The documentation focuses on the `/api/v1/users/` endpoint group and related authentication endpoints that support user lifecycle management, including new avatar management capabilities for enhanced user profile customization.
 
 ## Project Structure
 The user management functionality is organized under the FastAPI application with modular routing and schema-driven validation. The key components include:
-- Endpoint definitions for user operations and permission management
-- Pydantic models for request/response schemas
-- SQLAlchemy models for persistence
+- Endpoint definitions for user operations, permission management, and avatar management
+- Pydantic models for request/response schemas with avatar support
+- SQLAlchemy models for persistence with avatar URL storage
 - Security utilities for authentication, authorization, and plugin access control
 - Router configuration for API versioning
+- Frontend integration for avatar selection and upload
 
 ```mermaid
 graph TB
@@ -56,6 +62,9 @@ D --> I["Auth Schemas<br/>schemas/auth.py"]
 C --> J["Common Schemas<br/>schemas/common.py"]
 K["Security Utilities<br/>core/security.py"] --> C
 K --> D
+L["Frontend Avatar Component<br/>Avatar.vue"] --> M["Profile View<br/>Profile.vue"]
+N["Auth Store<br/>auth.js"] --> O["Avatar Management<br/>users/me/avatar"]
+M --> O
 ```
 
 **Diagram sources**
@@ -63,6 +72,9 @@ K --> D
 - [router.py:6-9](file://backend/app/api/v1/router.py#L6-L9)
 - [users.py:12](file://backend/app/api/v1/endpoints/users.py#L12)
 - [auth.py:17](file://backend/app/api/v1/endpoints/auth.py#L17)
+- [Avatar.vue:1-58](file://frontend/src/components/ui/Avatar.vue#L1-L58)
+- [Profile.vue:1-199](file://frontend/src/views/settings/Profile.vue#L1-L199)
+- [auth.js:1-198](file://frontend/src/stores/auth.js#L1-L198)
 
 **Section sources**
 - [main.py:66-67](file://backend/app/main.py#L66-L67)
@@ -83,13 +95,15 @@ This section outlines the essential building blocks for user management operatio
 - Role enumeration with superuser, admin, and user values
 - Active/inactive user status management
 - Timestamp tracking for created/updated records
+- **Updated**: Avatar URL field with system avatar support (system:1, system:2, system:3)
 
 ### Request/Response Schemas
-- User creation with username, email, password, full name, and role
-- User updates with selective field updates
-- User response with comprehensive profile information
+- User creation with username, email, password, full name, role, and optional avatar URL
+- User updates with selective field updates including avatar URL
+- User response with comprehensive profile information including avatar URL
 - Status responses for deletion operations
 - Permission response with role-based access information
+- **Updated**: Avatar URL field in all schemas for profile customization
 
 **Section sources**
 - [security.py:13](file://backend/app/core/security.py#L13)
@@ -111,7 +125,7 @@ Client->>API : HTTP Request
 API->>Endpoint : Route to Users Endpoint
 Endpoint->>Security : Validate JWT Token & Check Permissions
 Security-->>Endpoint : Authorized User Context
-Endpoint->>Service : Business Logic Call
+Endpoint->>Service : Business Logic Call (including avatar update)
 Service->>DB : Database Operation
 DB-->>Service : Data Result
 Service-->>Endpoint : Processed Data
@@ -129,11 +143,22 @@ The architecture enforces:
 - Plugin access control for different system sections
 - Schema validation at the endpoint level
 - Database abstraction through SQLAlchemy ORM
+- **Updated**: Avatar URL validation and storage capabilities
 
 ## Detailed Component Analysis
 
 ### Endpoint Definitions and URL Patterns
-The user management endpoints follow RESTful conventions with the base path `/api/v1/users` and include new permission endpoints:
+The user management endpoints follow RESTful conventions with the base path `/api/v1/users` and include new permission endpoints and avatar management functionality:
+
+#### PUT /api/v1/users/me/avatar
+- **Purpose**: Update the current user's avatar
+- **Method**: PUT
+- **Request Body**: `{ avatar_url: string }`
+- **Response**: UserResponse object with updated avatar URL
+- **Authorization**: Requires valid JWT token (any authenticated user)
+- **Validation**: Avatar URL must be a valid URL or system avatar format (system:1, system:2, system:3)
+- **Response Fields**:
+  - `avatar_url`: Updated avatar URL or system avatar identifier
 
 #### GET /api/v1/users/me/permissions
 - **Purpose**: Retrieve current user's permission information
@@ -200,13 +225,14 @@ The user management endpoints follow RESTful conventions with the base path `/ap
 - **Restrictions**: Cannot delete own account, cannot delete last superuser
 
 **Section sources**
+- [users.py:27-35](file://backend/app/api/v1/endpoints/users.py#L27-L35)
 - [users.py:15-22](file://backend/app/api/v1/endpoints/users.py#L15-L22)
-- [users.py:27-38](file://backend/app/api/v1/endpoints/users.py#L27-L38)
-- [users.py:41-49](file://backend/app/api/v1/endpoints/users.py#L41-L49)
+- [users.py:38-49](file://backend/app/api/v1/endpoints/users.py#L38-L49)
 - [users.py:52-65](file://backend/app/api/v1/endpoints/users.py#L52-L65)
-- [users.py:68-91](file://backend/app/api/v1/endpoints/users.py#L68-L91)
-- [users.py:94-116](file://backend/app/api/v1/endpoints/users.py#L94-L116)
-- [users.py:119-139](file://backend/app/api/v1/endpoints/users.py#L119-L139)
+- [users.py:63-76](file://backend/app/api/v1/endpoints/users.py#L63-L76)
+- [users.py:79-102](file://backend/app/api/v1/endpoints/users.py#L79-L102)
+- [users.py:105-127](file://backend/app/api/v1/endpoints/users.py#L105-L127)
+- [users.py:130-150](file://backend/app/api/v1/endpoints/users.py#L130-L150)
 
 ### Request/Response Schemas
 
@@ -217,6 +243,7 @@ Fields for user registration and creation:
 - `password`: String (required)
 - `full_name`: String (optional)
 - `role`: String (default: "user")
+- `avatar_url`: String (optional)
 
 Validation rules:
 - Username must be unique
@@ -224,6 +251,7 @@ Validation rules:
 - Password must meet security requirements
 - Role must be either "superuser", "admin", or "user"
 - Superusers can only be created by other superusers
+- **Updated**: Avatar URL validation for custom URLs or system avatar formats
 
 #### UserUpdate Schema
 Fields for partial user updates:
@@ -232,12 +260,14 @@ Fields for partial user updates:
 - `role`: String (optional)
 - `is_active`: Boolean (optional)
 - `password`: String (optional)
+- `avatar_url`: String (optional)
 
 Behavior:
 - Only provided fields are updated
 - Password updates trigger re-hashing
 - Role changes require superuser privileges
 - Cannot assign superuser role without superuser privileges
+- **Updated**: Avatar URL updates for profile customization
 
 #### UserResponse Schema
 Complete user profile representation:
@@ -246,6 +276,7 @@ Complete user profile representation:
 - `email`: String
 - `full_name`: String (nullable)
 - `role`: String ("superuser", "admin", or "user")
+- `avatar_url`: String (nullable)
 - `is_active`: Boolean
 - `created_at`: DateTime (nullable)
 - `updated_at`: DateTime (nullable)
@@ -267,6 +298,34 @@ Permission information for current user:
 - [user.py:22-32](file://backend/app/schemas/user.py#L22-L32)
 - [common.py:5-7](file://backend/app/schemas/common.py#L5-L7)
 
+### Avatar Management Functionality
+
+#### Avatar URL Formats
+The system supports two types of avatar URLs:
+- **Custom URLs**: Full URL to external image (e.g., "https://example.com/avatar.jpg")
+- **System Avatars**: Predefined system avatars with format "system:n" where n is 1, 2, or 3
+
+#### Avatar Validation Rules
+- Custom URLs must be valid HTTP/HTTPS URLs
+- System avatars must match format "system:1", "system:2", or "system:3"
+- Avatar URLs are optional during user creation/update
+- Empty avatar_url indicates default initials avatar
+
+#### Frontend Integration
+The frontend provides comprehensive avatar management:
+- System avatar selection with predefined SVG images
+- Custom image upload with preview functionality
+- Real-time avatar preview before saving
+- Responsive avatar component with fallback initials
+
+**Section sources**
+- [user.py:15-16](file://backend/app/models/user.py#L15-L16)
+- [user.py:29-32](file://backend/app/models/user.py#L29-L32)
+- [user.py:19-20](file://backend/app/schemas/user.py#L19-L20)
+- [user.py:28-29](file://backend/app/schemas/user.py#L28-L29)
+- [Profile.vue:18-23](file://frontend/src/views/settings/Profile.vue#L18-L23)
+- [Profile.vue:46-57](file://frontend/src/views/settings/Profile.vue#L46-L57)
+
 ### Authorization Requirements and Role-Based Access Control
 
 #### Authentication Flow
@@ -279,6 +338,7 @@ All user management endpoints require valid JWT authentication:
 #### Enhanced Role-Based Access Control Matrix
 | Endpoint | Required Role | Additional Restrictions |
 |----------|---------------|------------------------|
+| PUT /users/me/avatar | Any authenticated user | N/A |
 | GET /users/me/permissions | Any authenticated user | N/A |
 | GET /users/plugins/access/{section} | Any authenticated user | N/A |
 | GET /users | Superuser | N/A |
@@ -298,9 +358,11 @@ CheckRole --> |Superuser| CheckLastSuperuser{"Last Superuser?"}
 CheckRole --> |Admin| CheckAdmin["Admin Access"]
 CheckRole --> |User| CheckSelf{"Accessing Self?"}
 CheckLastSuperuser --> |Yes| CheckSelf
-CheckLastSuperuser --> |No| Proceed["Proceed to Business Logic"]
-CheckSelf --> |Yes| Proceed
+CheckLastSuperuser --> |No| CheckAvatar{"Avatar Update?"}
+CheckSelf --> |Yes| CheckAvatar
 CheckSelf --> |No| Forbidden
+CheckAvatar --> |Yes| Proceed["Proceed to Avatar Update"]
+CheckAvatar --> |No| Proceed
 CheckAdmin --> |Yes| Proceed
 CheckAdmin --> |No| Forbidden
 Proceed --> End([Response Sent])
@@ -361,6 +423,7 @@ Deny --> End
 - Role validation against allowed values ("superuser", "admin", "user")
 - Type validation through Pydantic models
 - Superuser privilege validation for role assignments
+- **Updated**: Avatar URL validation for custom URLs and system avatar formats
 
 #### Enhanced Security Measures
 - JWT token expiration (configurable)
@@ -370,6 +433,7 @@ Deny --> End
 - Superuser-only access for critical operations
 - Prevention of last superuser removal
 - Plugin access control enforcement
+- **Updated**: Avatar URL validation and sanitization
 
 **Section sources**
 - [security.py:16-28](file://backend/app/core/security.py#L16-L28)
@@ -377,7 +441,25 @@ Deny --> End
 
 ### Practical Usage Examples
 
-#### User Creation Example
+#### Avatar Management Examples
+
+##### Update User Avatar with Custom URL
+```javascript
+// PUT /api/v1/users/me/avatar
+const updateAvatar = {
+  avatar_url: "https://example.com/custom-avatar.jpg"
+};
+```
+
+##### Update User Avatar with System Avatar
+```javascript
+// PUT /api/v1/users/me/avatar
+const updateAvatar = {
+  avatar_url: "system:2"
+};
+```
+
+##### User Creation with Avatar
 ```javascript
 // POST /api/v1/users/
 const createUser = {
@@ -385,7 +467,8 @@ const createUser = {
   email: "john@example.com",
   password: "SecurePass123!",
   full_name: "John Doe",
-  role: "user"
+  role: "user",
+  avatar_url: "system:1"
 };
 ```
 
@@ -429,11 +512,12 @@ Current implementation supports:
 - No built-in filtering capabilities
 
 Future enhancements could include:
-- Query parameters for filtering by role, status
+- Query parameters for filtering by role, status, avatar type
 - Sorting options (created_at, username)
 - Advanced search operators
 
 **Section sources**
+- [users.py:27-35](file://backend/app/api/v1/endpoints/users.py#L27-L35)
 - [users.py:17-18](file://backend/app/api/v1/endpoints/users.py#L17-L18)
 - [users.py:40-57](file://backend/app/api/v1/endpoints/users.py#L40-L57)
 
@@ -458,6 +542,11 @@ SecurityUtils["Security Utilities"]
 JWT["JWT Handler"]
 PluginAccess["Plugin Access Control"]
 end
+subgraph "Frontend Layer"
+AvatarComponent["Avatar Component"]
+ProfileView["Profile View"]
+AuthStore["Auth Store"]
+end
 UsersEndpoint --> UserService
 AuthEndpoint --> AuthService
 UserService --> UserModel
@@ -467,6 +556,8 @@ AuthEndpoint --> SecurityUtils
 SecurityUtils --> JWT
 SecurityUtils --> PluginAccess
 UserModel --> DB
+AvatarComponent --> ProfileView
+ProfileView --> AuthStore
 ```
 
 **Diagram sources**
@@ -474,6 +565,9 @@ UserModel --> DB
 - [auth.py:15](file://backend/app/api/v1/endpoints/auth.py#L15)
 - [user_service.py:4](file://backend/app/services/user_service.py#L4)
 - [security.py:13](file://backend/app/core/security.py#L13)
+- [Avatar.vue:1-58](file://frontend/src/components/ui/Avatar.vue#L1-L58)
+- [Profile.vue:1-199](file://frontend/src/views/settings/Profile.vue#L1-L199)
+- [auth.js:1-198](file://frontend/src/stores/auth.js#L1-L198)
 
 Key dependencies:
 - SQLAlchemy ORM for database operations
@@ -482,6 +576,7 @@ Key dependencies:
 - JWT library for token management
 - FastAPI for routing and dependency injection
 - Enhanced security utilities for role-based access control
+- **Updated**: Frontend avatar component integration
 
 **Section sources**
 - [users.py:1-10](file://backend/app/api/v1/endpoints/users.py#L1-L10)
@@ -494,6 +589,7 @@ Key dependencies:
 - Token caching: JWT validation results could benefit from caching layer
 - Connection pooling: SQLAlchemy session management handles connection reuse
 - Superuser count checks: Efficient database queries prevent orphan superuser scenarios
+- **Updated**: Avatar URL storage optimization for minimal database overhead
 
 ## Troubleshooting Guide
 
@@ -501,7 +597,7 @@ Key dependencies:
 - **401 Unauthorized**: Invalid or missing JWT token
 - **403 Forbidden**: Insufficient permissions, inactive user, or superuser-only access
 - **404 Not Found**: User does not exist
-- **400 Bad Request**: Duplicate username/email, self-deletion attempt, or last superuser removal
+- **400 Bad Request**: Duplicate username/email, self-deletion attempt, last superuser removal, or invalid avatar URL format
 
 ### Authentication Issues
 - Verify token format: Must be Bearer token
@@ -515,11 +611,19 @@ Key dependencies:
 - Password requirements: Meet security criteria
 - Role validation: Only "superuser", "admin", or "user" roles allowed
 - Superuser validation: Ensure proper privilege escalation
+- **Updated**: Avatar URL validation: Ensure valid URL format or system avatar format
 
 ### Permission Issues
 - Check user role: Verify current user has appropriate permissions
 - Plugin access: Ensure requested section is accessible
 - Superuser restrictions: Some operations are restricted to superusers only
+- **Updated**: Avatar updates: Any authenticated user can update their own avatar
+
+### Avatar Management Issues
+- **Invalid Avatar URL**: Ensure URL is valid HTTP/HTTPS or follows system avatar format
+- **System Avatar Error**: Use format "system:1", "system:2", or "system:3"
+- **File Upload Issues**: Frontend handles local file uploads, server expects URL string
+- **Avatar Preview**: System avatars use predefined SVG files, custom avatars use uploaded URLs
 
 **Section sources**
 - [users.py:32-36](file://backend/app/api/v1/endpoints/users.py#L32-L36)
@@ -527,4 +631,4 @@ Key dependencies:
 - [users.py:79-80](file://backend/app/api/v1/endpoints/users.py#L79-L80)
 
 ## Conclusion
-The user management endpoints provide a robust foundation for user lifecycle operations within the NOC Vision platform. The implementation emphasizes security through JWT authentication, enhanced role-based access control with superuser privileges, and comprehensive data validation. The addition of new permission endpoints and plugin access control provides granular control over system functionality. The current implementation focuses on individual user operations with enhanced security measures, including prevention of last superuser removal and proper privilege escalation. The modular design ensures maintainability and extensibility for evolving user management requirements, with clear separation between user management, authentication, and permission control functionality.
+The user management endpoints provide a robust foundation for user lifecycle operations within the NOC Vision platform. The implementation emphasizes security through JWT authentication, enhanced role-based access control with superuser privileges, and comprehensive data validation. The addition of new permission endpoints, plugin access control, and avatar management functionality provides comprehensive user profile customization capabilities. The PUT /api/v1/users/me/avatar endpoint enables users to update their profile pictures with either custom URLs or predefined system avatars, while the frontend integration provides intuitive avatar selection and upload functionality. The current implementation focuses on individual user operations with enhanced security measures, including prevention of last superuser removal, proper privilege escalation, and avatar URL validation. The modular design ensures maintainability and extensibility for evolving user management requirements, with clear separation between user management, authentication, permission control, and avatar management functionality.
