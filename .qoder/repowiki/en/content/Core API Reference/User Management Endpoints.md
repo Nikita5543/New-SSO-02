@@ -12,6 +12,14 @@
 - [auth.py](file://backend/app/api/v1/endpoints/auth.py)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Added new permission endpoints for user access control
+- Enhanced role-based access control with superuser privileges
+- Updated authorization requirements to reflect new security model
+- Modified user role definitions and validation logic
+- Added plugin access control functionality
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -24,14 +32,14 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document provides comprehensive API documentation for user management endpoints within the NOC Vision platform. It covers HTTP methods, URL patterns, request/response schemas, authorization requirements, role-based access control, and practical usage examples for user CRUD operations, bulk operations, and user search/filtering. The documentation focuses on the `/api/v1/users/` endpoint group and related authentication endpoints that support user lifecycle management.
+This document provides comprehensive API documentation for user management endpoints within the NOC Vision platform. It covers HTTP methods, URL patterns, request/response schemas, authorization requirements, role-based access control, and practical usage examples for user CRUD operations, bulk operations, and user search/filtering. The documentation focuses on the `/api/v1/users/` endpoint group and related authentication endpoints that support user lifecycle management, including new permission endpoints for enhanced access control.
 
 ## Project Structure
 The user management functionality is organized under the FastAPI application with modular routing and schema-driven validation. The key components include:
-- Endpoint definitions for user operations
+- Endpoint definitions for user operations and permission management
 - Pydantic models for request/response schemas
 - SQLAlchemy models for persistence
-- Security utilities for authentication and authorization
+- Security utilities for authentication, authorization, and plugin access control
 - Router configuration for API versioning
 
 ```mermaid
@@ -65,13 +73,14 @@ This section outlines the essential building blocks for user management operatio
 
 ### Authentication and Authorization
 - OAuth2 Bearer token scheme with JWT tokens
-- Role-based access control with admin privileges
+- Enhanced role-based access control with superuser privileges
+- Plugin access control for different sections (operations, analytics, security, admin)
 - Password hashing using bcrypt
 - Token validation and expiration handling
 
 ### Data Models
 - User entity with unique constraints on username and email
-- Role enumeration with admin and user values
+- Role enumeration with superuser, admin, and user values
 - Active/inactive user status management
 - Timestamp tracking for created/updated records
 
@@ -80,6 +89,7 @@ This section outlines the essential building blocks for user management operatio
 - User updates with selective field updates
 - User response with comprehensive profile information
 - Status responses for deletion operations
+- Permission response with role-based access information
 
 **Section sources**
 - [security.py:13](file://backend/app/core/security.py#L13)
@@ -87,7 +97,7 @@ This section outlines the essential building blocks for user management operatio
 - [user.py:6-32](file://backend/app/schemas/user.py#L6-L32)
 
 ## Architecture Overview
-The user management architecture follows a layered approach with clear separation of concerns:
+The user management architecture follows a layered approach with clear separation of concerns and enhanced security controls:
 
 ```mermaid
 sequenceDiagram
@@ -99,7 +109,7 @@ participant DB as "Database"
 participant Security as "Security Layer"
 Client->>API : HTTP Request
 API->>Endpoint : Route to Users Endpoint
-Endpoint->>Security : Validate JWT Token
+Endpoint->>Security : Validate JWT Token & Check Permissions
 Security-->>Endpoint : Authorized User Context
 Endpoint->>Service : Business Logic Call
 Service->>DB : Database Operation
@@ -115,14 +125,36 @@ Endpoint-->>Client : JSON Response
 
 The architecture enforces:
 - Centralized authentication through OAuth2 Bearer tokens
-- Role-based authorization for sensitive operations
+- Enhanced role-based authorization for sensitive operations
+- Plugin access control for different system sections
 - Schema validation at the endpoint level
 - Database abstraction through SQLAlchemy ORM
 
 ## Detailed Component Analysis
 
 ### Endpoint Definitions and URL Patterns
-The user management endpoints follow RESTful conventions with the base path `/api/v1/users`:
+The user management endpoints follow RESTful conventions with the base path `/api/v1/users` and include new permission endpoints:
+
+#### GET /api/v1/users/me/permissions
+- **Purpose**: Retrieve current user's permission information
+- **Method**: GET
+- **Response**: Permission object with role, superuser flag, and accessible sections
+- **Authorization**: Requires valid JWT token (any authenticated user)
+- **Response Fields**:
+  - `role`: Current user's role (superuser, admin, user)
+  - `can_access_admin`: Boolean indicating admin access
+  - `sections`: Array of accessible plugin sections
+
+#### GET /api/v1/users/plugins/access/{section}
+- **Purpose**: Check access to specific plugin section
+- **Method**: GET
+- **Path Parameter**: `section` (string)
+- **Response**: Access decision with section name and permission status
+- **Authorization**: Requires valid JWT token (any authenticated user)
+- **Response Fields**:
+  - `section`: Requested section name
+  - `has_access`: Boolean indicating access permission
+  - `role`: Current user's role
 
 #### GET /api/v1/users/
 - **Purpose**: Retrieve paginated list of users
@@ -131,7 +163,7 @@ The user management endpoints follow RESTful conventions with the base path `/ap
 - **Parameters**: 
   - `skip`: Integer offset for pagination (default: 0)
   - `limit`: Integer maximum results (default: 100)
-- **Authorization**: Requires admin role
+- **Authorization**: Requires superuser role
 
 #### GET /api/v1/users/{user_id}
 - **Purpose**: Retrieve specific user by ID
@@ -139,7 +171,7 @@ The user management endpoints follow RESTful conventions with the base path `/ap
 - **Path Parameter**: `user_id` (integer)
 - **Response**: UserResponse object
 - **Authorization**: 
-  - Admin users: Full access to any user
+  - Superuser: Full access to any user
   - Regular users: Can only access their own profile
 
 #### POST /api/v1/users/
@@ -147,7 +179,8 @@ The user management endpoints follow RESTful conventions with the base path `/ap
 - **Method**: POST
 - **Request Body**: UserCreate schema
 - **Response**: UserResponse object
-- **Authorization**: Requires admin role
+- **Authorization**: Requires superuser role
+- **Restrictions**: Cannot create superuser accounts
 
 #### PUT /api/v1/users/{user_id}
 - **Purpose**: Update existing user
@@ -155,22 +188,25 @@ The user management endpoints follow RESTful conventions with the base path `/ap
 - **Path Parameter**: `user_id` (integer)
 - **Request Body**: UserUpdate schema (partial updates)
 - **Response**: UserResponse object
-- **Authorization**: Requires admin role
+- **Authorization**: Requires superuser role
+- **Restrictions**: Cannot assign superuser role without superuser privileges
 
 #### DELETE /api/v1/users/{user_id}
 - **Purpose**: Remove user account
 - **Method**: DELETE
 - **Path Parameter**: `user_id` (integer)
 - **Response**: StatusResponse object
-- **Authorization**: Requires admin role
-- **Restriction**: Cannot delete own account
+- **Authorization**: Requires superuser role
+- **Restrictions**: Cannot delete own account, cannot delete last superuser
 
 **Section sources**
 - [users.py:15-22](file://backend/app/api/v1/endpoints/users.py#L15-L22)
-- [users.py:25-37](file://backend/app/api/v1/endpoints/users.py#L25-L37)
-- [users.py:40-57](file://backend/app/api/v1/endpoints/users.py#L40-L57)
-- [users.py:60-70](file://backend/app/api/v1/endpoints/users.py#L60-L70)
-- [users.py:73-85](file://backend/app/api/v1/endpoints/users.py#L73-L85)
+- [users.py:27-38](file://backend/app/api/v1/endpoints/users.py#L27-L38)
+- [users.py:41-49](file://backend/app/api/v1/endpoints/users.py#L41-L49)
+- [users.py:52-65](file://backend/app/api/v1/endpoints/users.py#L52-L65)
+- [users.py:68-91](file://backend/app/api/v1/endpoints/users.py#L68-L91)
+- [users.py:94-116](file://backend/app/api/v1/endpoints/users.py#L94-L116)
+- [users.py:119-139](file://backend/app/api/v1/endpoints/users.py#L119-L139)
 
 ### Request/Response Schemas
 
@@ -186,7 +222,8 @@ Validation rules:
 - Username must be unique
 - Email must be unique
 - Password must meet security requirements
-- Role must be either "admin" or "user"
+- Role must be either "superuser", "admin", or "user"
+- Superusers can only be created by other superusers
 
 #### UserUpdate Schema
 Fields for partial user updates:
@@ -199,7 +236,8 @@ Fields for partial user updates:
 Behavior:
 - Only provided fields are updated
 - Password updates trigger re-hashing
-- Role changes require admin privileges
+- Role changes require superuser privileges
+- Cannot assign superuser role without superuser privileges
 
 #### UserResponse Schema
 Complete user profile representation:
@@ -207,7 +245,7 @@ Complete user profile representation:
 - `username`: String
 - `email`: String
 - `full_name`: String (nullable)
-- `role`: String ("admin" or "user")
+- `role`: String ("superuser", "admin", or "user")
 - `is_active`: Boolean
 - `created_at`: DateTime (nullable)
 - `updated_at`: DateTime (nullable)
@@ -216,6 +254,12 @@ Complete user profile representation:
 Standard response for deletion operations:
 - `status`: String ("ok")
 - `message`: String (optional)
+
+#### PermissionResponse Schema
+Permission information for current user:
+- `role`: String (current user's role)
+- `can_access_admin`: Boolean (indicates admin access capability)
+- `sections`: Array of strings (accessible plugin sections)
 
 **Section sources**
 - [user.py:6-11](file://backend/app/schemas/user.py#L6-L11)
@@ -232,37 +276,76 @@ All user management endpoints require valid JWT authentication:
 - Token validation: JWT decoding with secret key
 - Expiration handling: Automatic validation
 
-#### Role-Based Access Control Matrix
+#### Enhanced Role-Based Access Control Matrix
 | Endpoint | Required Role | Additional Restrictions |
 |----------|---------------|------------------------|
-| GET /users | Any authenticated user | Non-admins restricted to self-view |
-| GET /users/{id} | Any authenticated user | Self-access only for non-admins |
-| POST /users | Admin | N/A |
-| PUT /users/{id} | Admin | N/A |
-| DELETE /users/{id} | Admin | Cannot delete self |
+| GET /users/me/permissions | Any authenticated user | N/A |
+| GET /users/plugins/access/{section} | Any authenticated user | N/A |
+| GET /users | Superuser | N/A |
+| GET /users/{id} | Superuser or self | Self-access only for non-superusers |
+| POST /users | Superuser | Cannot create superuser |
+| PUT /users/{id} | Superuser | Cannot assign superuser without superuser |
+| DELETE /users/{id} | Superuser | Cannot delete self, cannot delete last superuser |
 
-#### Permission Validation Logic
+#### Enhanced Permission Validation Logic
 ```mermaid
 flowchart TD
 Start([Request Received]) --> Auth["Validate JWT Token"]
 Auth --> CheckActive{"User Active?"}
 CheckActive --> |No| Forbidden["HTTP 403 Forbidden"]
 CheckActive --> |Yes| CheckRole{"Required Role?"}
-CheckRole --> |Admin| Proceed["Proceed to Business Logic"]
+CheckRole --> |Superuser| CheckLastSuperuser{"Last Superuser?"}
+CheckRole --> |Admin| CheckAdmin["Admin Access"]
 CheckRole --> |User| CheckSelf{"Accessing Self?"}
+CheckLastSuperuser --> |Yes| CheckSelf
+CheckLastSuperuser --> |No| Proceed["Proceed to Business Logic"]
 CheckSelf --> |Yes| Proceed
 CheckSelf --> |No| Forbidden
+CheckAdmin --> |Yes| Proceed
+CheckAdmin --> |No| Forbidden
 Proceed --> End([Response Sent])
 Forbidden --> End
 ```
 
 **Diagram sources**
-- [security.py:82-98](file://backend/app/core/security.py#L82-L98)
-- [users.py:34-36](file://backend/app/api/v1/endpoints/users.py#L34-L36)
+- [security.py:101-110](file://backend/app/core/security.py#L101-L110)
+- [users.py:110-115](file://backend/app/api/v1/endpoints/users.py#L110-L115)
 
 **Section sources**
-- [security.py:82-98](file://backend/app/core/security.py#L82-L98)
-- [users.py:34-36](file://backend/app/api/v1/endpoints/users.py#L34-L36)
+- [security.py:101-110](file://backend/app/core/security.py#L101-L110)
+- [users.py:110-115](file://backend/app/api/v1/endpoints/users.py#L110-L115)
+
+### Plugin Access Control
+
+#### Plugin Section Access Validation
+The system provides granular access control for different plugin sections based on user roles:
+
+| Role | Accessible Sections |
+|------|-------------------|
+| Superuser | operations, analytics, security, admin |
+| User | operations, general |
+
+#### Access Control Logic
+```mermaid
+flowchart TD
+Start([Plugin Access Request]) --> GetUserRole["Get User Role"]
+GetUserRole --> CheckSuperuser{"Is Superuser?"}
+CheckSuperuser --> |Yes| AllowAll["Allow All Sections"]
+CheckSuperuser --> |No| CheckUserRole{"User Role?"}
+CheckUserRole --> |User| CheckAllowed{"Section Allowed?"}
+CheckUserRole --> |Other| Deny["Deny Access"]
+CheckAllowed --> |Yes| Allow["Allow Access"]
+CheckAllowed --> |No| Deny
+AllowAll --> End([Access Granted])
+Allow --> End
+Deny --> End
+```
+
+**Diagram sources**
+- [security.py:113-133](file://backend/app/core/security.py#L113-L133)
+
+**Section sources**
+- [security.py:113-133](file://backend/app/core/security.py#L113-L133)
 
 ### Data Validation and Security Considerations
 
@@ -272,17 +355,21 @@ Forbidden --> End
 - Password updates: Automatic re-hashing on change
 - Storage: Only hashed passwords stored
 
-#### Input Validation
+#### Enhanced Input Validation
 - Email format validation using EmailStr
 - Unique constraint enforcement (username, email)
-- Role validation against allowed values
+- Role validation against allowed values ("superuser", "admin", "user")
 - Type validation through Pydantic models
+- Superuser privilege validation for role assignments
 
-#### Security Measures
+#### Enhanced Security Measures
 - JWT token expiration (configurable)
 - Token revocation on logout
 - SQL injection prevention through ORM
 - CSRF protection via token-based auth
+- Superuser-only access for critical operations
+- Prevention of last superuser removal
+- Plugin access control enforcement
 
 **Section sources**
 - [security.py:16-28](file://backend/app/core/security.py#L16-L28)
@@ -300,6 +387,23 @@ const createUser = {
   full_name: "John Doe",
   role: "user"
 };
+```
+
+#### Permission Check Example
+```javascript
+// GET /api/v1/users/me/permissions
+{
+  "role": "user",
+  "can_access_admin": false,
+  "sections": ["operations"]
+}
+
+// GET /api/v1/users/plugins/access/analytics
+{
+  "section": "analytics",
+  "has_access": false,
+  "role": "user"
+}
 ```
 
 #### User Update Example
@@ -352,6 +456,7 @@ end
 subgraph "Security Layer"
 SecurityUtils["Security Utilities"]
 JWT["JWT Handler"]
+PluginAccess["Plugin Access Control"]
 end
 UsersEndpoint --> UserService
 AuthEndpoint --> AuthService
@@ -360,6 +465,7 @@ AuthService --> UserModel
 UsersEndpoint --> SecurityUtils
 AuthEndpoint --> SecurityUtils
 SecurityUtils --> JWT
+SecurityUtils --> PluginAccess
 UserModel --> DB
 ```
 
@@ -375,6 +481,7 @@ Key dependencies:
 - bcrypt for password hashing
 - JWT library for token management
 - FastAPI for routing and dependency injection
+- Enhanced security utilities for role-based access control
 
 **Section sources**
 - [users.py:1-10](file://backend/app/api/v1/endpoints/users.py#L1-L10)
@@ -386,26 +493,33 @@ Key dependencies:
 - Lazy loading: Relationship loading follows SQLAlchemy best practices
 - Token caching: JWT validation results could benefit from caching layer
 - Connection pooling: SQLAlchemy session management handles connection reuse
+- Superuser count checks: Efficient database queries prevent orphan superuser scenarios
 
 ## Troubleshooting Guide
 
 ### Common Error Scenarios
 - **401 Unauthorized**: Invalid or missing JWT token
-- **403 Forbidden**: Insufficient permissions or inactive user
+- **403 Forbidden**: Insufficient permissions, inactive user, or superuser-only access
 - **404 Not Found**: User does not exist
-- **400 Bad Request**: Duplicate username/email, self-deletion attempt
+- **400 Bad Request**: Duplicate username/email, self-deletion attempt, or last superuser removal
 
 ### Authentication Issues
 - Verify token format: Must be Bearer token
 - Check token expiration: Tokens have configurable expiry
 - Validate user status: Only active users can access endpoints
-- Confirm role assignment: Admin privileges required for user management
+- Confirm role assignment: Superuser privileges required for user management
 
 ### Data Validation Errors
 - Username uniqueness: Ensure username is not already taken
 - Email uniqueness: Verify email address availability
 - Password requirements: Meet security criteria
-- Role validation: Only "admin" or "user" roles allowed
+- Role validation: Only "superuser", "admin", or "user" roles allowed
+- Superuser validation: Ensure proper privilege escalation
+
+### Permission Issues
+- Check user role: Verify current user has appropriate permissions
+- Plugin access: Ensure requested section is accessible
+- Superuser restrictions: Some operations are restricted to superusers only
 
 **Section sources**
 - [users.py:32-36](file://backend/app/api/v1/endpoints/users.py#L32-L36)
@@ -413,4 +527,4 @@ Key dependencies:
 - [users.py:79-80](file://backend/app/api/v1/endpoints/users.py#L79-L80)
 
 ## Conclusion
-The user management endpoints provide a robust foundation for user lifecycle operations within the NOC Vision platform. The implementation emphasizes security through JWT authentication, role-based access control, and comprehensive data validation. While the current implementation focuses on individual user operations, the architecture supports future enhancements for bulk operations, advanced filtering, and improved search capabilities. The modular design ensures maintainability and extensibility for evolving user management requirements.
+The user management endpoints provide a robust foundation for user lifecycle operations within the NOC Vision platform. The implementation emphasizes security through JWT authentication, enhanced role-based access control with superuser privileges, and comprehensive data validation. The addition of new permission endpoints and plugin access control provides granular control over system functionality. The current implementation focuses on individual user operations with enhanced security measures, including prevention of last superuser removal and proper privilege escalation. The modular design ensures maintainability and extensibility for evolving user management requirements, with clear separation between user management, authentication, and permission control functionality.

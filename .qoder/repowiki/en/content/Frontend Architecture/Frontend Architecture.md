@@ -14,6 +14,7 @@
 - [components/ui/Button.vue](file://frontend/src/components/ui/Button.vue)
 - [components/ui/ThemeToggle.vue](file://frontend/src/components/ui/ThemeToggle.vue)
 - [plugins/incidents/views/IncidentsList.vue](file://frontend/src/plugins/incidents/views/IncidentsList.vue)
+- [views/users/Users.vue](file://frontend/src/views/users/Users.vue)
 - [assets/css/main.css](file://frontend/src/assets/css/main.css)
 - [lib/utils.js](file://frontend/src/lib/utils.js)
 - [tailwind.config.js](file://frontend/tailwind.config.js)
@@ -28,6 +29,9 @@
 - Added new section on Application Initialization Sequence
 - Updated Architecture Overview to show proper initialization order
 - Modified Detailed Component Analysis to include initialization sequence details
+- Added comprehensive User Management Interface section
+- Updated Route Protection section with requiresSuperuser implementation
+- Enhanced Sidebar Navigation section with role-based visibility rules
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -36,16 +40,18 @@
 4. [Core Components](#core-components)
 5. [Architecture Overview](#architecture-overview)
 6. [Detailed Component Analysis](#detailed-component-analysis)
-7. [Dependency Analysis](#dependency-analysis)
-8. [Performance Considerations](#performance-considerations)
-9. [Troubleshooting Guide](#troubleshooting-guide)
-10. [Conclusion](#conclusion)
-11. [Appendices](#appendices)
+7. [User Management Interface](#user-management-interface)
+8. [Route Protection and Access Control](#route-protection-and-access-control)
+9. [Dependency Analysis](#dependency-analysis)
+10. [Performance Considerations](#performance-considerations)
+11. [Troubleshooting Guide](#troubleshooting-guide)
+12. [Conclusion](#conclusion)
+13. [Appendices](#appendices)
 
 ## Introduction
 This document describes the frontend architecture of the Vue 3 application. It covers the component-based architecture, state management with Pinia, routing with Vue Router, and the plugin registry system. It also documents the layout system, reusable UI components, integration with backend APIs, component hierarchy, data flow patterns, and communication between the frontend and backend. Additional topics include the plugin view integration system, dynamic component loading, theme management, responsive design principles, accessibility considerations, and performance optimization strategies.
 
-**Updated** The application now implements an improved initialization sequence that ensures consistent visual presentation from the moment users access the interface.
+**Updated** The application now implements an improved initialization sequence that ensures consistent visual presentation from the moment users access the interface, along with a comprehensive user management system and enhanced role-based access control.
 
 ## Project Structure
 The frontend is organized around a clear separation of concerns with an optimized initialization sequence:
@@ -82,6 +88,9 @@ subgraph "UI Components"
 BTN["components/ui/Button.vue"]
 TT["components/ui/ThemeToggle.vue"]
 end
+subgraph "User Management"
+USERS["views/users/Users.vue"]
+end
 MJS --> INIT
 INIT --> THEME
 INIT --> AUTH
@@ -96,6 +105,7 @@ DL --> BTN
 DL --> TT
 SB --> REG
 DL --> AUTH
+USERS --> AUTH
 ```
 
 **Diagram sources**
@@ -103,6 +113,7 @@ DL --> AUTH
 - [stores/theme.js:32-46](file://frontend/src/stores/theme.js#L32-L46)
 - [stores/auth.js:91-103](file://frontend/src/stores/auth.js#L91-L103)
 - [stores/pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
+- [views/users/Users.vue:1-407](file://frontend/src/views/users/Users.vue#L1-L407)
 
 **Section sources**
 - [main.js:1-146](file://frontend/src/main.js#L1-L146)
@@ -193,7 +204,7 @@ The frontend follows a layered architecture with optimized initialization:
 - Presentation Layer: Views and components
 - Layout Layer: DashboardLayout and Sidebar
 - State Management: Pinia stores with proper initialization order
-- Routing: Vue Router with lazy-loaded plugin routes
+- Routing: Vue Router with lazy-loaded plugin routes and enhanced access control
 - Styling: Tailwind CSS with CSS custom properties and dark mode support
 - Backend Integration: REST endpoints accessed via fetch wrappers
 
@@ -206,8 +217,9 @@ AUTH["Auth Store<br/>fetchUser()"]
 REG["Plugin Registry<br/>initializePlugins()"]
 end
 subgraph "Presentation"
-VIEWS["Views (Dashboard, Settings, Help, Plugins)"]
+VIEWS["Views (Dashboard, Settings, Help, Plugins, Users)"]
 UI["UI Components (Button, Card, Input, Dropdown, etc.)"]
+UM["User Management Interface"]
 end
 subgraph "Layout"
 DL["DashboardLayout"]
@@ -220,12 +232,17 @@ THEMESTORE["Theme Store"]
 end
 subgraph "Routing"
 ROUTER["Vue Router"]
+GUARDS["Access Control Guards"]
 end
 subgraph "Styling"
 CSS["Tailwind CSS + main.css"]
 end
 subgraph "Backend"
 API["/api/v1/* endpoints"]
+USERSAPI["/api/v1/users/* endpoints"]
+ENDPOINTS["/api/v1/auth/* endpoints"]
+ENDPOINTS2["/api/v1/plugins endpoints"]
+ENDPOINTS3["/api/v1/settings endpoints"]
 end
 INIT --> THEME
 INIT --> AUTH
@@ -240,8 +257,12 @@ VIEWS --> AUTHSTORE
 SB --> REGSTORE
 DL --> THEMESTORE
 ROUTER --> VIEWS
+ROUTER --> GUARDS
 VIEWS --> API
-AUTHSTORE --> API
+AUTHSTORE --> ENDPOINTS
+AUTHSTORE --> USERSAPI
+REGSTORE --> ENDPOINTS2
+UM --> USERSAPI
 CSS --> UI
 CSS --> DL
 ```
@@ -251,6 +272,7 @@ CSS --> DL
 - [stores/theme.js:32-46](file://frontend/src/stores/theme.js#L32-L46)
 - [stores/auth.js:91-103](file://frontend/src/stores/auth.js#L91-L103)
 - [stores/pluginRegistry.js:19-52](file://frontend/src/stores/pluginRegistry.js#L19-L52)
+- [views/users/Users.vue:32-104](file://frontend/src/views/users/Users.vue#L32-L104)
 
 ## Detailed Component Analysis
 
@@ -306,7 +328,7 @@ MountApp --> End(["Application Ready"])
 ### Authentication and Session Management
 The authentication store encapsulates:
 - Token lifecycle (access/refresh), expiry checks, and persistence
-- Role-based access (admin/user)
+- Role-based access (admin/user/superuser)
 - Secure fetch wrapper that automatically retries on 401 with token refresh
 - Logout with backend cleanup
 
@@ -379,7 +401,7 @@ Router configuration:
 - Enforces guards:
   - requiresAuth for protected areas
   - guest for auth pages when already logged in
-  - requiresAdmin for admin-only routes
+  - requiresSuperuser for superuser-only routes
 
 ```mermaid
 flowchart TD
@@ -387,8 +409,8 @@ Enter(["Route Change"]) --> CheckGuest{"to.meta.guest?"}
 CheckGuest --> |Yes & Authenticated| RedirectHome["next('/dashboard')"]
 CheckGuest --> |No| CheckAuth{"to.meta.requiresAuth?"}
 CheckAuth --> |Yes & Not Authenticated| RedirectSignIn["next('/auth/signin')"]
-CheckAuth --> |No| CheckAdmin{"to.meta.requiresAdmin?"}
-CheckAdmin --> |Yes & Not Admin| RedirectDash["next('/dashboard')"]
+CheckAuth --> |No| CheckAdmin{"to.meta.requiresSuperuser?"}
+CheckAdmin --> |Yes & Not Superuser| RedirectDash["next('/dashboard')"]
 CheckAdmin --> |No| Proceed["next()"]
 ```
 
@@ -422,6 +444,7 @@ class Sidebar {
 +coreOtherItems
 +menuItemsBySection(section)
 +isItemVisible(item)
++hasSectionAccess(section)
 }
 class SidebarItem {
 +item : Object
@@ -435,12 +458,12 @@ Sidebar --> SidebarItem : "iterates"
 
 **Diagram sources**
 - [layouts/DashboardLayout.vue:1-125](file://frontend/src/layouts/DashboardLayout.vue#L1-L125)
-- [components/layout/Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
+- [components/layout/Sidebar.vue:1-277](file://frontend/src/components/layout/Sidebar.vue#L1-L277)
 - [components/layout/SidebarItem.vue:1-74](file://frontend/src/components/layout/SidebarItem.vue#L1-L74)
 
 **Section sources**
 - [layouts/DashboardLayout.vue:1-125](file://frontend/src/layouts/DashboardLayout.vue#L1-L125)
-- [components/layout/Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
+- [components/layout/Sidebar.vue:1-277](file://frontend/src/components/layout/Sidebar.vue#L1-L277)
 - [components/layout/SidebarItem.vue:1-74](file://frontend/src/components/layout/SidebarItem.vue#L1-L74)
 
 ### Reusable UI Components
@@ -539,6 +562,88 @@ Apply --> Render["Components re-render with new theme"]
 - [stores/theme.js:1-59](file://frontend/src/stores/theme.js#L1-L59)
 - [assets/css/main.css:31-51](file://frontend/src/assets/css/main.css#L31-L51)
 
+## User Management Interface
+
+The application now includes a comprehensive user management system designed for superuser access:
+
+### Features
+- **User Listing**: Displays all system users with filtering and sorting capabilities
+- **User Creation**: Form-based creation with validation and role assignment
+- **User Editing**: Modal-based editing with password change options
+- **User Deletion**: Confirmation-based deletion with safety checks
+- **Role Management**: Distinct role-based UI elements (user vs superuser badges)
+- **Status Management**: Active/inactive user toggles
+- **Real-time Updates**: Automatic refresh of user lists after operations
+
+### Implementation Details
+- **Data Flow**: Uses authStore.authFetch for all user operations
+- **Form Handling**: Comprehensive form validation and error handling
+- **Modal System**: Separate modals for create and edit operations
+- **Role-Based UI**: Different badge variants for user roles
+- **Security**: Prevents self-deletion and restricts role changes
+
+```mermaid
+sequenceDiagram
+participant U as "User"
+participant V as "Users.vue"
+participant AS as "Auth Store"
+participant BE as "Backend API"
+U->>V : "Click Add User"
+V->>V : "openCreateModal()"
+V->>BE : "POST /api/v1/users/"
+BE-->>AS : "200 Created"
+AS-->>V : "User created"
+V->>V : "fetchUsers()"
+V->>BE : "GET /api/v1/users/"
+BE-->>AS : "200 [users]"
+AS-->>V : "Updated user list"
+V->>U : "Display success message"
+```
+
+**Diagram sources**
+- [views/users/Users.vue:48-65](file://frontend/src/views/users/Users.vue#L48-L65)
+- [views/users/Users.vue:32-46](file://frontend/src/views/users/Users.vue#L32-L46)
+
+**Section sources**
+- [views/users/Users.vue:1-407](file://frontend/src/views/users/Users.vue#L1-L407)
+
+## Route Protection and Access Control
+
+The application implements a multi-layered access control system:
+
+### Role-Based Access Control
+- **Guest Routes**: Accessible only when not authenticated
+- **Authenticated Routes**: Require valid authentication
+- **Superuser Routes**: Restricted to superuser role only
+- **Role Checking**: Centralized role validation through auth store
+
+### Implementation Details
+- **requiresAuth**: Basic authentication requirement
+- **guest**: Prevents authenticated users from accessing auth pages
+- **requiresSuperuser**: Advanced role-based restriction
+- **Dynamic Role Checking**: Computed properties for role evaluation
+
+```mermaid
+flowchart TD
+RouteChange["Route Change"] --> GuestCheck{"requiresAuth?"}
+GuestCheck --> |Yes| AuthCheck{"isAuthenticated?"}
+GuestCheck --> |No| SuperuserCheck{"requiresSuperuser?"}
+AuthCheck --> |No| RedirectAuth["Redirect to /auth/signin"]
+AuthCheck --> |Yes| SuperuserCheck
+SuperuserCheck --> |Yes| RoleCheck{"userRole === 'superuser'?"}
+SuperuserCheck --> |No| Proceed["Proceed to route"]
+RoleCheck --> |No| RedirectDash["Redirect to /dashboard"]
+RoleCheck --> |Yes| Proceed
+```
+
+**Diagram sources**
+- [router/index.js:165-177](file://frontend/src/router/index.js#L165-L177)
+- [stores/auth.js:19-27](file://frontend/src/stores/auth.js#L19-L27)
+
+**Section sources**
+- [router/index.js:1-180](file://frontend/src/router/index.js#L1-L180)
+- [stores/auth.js:1-198](file://frontend/src/stores/auth.js#L1-L198)
+
 ## Dependency Analysis
 External dependencies and integrations:
 - Vue 3, Vue Router, Pinia for framework and state
@@ -607,15 +712,24 @@ Common issues and resolutions:
   - Verify theme store initializes before authentication
   - Check for proper error handling in initApp()
   - Ensure plugin initialization completes before mounting
+- **New**: User management issues:
+  - Verify superuser role for accessing user management
+  - Check backend user endpoints availability
+  - Ensure proper error handling for user operations
+- **New**: Access control issues:
+  - Verify role-based navigation rules
+  - Check requiresSuperuser meta field implementation
+  - Confirm sidebar role-based visibility logic
 
 **Section sources**
 - [stores/auth.js:136-177](file://frontend/src/stores/auth.js#L136-L177)
 - [main.js:125-143](file://frontend/src/main.js#L125-L143)
 - [stores/theme.js:23-46](file://frontend/src/stores/theme.js#L23-L46)
 - [assets/css/main.css:1-77](file://frontend/src/assets/css/main.css#L1-L77)
+- [views/users/Users.vue:32-104](file://frontend/src/views/users/Users.vue#L32-L104)
 
 ## Conclusion
-The frontend employs a clean, modular architecture centered on Vue 3, Pinia, and Vue Router. The recent improvements to the application initialization sequence ensure consistent visual presentation from the moment users access the interface. The plugin registry system enables dynamic integration of features, while the layout and UI components provide a consistent, accessible, and responsive experience. Theme management and Tailwind CSS support both light and dark modes. The authentication store ensures secure, resilient communication with backend APIs. Together, these patterns deliver a scalable and maintainable frontend foundation with improved user experience.
+The frontend employs a clean, modular architecture centered on Vue 3, Pinia, and Vue Router. The recent improvements to the application initialization sequence ensure consistent visual presentation from the moment users access the interface. The addition of a comprehensive user management system provides superuser access to manage system users with role-based restrictions. The enhanced route protection system with requiresSuperuser meta field ensures proper access control across the application. The plugin registry system enables dynamic integration of features, while the layout and UI components provide a consistent, accessible, and responsive experience. Theme management and Tailwind CSS support both light and dark modes. The authentication store ensures secure, resilient communication with backend APIs. Together, these patterns deliver a scalable and maintainable frontend foundation with improved user experience and robust access control.
 
 ## Appendices
 
@@ -640,3 +754,4 @@ The frontend employs a clean, modular architecture centered on Vue 3, Pinia, and
 **Section sources**
 - [components/ui/Button.vue:25-53](file://frontend/src/components/ui/Button.vue#L25-L53)
 - [components/layout/SidebarItem.vue:34-72](file://frontend/src/components/layout/SidebarItem.vue#L34-L72)
+- [views/users/Users.vue:145-407](file://frontend/src/views/users/Users.vue#L145-L407)
