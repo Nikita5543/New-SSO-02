@@ -106,6 +106,15 @@ function getMenuItemsForPlugin(pluginName) {
         section: 'admin',
         order: 60
       }
+    ],
+    ipam: [
+      {
+        label: 'IPAM',
+        icon: icons.Globe,
+        path: '/plugins/ipam',
+        section: 'operations',
+        order: 25
+      }
     ]
   }
   
