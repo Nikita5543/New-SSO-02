@@ -15,8 +15,11 @@
 - [endpoints.py](file://backend/app/plugins/configuration/endpoints.py)
 - [endpoints.py](file://backend/app/plugins/incidents/endpoints.py)
 - [endpoints.py](file://backend/app/plugins/customer_services/endpoints.py)
+- [endpoints.py](file://backend/app/plugins/performance/endpoints.py)
 - [models.py](file://backend/app/plugins/customer_services/models.py)
 - [schemas.py](file://backend/app/plugins/customer_services/schemas.py)
+- [models.py](file://backend/app/plugins/performance/models.py)
+- [schemas.py](file://backend/app/plugins/performance/schemas.py)
 - [pluginRegistry.js](file://frontend/src/stores/pluginRegistry.js)
 - [main.js](file://frontend/src/main.js)
 - [index.js](file://frontend/src/router/index.js)
@@ -24,14 +27,16 @@
 - [Accounting.vue](file://frontend/src/plugins/accounting/views/Accounting.vue)
 - [Configuration.vue](file://frontend/src/plugins/configuration/views/Configuration.vue)
 - [CustomerServices.vue](file://frontend/src/plugins/customer_services/views/CustomerServices.vue)
+- [Performance.vue](file://frontend/src/plugins/performance/views/Performance.vue)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive documentation for the Customer Services plugin as a detailed example
-- Updated plugin architecture examples to include advanced features like CSV import and real-time service management
-- Enhanced frontend integration documentation with Vue.js component examples
-- Added new sections covering CSV data handling, real-time service management, and advanced plugin features
+- Added comprehensive documentation for the Performance plugin as a new system monitoring example
+- Enhanced plugin architecture examples to include advanced system monitoring features including Docker container monitoring, real-time metrics collection, and alarm generation
+- Updated frontend integration documentation with Vue.js component examples for system monitoring dashboards
+- Added new sections covering system metrics collection, Docker container monitoring, alarm management, and comprehensive UI components
+- Expanded plugin development lifecycle to include system monitoring plugin creation
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -40,14 +45,15 @@
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
 6. [Advanced Plugin Features](#advanced-plugin-features)
-7. [Dependency Analysis](#dependency-analysis)
-8. [Performance Considerations](#performance-considerations)
-9. [Troubleshooting Guide](#troubleshooting-guide)
-10. [Conclusion](#conclusion)
-11. [Appendices](#appendices)
+7. [System Monitoring Capabilities](#system-monitoring-capabilities)
+8. [Dependency Analysis](#dependency-analysis)
+9. [Performance Considerations](#performance-considerations)
+10. [Troubleshooting Guide](#troubleshooting-guide)
+11. [Conclusion](#conclusion)
+12. [Appendices](#appendices)
 
 ## Introduction
-This document describes the plugin-based system architecture of the platform. It explains how plugins are discovered, loaded, and registered in both the backend and frontend, and how they integrate with the main application. The system now includes advanced plugins like Customer Services that demonstrate sophisticated features such as CSV data import, real-time service management, and comprehensive Vue.js frontend integration. It also documents the standardized plugin structure, the plugin development lifecycle, and practical examples of plugin integration, menu generation, and state management. Communication patterns between the backend plugin loader and the frontend plugin registry are covered, along with extensibility mechanisms and best practices.
+This document describes the plugin-based system architecture of the platform. It explains how plugins are discovered, loaded, and registered in both the backend and frontend, and how they integrate with the main application. The system now includes advanced plugins like Performance and Customer Services that demonstrate sophisticated features such as system monitoring, Docker container management, real-time metrics collection, CSV data import, and comprehensive Vue.js frontend integration. It also documents the standardized plugin structure, the plugin development lifecycle, and practical examples of plugin integration, menu generation, and state management. Communication patterns between the backend plugin loader and the frontend plugin registry are covered, along with extensibility mechanisms and best practices.
 
 ## Project Structure
 The plugin system spans two primary areas:
@@ -63,22 +69,28 @@ C["Plugin Modules<br/>plugins/*/plugin.py"]
 D["Plugin Routers<br/>plugins/*/endpoints.py"]
 E["Plugin Models<br/>plugins/*/models.py"]
 F["Plugin Schemas<br/>plugins/*/schemas.py"]
+G["Performance Plugin<br/>performance/endpoints.py"]
+H["System Monitoring<br/>psutil/docker"]
 end
 subgraph "Frontend"
-G["Main Entry<br/>main.js"]
-H["Plugin Registry Store<br/>pluginRegistry.js"]
-I["Router & Views<br/>index.js + plugin views"]
-J["Vue Components<br/>CustomerServices.vue"]
+I["Main Entry<br/>main.js"]
+J["Plugin Registry Store<br/>pluginRegistry.js"]
+K["Router & Views<br/>index.js + plugin views"]
+L["Vue Components<br/>Performance.vue"]
+M["CustomerServices.vue"]
 end
 A --> B
 B --> C
 C --> D
 D --> E
 D --> F
+D --> G
 G --> H
-G --> I
 I --> J
-H --> I
+I --> K
+K --> L
+K --> M
+J --> K
 ```
 
 **Diagram sources**
@@ -86,12 +98,14 @@ H --> I
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
 - [plugin.py:1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
 - [endpoints.py:1-61](file://backend/app/plugins/accounting/endpoints.py#L1-L61)
+- [endpoints.py:24-67](file://backend/app/plugins/customer_services/endpoints.py#L24-L67)
+- [endpoints.py:265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [models.py:1-74](file://backend/app/plugins/customer_services/models.py#L1-L74)
 - [schemas.py:1-54](file://backend/app/plugins/customer_services/schemas.py#L1-L54)
 - [main.js:18-51](file://frontend/src/main.js#L18-L51)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [index.js:26-32](file://frontend/src/router/index.js#L26-L32)
-- [CustomerServices.vue:1-384](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L1-L384)
+- [Performance.vue:1-465](file://frontend/src/plugins/performance/views/Performance.vue#L1-L465)
 
 **Section sources**
 - [main.py:17-48](file://backend/app/main.py#L17-L48)
@@ -103,19 +117,22 @@ H --> I
 ## Core Components
 - Backend plugin loader: Discovers plugin directories, validates plugin metadata and registration function, constructs a plugin context, and invokes the plugin's register function to attach API routes.
 - Plugin modules: Provide metadata and a register function that includes a FastAPI router under a plugin-scoped prefix.
-- Plugin endpoints: Define API endpoints for each plugin's domain logic, including advanced features like CSV import and real-time data management.
+- Plugin endpoints: Define API endpoints for each plugin's domain logic, including advanced features like CSV import, system monitoring, and real-time data management.
 - Plugin models and schemas: Define SQLAlchemy models and Pydantic schemas for data persistence and validation.
 - Frontend plugin registry: Dynamically loads plugin manifests from the backend, aggregates menu items, and exposes computed state for UI rendering.
 - Frontend router and views: Define plugin routes and render plugin-specific views with comprehensive Vue.js components.
 
 Key responsibilities:
-- Backend: Plugin discovery, model registration, API router inclusion, CSV data import, and runtime plugin status exposure.
+- Backend: Plugin discovery, model registration, API router inclusion, CSV data import, system monitoring, and runtime plugin status exposure.
 - Frontend: Plugin manifest registration, menu aggregation, route composition, and complex view rendering with real-time data management.
 
 **Section sources**
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
 - [plugin.py:1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
+- [plugin.py](file://backend/app/plugins/performance/plugin.py)
 - [endpoints.py:1-61](file://backend/app/plugins/accounting/endpoints.py#L1-L61)
+- [endpoints.py:24-67](file://backend/app/plugins/customer_services/endpoints.py#L24-L67)
+- [endpoints.py:265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [models.py:1-74](file://backend/app/plugins/customer_services/models.py#L1-L74)
 - [schemas.py:1-54](file://backend/app/plugins/customer_services/schemas.py#L1-L54)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
@@ -124,7 +141,7 @@ Key responsibilities:
 
 ## Architecture Overview
 The system follows a dual-layer plugin architecture with advanced capabilities:
-- Backend layer: Plugins are Python packages under a dedicated directory. Each plugin defines a metadata dictionary and a register function that receives a FastAPI app and a plugin context. The loader imports plugin models first, then the plugin module, validates metadata, and calls register to attach routes. Advanced plugins like Customer Services include CSV import functionality and real-time data management.
+- Backend layer: Plugins are Python packages under a dedicated directory. Each plugin defines a metadata dictionary and a register function that receives a FastAPI app and a plugin context. The loader imports plugin models first, then the plugin module, validates metadata, and calls register to attach routes. Advanced plugins like Performance and Customer Services include CSV import functionality, system monitoring, and real-time data management.
 - Frontend layer: On startup, the frontend fetches the list of loaded plugins from the backend, constructs plugin manifests, and registers them in a Pinia store. Menu items are generated per plugin and exposed for the sidebar navigation. Complex Vue.js components handle real-time data updates and user interactions.
 
 ```mermaid
@@ -133,6 +150,7 @@ participant BE as "Backend App<br/>main.py"
 participant Loader as "Plugin Loader<br/>plugin_loader.py"
 participant Mod as "Plugin Module<br/>plugins/*/plugin.py"
 participant Router as "Plugin Router<br/>plugins/*/endpoints.py"
+participant Perf as "Performance Endpoints<br/>performance/endpoints.py"
 participant CSV as "CSV Import<br/>services.csv"
 participant FE as "Frontend Main<br/>main.js"
 participant Reg as "Plugin Registry<br/>pluginRegistry.js"
@@ -145,6 +163,7 @@ BE-->>FE : "loaded plugins list"
 FE->>Reg : "registerPlugin(manifest)"
 FE->>FE : "generate menu items per plugin"
 FE->>CSV : "load CSV data (Customer Services)"
+FE->>Perf : "fetch system metrics (Performance)"
 ```
 
 **Diagram sources**
@@ -153,6 +172,7 @@ FE->>CSV : "load CSV data (Customer Services)"
 - [plugin.py:1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
 - [endpoints.py:1-61](file://backend/app/plugins/accounting/endpoints.py#L1-L61)
 - [endpoints.py:24-67](file://backend/app/plugins/customer_services/endpoints.py#L24-L67)
+- [endpoints.py:265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [main.js:18-51](file://frontend/src/main.js#L18-L51)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
@@ -223,24 +243,25 @@ PluginModule --> FastAPIApp : "registers routes"
 **Diagram sources**
 - [plugin_loader.py:69-76](file://backend/app/core/plugin_loader.py#L69-L76)
 - [plugin.py:1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
-- [plugin.py:1-17](file://backend/app/plugins/customer_services/plugin.py#L1-L17)
+- [plugin.py](file://backend/app/plugins/performance/plugin.py)
 
 **Section sources**
 - [plugin.py:1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
 - [plugin.py:1-17](file://backend/app/plugins/configuration/plugin.py#L1-L17)
 - [plugin.py:1-17](file://backend/app/plugins/incidents/plugin.py#L1-L17)
 - [plugin.py:1-17](file://backend/app/plugins/inventory/plugin.py#L1-L17)
-- [plugin.py:1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
+- [plugin.py](file://backend/app/plugins/performance/plugin.py)
 - [plugin.py:1-17](file://backend/app/plugins/security_module/plugin.py#L1-L17)
 - [plugin.py:1-17](file://backend/app/plugins/customer_services/plugin.py#L1-L17)
 
 ### Plugin Endpoints and API Exposure
-Each plugin defines an API router with endpoints for its domain. The loader attaches each router under a prefix derived from the plugin's metadata name. Authentication and authorization are enforced via dependency-injected security functions. Advanced plugins like Customer Services include CSV import functionality and real-time data management capabilities.
+Each plugin defines an API router with endpoints for its domain. The loader attaches each router under a prefix derived from the plugin's metadata. Authentication and authorization are enforced via dependency-injected security functions. Advanced plugins like Performance and Customer Services include CSV import functionality, system monitoring, and real-time data management capabilities.
 
 ```mermaid
 sequenceDiagram
 participant Client as "Client"
 participant Router as "Plugin Router<br/>endpoints.py"
+participant Perf as "Performance Endpoints<br/>performance/endpoints.py"
 participant CSV as "CSV Handler<br/>load_csv_to_db"
 participant DB as "Database Session"
 participant Sec as "Security Dependencies"
@@ -248,7 +269,8 @@ Client->>Router : "HTTP Request"
 Router->>Sec : "Depends(get_current_user/admin)"
 Router->>CSV : "load_csv_to_db(db)"
 Router->>DB : "Depends(get_db)"
-Router-->>Client : "HTTP Response"
+Router->>Perf : "get_system_metrics()"
+Perf-->>Client : "HTTP Response"
 ```
 
 **Diagram sources**
@@ -256,12 +278,14 @@ Router-->>Client : "HTTP Response"
 - [endpoints.py:1-71](file://backend/app/plugins/configuration/endpoints.py#L1-L71)
 - [endpoints.py:1-122](file://backend/app/plugins/incidents/endpoints.py#L1-L122)
 - [endpoints.py:24-67](file://backend/app/plugins/customer_services/endpoints.py#L24-L67)
+- [endpoints.py:265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 
 **Section sources**
 - [endpoints.py:1-61](file://backend/app/plugins/accounting/endpoints.py#L1-L61)
 - [endpoints.py:1-71](file://backend/app/plugins/configuration/endpoints.py#L1-L71)
 - [endpoints.py:1-122](file://backend/app/plugins/incidents/endpoints.py#L1-L122)
 - [endpoints.py:24-67](file://backend/app/plugins/customer_services/endpoints.py#L24-L67)
+- [endpoints.py:265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 
 ### Frontend Plugin Registry and Menu Generation
 On startup, the frontend:
@@ -292,16 +316,16 @@ Init --> Ready["UI ready with plugin menus"]
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
 ### Frontend Router Integration and View Rendering
-The frontend router defines plugin routes and lazy-loads plugin views. Each plugin view consumes the backend APIs exposed under the plugin's prefixed endpoints. The Customer Services view demonstrates comprehensive data management with CSV import, real-time updates, and advanced filtering capabilities.
+The frontend router defines plugin routes and lazy-loads plugin views. Each plugin view consumes the backend APIs exposed under the plugin's prefixed endpoints. The Performance and Customer Services views demonstrate comprehensive data management with CSV import, real-time updates, and advanced filtering capabilities.
 
 ```mermaid
 sequenceDiagram
 participant Router as "Vue Router<br/>index.js"
-participant View as "Plugin View<br/>CustomerServices.vue"
+participant View as "Plugin View<br/>Performance.vue"
 participant Auth as "Auth Store"
-participant API as "Backend API<br/>/api/v1/plugins/customer_services"
+participant API as "Backend API<br/>/api/v1/plugins/performance"
 Router->>View : "Navigate to plugin route"
-View->>Auth : "authFetch('/api/v1/plugins/customer_services/')"
+View->>Auth : "authFetch('/api/v1/plugins/performance/system/overview')"
 Auth->>API : "Authenticated HTTP request"
 API-->>Auth : "JSON response"
 Auth-->>View : "Data"
@@ -309,12 +333,12 @@ View-->>Router : "Render UI"
 ```
 
 **Diagram sources**
-- [index.js:114-144](file://frontend/src/router/index.js#L114-L144)
-- [CustomerServices.vue:77-100](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L77-L100)
+- [index.js:134-137](file://frontend/src/router/index.js#L134-L137)
+- [Performance.vue:73](file://frontend/src/plugins/performance/views/Performance.vue#L73)
 
 **Section sources**
-- [index.js:114-144](file://frontend/src/router/index.js#L114-L144)
-- [CustomerServices.vue:77-100](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L77-L100)
+- [index.js:134-137](file://frontend/src/router/index.js#L134-L137)
+- [Performance.vue:73](file://frontend/src/plugins/performance/views/Performance.vue#L73)
 
 ## Advanced Plugin Features
 
@@ -392,31 +416,32 @@ CustomerService --> CustomerServiceResponse : "returns"
 - [schemas.py:6-54](file://backend/app/plugins/customer_services/schemas.py#L6-L54)
 
 ### Comprehensive Vue.js Frontend Integration
-The Customer Services frontend component demonstrates advanced Vue.js integration:
+The Customer Services and Performance frontend components demonstrate advanced Vue.js integration:
 - Real-time data fetching and display
 - Advanced filtering and search capabilities
 - Pagination with navigation controls
 - Modal-based service editing
 - Status-based visual indicators
 - Responsive table layout with column management
+- System monitoring dashboards with real-time metrics
 
 ```mermaid
 flowchart TD
-Component["CustomerServices.vue"] --> Data["Service Data Management"]
-Data --> Fetch["fetchServices()"]
-Fetch --> Search["Search & Filter"]
-Search --> Pagination["Pagination Controls"]
-Pagination --> Modal["Edit Modal"]
-Modal --> Update["saveChanges()"]
-Update --> Refresh["Refresh List"]
-Refresh --> Component
+Component["Performance.vue"] --> Data["System Data Management"]
+Data --> Fetch["fetchSystemData()"]
+Fetch --> Metrics["System Metrics"]
+Metrics --> Containers["Docker Containers"]
+Containers --> Alarms["Alarm Management"]
+Alarms --> Stats["Plugin Statistics"]
+Stats --> Update["Auto-refresh every 5s"]
+Update --> Component
 ```
 
 **Diagram sources**
-- [CustomerServices.vue:1-384](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L1-L384)
+- [Performance.vue:1-465](file://frontend/src/plugins/performance/views/Performance.vue#L1-L465)
 
 **Section sources**
-- [CustomerServices.vue:1-384](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L1-L384)
+- [Performance.vue:1-465](file://frontend/src/plugins/performance/views/Performance.vue#L1-L465)
 
 ### Practical Examples
 
@@ -447,6 +472,35 @@ FE->>FE : "Update UI & refresh list"
 **Section sources**
 - [CustomerServices.vue:77-142](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L77-L142)
 - [endpoints.py:69-147](file://backend/app/plugins/customer_services/endpoints.py#L69-L147)
+
+#### Example: Performance Plugin Integration
+- Backend: The Performance plugin registers a router under a plugin-scoped prefix and exposes endpoints for system metrics, Docker container monitoring, alarm generation, and system overview.
+- Frontend: The Performance view fetches real-time system data from the backend, renders comprehensive monitoring dashboards, displays system metrics, Docker container status, and active alarms.
+
+```mermaid
+sequenceDiagram
+participant FE as "Performance.vue"
+participant Auth as "Auth Store"
+participant API as "Backend Performance API"
+FE->>Auth : "authFetch('/api/v1/plugins/performance/system/overview')"
+Auth->>API : "GET /api/v1/plugins/performance/system/overview"
+API-->>Auth : "200 OK + system metrics, containers, alarms"
+Auth-->>FE : "JSON system data"
+FE->>FE : "Display metrics cards, container list, alarm alerts"
+FE->>Auth : "authFetch('/api/v1/plugins/performance/system/containers')"
+Auth->>API : "GET /api/v1/plugins/performance/system/containers"
+API-->>Auth : "200 OK + container status"
+Auth-->>FE : "Container data"
+FE->>FE : "Update dashboard with real-time data"
+```
+
+**Diagram sources**
+- [Performance.vue:73](file://frontend/src/plugins/performance/views/Performance.vue#L73)
+- [endpoints.py:289-300](file://backend/app/plugins/performance/endpoints.py#L289-L300)
+
+**Section sources**
+- [Performance.vue:73](file://frontend/src/plugins/performance/views/Performance.vue#L73)
+- [endpoints.py:289-300](file://backend/app/plugins/performance/endpoints.py#L289-L300)
 
 #### Example: Incidents Plugin Integration
 - Backend: The incidents plugin registers a router under a plugin-scoped prefix and exposes endpoints for listing, creating, retrieving, updating, and deleting incidents.
@@ -516,12 +570,222 @@ class PluginRegistryStore {
 **Section sources**
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
+## System Monitoring Capabilities
+
+### Real-Time System Metrics Collection
+The Performance plugin provides comprehensive system monitoring with:
+- CPU usage percentage, core count, and frequency monitoring
+- Memory usage tracking with total, available, and used metrics
+- Disk space monitoring with capacity utilization
+- Network I/O monitoring with sent and received bytes
+- Load average calculations for different time periods
+
+```mermaid
+classDiagram
+class SystemMetrics {
++timestamp : string
++cpu : CPUMetrics
++memory : MemoryMetrics
++disk : DiskMetrics
++network : NetworkMetrics
+}
+class CPUMetrics {
++percent : float
++count : int
++frequency_mhz : float
++load_avg_1m : float
++load_avg_5m : float
++load_avg_15m : float
+}
+class MemoryMetrics {
++total_gb : float
++available_gb : float
++used_gb : float
++percent : float
+}
+class DiskMetrics {
++total_gb : float
++used_gb : float
++free_gb : float
++percent : float
+}
+class NetworkMetrics {
++bytes_sent_mb : float
++bytes_recv_mb : float
++packets_sent : int
++packets_recv : int
+}
+SystemMetrics --> CPUMetrics
+SystemMetrics --> MemoryMetrics
+SystemMetrics --> DiskMetrics
+SystemMetrics --> NetworkMetrics
+```
+
+**Diagram sources**
+- [endpoints.py:67-121](file://backend/app/plugins/performance/endpoints.py#L67-L121)
+
+**Section sources**
+- [endpoints.py:67-121](file://backend/app/plugins/performance/endpoints.py#L67-L121)
+
+### Docker Container Monitoring
+The Performance plugin monitors Docker containers with:
+- Container status detection (running, stopped, unknown)
+- Health status assessment
+- Image information tracking
+- Project-specific filtering
+- Automatic error handling for Docker connectivity issues
+
+```mermaid
+flowchart TD
+Docker["Docker Daemon"] --> Command["docker ps -a --format"]
+Command --> Parse["Parse Container Info"]
+Parse --> Filter["Filter by Project"]
+Filter --> Status["Determine Status"]
+Status --> Health["Assess Health"]
+Health --> Containers["Container List"]
+```
+
+**Diagram sources**
+- [endpoints.py:18-64](file://backend/app/plugins/performance/endpoints.py#L18-L64)
+
+**Section sources**
+- [endpoints.py:18-64](file://backend/app/plugins/performance/endpoints.py#L18-L64)
+
+### Alarm Management System
+The Performance plugin implements intelligent alarm generation with:
+- CPU usage threshold monitoring (warning at 70%, critical at 90%)
+- Memory usage threshold monitoring (warning at 80%, critical at 90%)
+- Disk space threshold monitoring (warning at 80%, critical at 90%)
+- Docker container status monitoring for stopped containers
+- Comprehensive error handling and monitoring alerts
+
+```mermaid
+flowchart TD
+Metrics["System Metrics"] --> CPU["CPU Check"]
+Metrics --> Memory["Memory Check"]
+Metrics --> Disk["Disk Check"]
+Metrics --> Containers["Container Check"]
+CPU --> CPUCritical{"CPU > 90%?"}
+CPU --> CPUWarning{"CPU > 70%?"}
+Memory --> MemCritical{"Memory > 90%?"}
+Memory --> MemWarning{"Memory > 80%?"}
+Disk --> DiskCritical{"Disk > 90%?"}
+Disk --> DiskWarning{"Disk > 80%?"}
+Containers --> Stopped["Stopped Containers?"]
+CPUCritical --> Alarm1["Critical CPU Alarm"]
+CPUWarning --> Alarm2["Warning CPU Alarm"]
+MemCritical --> Alarm3["Critical Memory Alarm"]
+MemWarning --> Alarm4["Warning Memory Alarm"]
+DiskCritical --> Alarm5["Critical Disk Alarm"]
+DiskWarning --> Alarm6["Warning Disk Alarm"]
+Stopped --> Alarm7["Stopped Container Alarm"]
+Alarm1 --> Alarms["Alarm List"]
+Alarm2 --> Alarms
+Alarm3 --> Alarms
+Alarm4 --> Alarms
+Alarm5 --> Alarms
+Alarm6 --> Alarms
+Alarm7 --> Alarms
+```
+
+**Diagram sources**
+- [endpoints.py:123-199](file://backend/app/plugins/performance/endpoints.py#L123-L199)
+
+**Section sources**
+- [endpoints.py:123-199](file://backend/app/plugins/performance/endpoints.py#L123-L199)
+
+### Comprehensive Vue.js Monitoring Dashboard
+The Performance frontend component demonstrates advanced monitoring dashboard features:
+- Real-time system metrics display with progress bars
+- Docker container status monitoring with color-coded indicators
+- Active alarm management with severity levels
+- Auto-refresh functionality with manual refresh controls
+- Comprehensive error handling and user feedback
+- Plugin statistics and system overview
+
+```mermaid
+flowchart TD
+Dashboard["Performance Dashboard"] --> MetricsGrid["System Metrics Grid"]
+Dashboard --> ContainerList["Docker Container List"]
+Dashboard --> AlarmPanel["Alarm Management Panel"]
+Dashboard --> PluginStats["Plugin Statistics"]
+MetricsGrid --> CPUCard["CPU Usage Card"]
+MetricsGrid --> MemoryCard["Memory Usage Card"]
+MetricsGrid --> DiskCard["Disk Usage Card"]
+MetricsGrid --> NetworkCard["Network I/O Card"]
+ContainerList --> ContainerCards["Container Status Cards"]
+AlarmPanel --> AlarmAlerts["Active Alarm Alerts"]
+PluginStats --> PluginCards["Plugin Status Cards"]
+```
+
+**Diagram sources**
+- [Performance.vue:211-462](file://frontend/src/plugins/performance/views/Performance.vue#L211-L462)
+
+**Section sources**
+- [Performance.vue:211-462](file://frontend/src/plugins/performance/views/Performance.vue#L211-L462)
+
+### Practical Examples
+
+#### Example: System Monitoring Dashboard Integration
+- Backend: The Performance plugin exposes endpoints for system metrics, container status, alarms, and system overview, all protected by authentication.
+- Frontend: The Performance view fetches system data every 5 seconds, displays real-time metrics in dashboard cards, shows container status with color-coded indicators, and presents active alarms with severity levels.
+
+```mermaid
+sequenceDiagram
+participant FE as "Performance.vue"
+participant Auth as "Auth Store"
+participant API as "Backend Performance API"
+FE->>Auth : "authFetch('/api/v1/plugins/performance/system/overview')"
+Auth->>API : "GET /api/v1/plugins/performance/system/overview"
+API-->>Auth : "200 OK + metrics, containers, alarms"
+Auth-->>FE : "System overview data"
+FE->>FE : "Update metrics cards, container list, alarm panel"
+FE->>Auth : "authFetch('/api/v1/plugins/performance/system/containers')"
+Auth->>API : "GET /api/v1/plugins/performance/system/containers"
+API-->>Auth : "200 OK + container status"
+Auth-->>FE : "Container data"
+FE->>FE : "Update dashboard with real-time data"
+```
+
+**Diagram sources**
+- [Performance.vue:67-93](file://frontend/src/plugins/performance/views/Performance.vue#L67-L93)
+- [endpoints.py:289-300](file://backend/app/plugins/performance/endpoints.py#L289-L300)
+
+**Section sources**
+- [Performance.vue:67-93](file://frontend/src/plugins/performance/views/Performance.vue#L67-L93)
+- [endpoints.py:289-300](file://backend/app/plugins/performance/endpoints.py#L289-L300)
+
+#### Example: Alarm Management Integration
+- Backend: The Performance plugin generates alarms based on system thresholds and Docker container status, providing structured alarm data with severity levels.
+- Frontend: The Performance view displays alarms with appropriate icons and colors, shows alarm counts, and provides detailed alarm information with timestamps.
+
+```mermaid
+sequenceDiagram
+participant FE as "Performance.vue"
+participant Auth as "Auth Store"
+participant API as "Backend Performance API"
+FE->>Auth : "authFetch('/api/v1/plugins/performance/system/alarms')"
+Auth->>API : "GET /api/v1/plugins/performance/system/alarms"
+API-->>Auth : "200 OK + alarm list"
+Auth-->>FE : "Alarm data"
+FE->>FE : "Display alarm cards with severity colors"
+FE->>FE : "Show alarm counts and details"
+```
+
+**Diagram sources**
+- [Performance.vue:165-201](file://frontend/src/plugins/performance/views/Performance.vue#L165-L201)
+- [endpoints.py:281-286](file://backend/app/plugins/performance/endpoints.py#L281-L286)
+
+**Section sources**
+- [Performance.vue:165-201](file://frontend/src/plugins/performance/views/Performance.vue#L165-L201)
+- [endpoints.py:281-286](file://backend/app/plugins/performance/endpoints.py#L281-L286)
+
 ## Dependency Analysis
 The plugin system exhibits clear separation of concerns with advanced plugin capabilities:
 - Backend depends on the loader to discover and register plugins; each plugin depends on the loader-provided context to register routes.
 - Frontend depends on the backend for plugin metadata and on the registry store for UI composition.
 - Views depend on the router and the auth store for authenticated requests.
-- Advanced plugins like Customer Services have additional dependencies on CSV processing and real-time data management.
+- Advanced plugins like Performance and Customer Services have additional dependencies on system monitoring libraries, CSV processing, and real-time data management.
 
 ```mermaid
 graph TB
@@ -530,11 +794,15 @@ Loader --> PM["plugins/*/plugin.py"]
 PM --> PR["plugins/*/endpoints.py"]
 PR --> Models["plugins/*/models.py"]
 PR --> Schemas["plugins/*/schemas.py"]
+PR --> PerfEndpoints["plugins/performance/endpoints.py"]
+PerfEndpoints --> Psutil["psutil library"]
+PerfEndpoints --> Subprocess["subprocess library"]
 FE_Main["frontend main.js"] --> FE_Reg["pluginRegistry.js"]
 FE_Reg --> FE_Router["router/index.js"]
 FE_Router --> FE_Views["plugin views"]
 FE_Views --> Auth["auth store (implicit via authFetch)"]
 FE_Views --> CSV["CSV Processing (Customer Services)"]
+FE_Views --> PerfView["Performance Dashboard (Real-time)"]
 ```
 
 **Diagram sources**
@@ -542,18 +810,18 @@ FE_Views --> CSV["CSV Processing (Customer Services)"]
 - [main.py:17-48](file://backend/app/main.py#L17-L48)
 - [plugin.py:1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
 - [endpoints.py:1-61](file://backend/app/plugins/accounting/endpoints.py#L1-L61)
-- [models.py:1-74](file://backend/app/plugins/customer_services/models.py#L1-L74)
-- [schemas.py:1-54](file://backend/app/plugins/customer_services/schemas.py#L1-L54)
+- [endpoints.py:24-67](file://backend/app/plugins/customer_services/endpoints.py#L24-L67)
+- [endpoints.py:265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [main.js:18-51](file://frontend/src/main.js#L18-L51)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
-- [index.js:114-144](file://frontend/src/router/index.js#L114-L144)
+- [index.js:134-137](file://frontend/src/router/index.js#L134-L137)
 
 **Section sources**
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
 - [main.py:17-48](file://backend/app/main.py#L17-L48)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [main.js:18-51](file://frontend/src/main.js#L18-L51)
-- [index.js:114-144](file://frontend/src/router/index.js#L114-L144)
+- [index.js:134-137](file://frontend/src/router/index.js#L134-L137)
 
 ## Performance Considerations
 - Plugin discovery scans the plugins directory and imports modules; keep the number of plugins reasonable and avoid heavy imports in plugin initialization.
@@ -562,6 +830,8 @@ FE_Views --> CSV["CSV Processing (Customer Services)"]
 - Lazy-loading of plugin views reduces initial bundle size; maintain this pattern for scalability.
 - CSV import operations should be optimized to prevent duplicate data loading and minimize database writes.
 - Real-time data updates should implement efficient polling or WebSocket connections to reduce server load.
+- System monitoring endpoints should be optimized to minimize system resource consumption.
+- Docker container monitoring should handle timeouts and errors gracefully to prevent blocking operations.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -571,15 +841,18 @@ Common issues and resolutions:
 - Authentication failures: Verify that endpoints depend on appropriate security functions and that the frontend uses authenticated fetch calls.
 - CSV import issues: Check CSV file path and format, ensure proper delimiter usage, and verify database connection for data insertion.
 - Real-time data synchronization: Monitor database connection pool and implement proper error handling for data import operations.
+- System monitoring failures: Verify psutil installation, Docker daemon accessibility, and proper permissions for system resource access.
+- Performance plugin errors: Check Docker connectivity, system monitoring permissions, and network timeouts for external system calls.
 
 **Section sources**
 - [plugin_loader.py:89-97](file://backend/app/core/plugin_loader.py#L89-L97)
 - [plugin.py:9-16](file://backend/app/plugins/accounting/plugin.py#L9-L16)
 - [main.js:18-51](file://frontend/src/main.js#L18-L51)
 - [endpoints.py:24-67](file://backend/app/plugins/customer_services/endpoints.py#L24-L67)
+- [endpoints.py:18-64](file://backend/app/plugins/performance/endpoints.py#L18-L64)
 
 ## Conclusion
-The plugin system provides a clean, extensible architecture for both backend and frontend with advanced capabilities demonstrated by the Customer Services plugin. The backend loader standardizes plugin discovery and registration, while the frontend registry enables dynamic UI composition and navigation. The Customer Services plugin showcases sophisticated features including CSV import, real-time service management, and comprehensive Vue.js frontend integration. By adhering to the standardized plugin structure and leveraging the provided context and store utilities, developers can implement robust, maintainable plugins that integrate seamlessly with the main application and support complex business requirements.
+The plugin system provides a clean, extensible architecture for both backend and frontend with advanced capabilities demonstrated by the Performance and Customer Services plugins. The backend loader standardizes plugin discovery and registration, while the frontend registry enables dynamic UI composition and navigation. The Performance plugin showcases sophisticated system monitoring features including real-time metrics collection, Docker container monitoring, alarm management, and comprehensive Vue.js frontend integration. The Customer Services plugin demonstrates CSV import, real-time service management, and advanced frontend integration. By adhering to the standardized plugin structure and leveraging the provided context and store utilities, developers can implement robust, maintainable plugins that integrate seamlessly with the main application and support complex business requirements including system monitoring and real-time data management.
 
 ## Appendices
 
@@ -594,6 +867,7 @@ The plugin system provides a clean, extensible architecture for both backend and
 **Section sources**
 - [plugin.py:1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
 - [endpoints.py:1-61](file://backend/app/plugins/accounting/endpoints.py#L1-L61)
+- [plugin.py](file://backend/app/plugins/performance/plugin.py)
 - [plugin.py:1-17](file://backend/app/plugins/customer_services/plugin.py#L1-L17)
 - [models.py:1-74](file://backend/app/plugins/customer_services/models.py#L1-L74)
 - [schemas.py:1-54](file://backend/app/plugins/customer_services/schemas.py#L1-L54)
@@ -604,23 +878,37 @@ The plugin system provides a clean, extensible architecture for both backend and
 - Register routes in the plugin's register function.
 - Test endpoints via the backend API.
 - On the frontend, add menu items and ensure routes are defined.
-- Implement advanced features like CSV import and real-time data management.
+- Implement advanced features like CSV import, system monitoring, and real-time data management.
 - Deploy backend and frontend together; verify plugin appears in the UI.
 
 **Section sources**
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
 - [main.py:17-48](file://backend/app/main.py#L17-L48)
 - [main.js:53-113](file://frontend/src/main.js#L53-L113)
-- [index.js:114-144](file://frontend/src/router/index.js#L114-L144)
+- [index.js:134-137](file://frontend/src/router/index.js#L134-L137)
 
 ### Communication Patterns and Extensibility
 - Backend-to-Frontend: The backend exposes a simple JSON endpoint listing loaded plugins. The frontend consumes this endpoint to build plugin manifests and menus.
 - Data Sharing: Plugin views communicate with backend APIs using authenticated fetch calls, enabling secure data exchange.
 - Extensibility: New plugins require minimal boilerplate—metadata, registration, and endpoints—allowing rapid feature addition.
-- Advanced Features: Plugins can implement sophisticated functionality like CSV import, real-time data management, and complex frontend integrations.
+- Advanced Features: Plugins can implement sophisticated functionality like CSV import, system monitoring, real-time data management, and complex frontend integrations.
 
 **Section sources**
 - [main.py:84-87](file://backend/app/main.py#L84-L87)
 - [main.js:18-51](file://frontend/src/main.js#L18-L51)
-- [CustomerServices.vue:41-104](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L41-L104)
+- [Performance.vue:67-93](file://frontend/src/plugins/performance/views/Performance.vue#L67-L93)
 - [endpoints.py:24-67](file://backend/app/plugins/customer_services/endpoints.py#L24-L67)
+- [endpoints.py:265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
+
+### System Monitoring Plugin Implementation
+- System metrics collection using psutil library for CPU, memory, disk, and network monitoring.
+- Docker container status monitoring with subprocess integration and filtering by project context.
+- Alarm generation based on configurable thresholds with severity levels.
+- Real-time dashboard with auto-refresh functionality and comprehensive error handling.
+- Authentication integration for secure system monitoring access.
+
+**Section sources**
+- [endpoints.py:67-121](file://backend/app/plugins/performance/endpoints.py#L67-L121)
+- [endpoints.py:18-64](file://backend/app/plugins/performance/endpoints.py#L18-L64)
+- [endpoints.py:123-199](file://backend/app/plugins/performance/endpoints.py#L123-L199)
+- [Performance.vue:67-130](file://frontend/src/plugins/performance/views/Performance.vue#L67-L130)

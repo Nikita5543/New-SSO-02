@@ -19,6 +19,8 @@
 - [backend/app/plugins/accounting/plugin.py](file://backend/app/plugins/accounting/plugin.py)
 - [backend/app/plugins/configuration/plugin.py](file://backend/app/plugins/configuration/plugin.py)
 - [backend/app/plugins/incidents/plugin.py](file://backend/app/plugins/incidents/plugin.py)
+- [backend/app/plugins/performance/plugin.py](file://backend/app/plugins/performance/plugin.py)
+- [backend/app/plugins/performance/endpoints.py](file://backend/app/plugins/performance/endpoints.py)
 - [backend/app/plugins/accounting/endpoints.py](file://backend/app/plugins/accounting/endpoints.py)
 - [backend/app/plugins/configuration/endpoints.py](file://backend/app/plugins/configuration/endpoints.py)
 - [backend/app/plugins/incidents/endpoints.py](file://backend/app/plugins/incidents/endpoints.py)
@@ -28,19 +30,22 @@
 - [frontend/src/components/layout/Sidebar.vue](file://frontend/src/components/layout/Sidebar.vue)
 - [frontend/src/views/auth/SignIn.vue](file://frontend/src/views/auth/SignIn.vue)
 - [frontend/src/views/auth/SignUp.vue](file://frontend/src/views/auth/SignUp.vue)
+- [frontend/src/views/help/Documentation.vue](file://frontend/src/views/help/Documentation.vue)
+- [frontend/src/plugins/performance/views/Performance.vue](file://frontend/src/plugins/performance/views/Performance.vue)
+- [frontend/src/plugins/customer_services/views/CustomerServices.vue](file://frontend/src/plugins/customer_services/views/CustomerServices.vue)
+- [frontend/src/plugins/incidents/views/IncidentsList.vue](file://frontend/src/plugins/incidents/views/IncidentsList.vue)
+- [frontend/src/plugins/ipam/views/Ipam.vue](file://frontend/src/plugins/ipam/views/Ipam.vue)
 - [frontend/src/main.js](file://frontend/src/main.js)
 - [frontend/src/router/index.js](file://frontend/src/router/index.js)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added new superuser role validation with get_current_superuser() function
-- Implemented plugin access controls with check_plugin_access() function
-- Enhanced role-based navigation with section-based access control
-- Added new user permissions endpoint for role-based access inspection
-- Updated security layer with comprehensive role hierarchy support
-- Enhanced frontend with plugin registry and section-based navigation
-- Added plugin-specific access control for different user roles
+- Enhanced authentication documentation to include secure authFetch method usage in performance monitoring components
+- Added comprehensive coverage of authFetch method implementation and usage patterns across all plugin components
+- Updated security best practices to emphasize centralized authentication logic for monitoring requests
+- Expanded plugin integration documentation with specific examples of secure API communication
+- Added detailed examples of authFetch usage in performance monitoring and other plugin components
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -56,6 +61,8 @@
 
 ## Introduction
 This document describes the JWT-based authentication and authorization system implemented in the backend and integrated with the frontend. It covers JWT token creation and validation, refresh token rotation, user roles and permissions, password hashing with bcrypt, and security best practices. The system now includes enhanced authentication with superuser role validation, plugin access controls, and improved role-based navigation. The document also documents the complete authentication flow from login to token refresh, endpoint specifications, request/response schemas, error handling, and the relationships among the authentication service, user models, and security utilities. Practical examples and security considerations for both backend and frontend implementations are included.
+
+**Updated** Enhanced documentation to reflect the secure authFetch method usage in performance monitoring components and other plugin integrations, demonstrating centralized authentication logic for all monitoring requests.
 
 ## Project Structure
 The authentication system spans several backend modules and integrates with the frontend via a Pinia store and Vue components:
@@ -89,13 +96,18 @@ subgraph "Plugins"
 PLUG_ACCOUNTING["Accounting Plugin"]
 PLUG_CONFIGURATION["Configuration Plugin"]
 PLUG_INCIDENTS["Incidents Plugin"]
+PLUG_PERFORMANCE["Performance Plugin<br/>Secure Monitoring Endpoints"]
 end
 subgraph "Frontend"
-FE_STORE["Auth Store<br/>Pinia"]
+FE_STORE["Auth Store<br/>Pinia<br/>authFetch Method"]
 FE_PLUGIN_REGISTRY["Plugin Registry<br/>Pinia"]
 FE_SIDEBAR["Sidebar Navigation<br/>Section-based access"]
 FE_VIEW["Sign-In View<br/>Vue"]
 FE_SIGNUP["Sign-Up View<br/>Vue"]
+FE_PERFORMANCE["Performance Component<br/>authFetch Usage"]
+FE_CUSTOMER_SERVICES["Customer Services Component<br/>authFetch Usage"]
+FE_INCIDENTS["Incidents Component<br/>authFetch Usage"]
+FE_IPAM["IPAM Component<br/>authFetch Usage"]
 end
 CFG --> SEC
 SEC --> API_AUTH
@@ -114,12 +126,17 @@ API_ROUTER --> API_USERS
 PLUGIN_LOADER --> PLUG_ACCOUNTING
 PLUGIN_LOADER --> PLUG_CONFIGURATION
 PLUGIN_LOADER --> PLUG_INCIDENTS
+PLUGIN_LOADER --> PLUG_PERFORMANCE
 MAIN --> API_ROUTER
 FE_STORE --> FE_VIEW
 FE_STORE --> FE_SIGNUP
 FE_PLUGIN_REGISTRY --> FE_SIDEBAR
 FE_STORE --> API_AUTH
 FE_STORE --> API_USERS
+FE_PERFORMANCE --> FE_STORE
+FE_CUSTOMER_SERVICES --> FE_STORE
+FE_INCIDENTS --> FE_STORE
+FE_IPAM --> FE_STORE
 ```
 
 **Diagram sources**
@@ -139,6 +156,7 @@ FE_STORE --> API_USERS
 - [backend/app/plugins/accounting/plugin.py:1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
 - [backend/app/plugins/configuration/plugin.py:1-17](file://backend/app/plugins/configuration/plugin.py#L1-L17)
 - [backend/app/plugins/incidents/plugin.py:1-17](file://backend/app/plugins/incidents/plugin.py#L1-L17)
+- [backend/app/plugins/performance/plugin.py:1-16](file://backend/app/plugins/performance/plugin.py#L1-L16)
 - [frontend/src/stores/auth.js:1-198](file://frontend/src/stores/auth.js#L1-L198)
 - [frontend/src/stores/pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [frontend/src/components/layout/Sidebar.vue:1-277](file://frontend/src/components/layout/Sidebar.vue#L1-L277)
@@ -212,7 +230,8 @@ PLUGIN_LOADER["Plugin Loader"]
 PLUGIN_ACCOUNTING["Accounting Plugin"]
 PLUGIN_CONFIGURATION["Configuration Plugin"]
 PLUGIN_INCIDENTS["Incidents Plugin"]
-FRONTEND["Frontend<br/>Auth Store + Plugin Registry"]
+PLUGIN_PERFORMANCE["Performance Plugin<br/>Secure Monitoring"]
+FRONTEND["Frontend<br/>Auth Store + Plugin Registry<br/>authFetch Method"]
 CLIENT --> AUTH_EP
 CLIENT --> USERS_EP
 AUTH_EP --> AUTH_SVC
@@ -225,9 +244,11 @@ SEC_UTIL --> PLUGIN_LOADER
 PLUGIN_LOADER --> PLUGIN_ACCOUNTING
 PLUGIN_LOADER --> PLUGIN_CONFIGURATION
 PLUGIN_LOADER --> PLUGIN_INCIDENTS
+PLUGIN_LOADER --> PLUGIN_PERFORMANCE
 FRONTEND --> CLIENT
 FRONTEND --> AUTH_EP
 FRONTEND --> USERS_EP
+FRONTEND --> PLUGIN_PERFORMANCE
 ```
 
 **Diagram sources**
@@ -400,75 +421,112 @@ O --> P
 **Section sources**
 - [backend/app/core/security.py:61-133](file://backend/app/core/security.py#L61-L133)
 
-### Enhanced Frontend Authentication Store and Usage
+### Enhanced Frontend Authentication Store and Secure API Communication
 - Maintains access token, refresh token, and expiry timestamp in localStorage
 - Provides login, register, logout, whoami, and protected fetch wrapper
 - Automatically refreshes access tokens when encountering 401 Unauthorized
 - Computes authentication state and role-based capabilities
+- **New** Secure authFetch method centralizes authentication logic for all monitoring requests
 - **New** Plugin registry for dynamic plugin management
 - **New** Section-based navigation with role-aware visibility
 
+**Updated** Enhanced documentation to include the secure authFetch method that centralizes authentication logic for all plugin components, ensuring consistent security practices across the application.
+
 ```mermaid
 sequenceDiagram
-participant V as "SignIn View"
+participant V as "Component"
 participant S as "Auth Store"
 participant EP as "Auth Endpoint"
-V->>S : login({username,password})
-S->>EP : POST /api/v1/auth/login
-EP-->>S : {access_token, refresh_token, user}
-S->>S : save tokens and expiry
-S-->>V : success
-Note over S : On protected request
-S->>EP : GET /api/v1/auth/me (with Bearer)
-EP-->>S : 401 Unauthorized
+V->>S : authFetch('/api/v1/plugins/performance/system/overview')
+S->>S : Check if Authorization header exists
+S->>EP : Fetch with Bearer token
+EP-->>S : 200 OK or 401 Unauthorized
+alt 401 Unauthorized
 S->>EP : POST /api/v1/auth/refresh
-EP-->>S : {access_token, refresh_token, user}
-S->>EP : retry original request
-EP-->>S : success
-Note over S : Plugin Registry
-S->>EP : GET /api/v1/users/me/permissions
-EP-->>S : {role, can_access_admin, sections}
-S->>S : update plugin registry
+EP-->>S : New token pair
+S->>EP : Retry original request
+EP-->>S : Success
+end
+S-->>V : Response data
 ```
 
 **Diagram sources**
-- [frontend/src/stores/auth.js:29-177](file://frontend/src/stores/auth.js#L29-L177)
-- [frontend/src/stores/pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
-- [frontend/src/views/auth/SignIn.vue:25-38](file://frontend/src/views/auth/SignIn.vue#L25-L38)
+- [frontend/src/stores/auth.js:160-177](file://frontend/src/stores/auth.js#L160-L177)
+- [frontend/src/plugins/performance/views/Performance.vue:72-93](file://frontend/src/plugins/performance/views/Performance.vue#L72-L93)
 
 **Section sources**
 - [frontend/src/stores/auth.js:29-177](file://frontend/src/stores/auth.js#L29-L177)
 - [frontend/src/stores/pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [frontend/src/views/auth/SignIn.vue:25-38](file://frontend/src/views/auth/SignIn.vue#L25-L38)
 
-### Plugin System Integration
+### Plugin System Integration with Secure Authentication
 - Dynamic plugin loading with ENABLED_PLUGINS configuration
 - Plugin access control integrated with user roles
 - Section-based navigation with role-aware visibility
 - Menu item registration with section categorization
+- **New** Centralized authFetch method ensures all plugin components use consistent authentication patterns
+
+**Updated** Enhanced documentation to cover the secure authentication patterns used across all plugin components, demonstrating how the authFetch method provides centralized authentication logic for monitoring requests.
 
 ```mermaid
 flowchart TD
-A["Plugin Loading"] --> B["Load Plugins Directory"]
-B --> C{"Enabled Plugins Configured?"}
-C --> |Yes| D["Filter by ENABLED_PLUGINS"]
-C --> |No| E["Load All Plugins"]
-D --> F["Import Plugin Module"]
-E --> F
-F --> G["Register Plugin Router"]
-G --> H["Add to Plugin Registry"]
-H --> I["Update Sidebar Navigation"]
+A["Plugin Component"] --> B["useAuthStore()"]
+B --> C["authFetch(url, options)"]
+C --> D{"Authorization header exists?"}
+D --> |No| E["Add Bearer token"]
+D --> |Yes| F["Use existing header"]
+E --> G["Fetch API"]
+F --> G
+G --> H{"Response 401?"}
+H --> |Yes| I["Refresh token automatically"]
+I --> J["Retry request with new token"]
+H --> |No| K["Return response"]
+J --> K
 ```
 
 **Diagram sources**
-- [backend/app/core/plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
-- [frontend/src/stores/pluginRegistry.js:26-36](file://frontend/src/stores/pluginRegistry.js#L26-L36)
-- [frontend/src/components/layout/Sidebar.vue:78-114](file://frontend/src/components/layout/Sidebar.vue#L78-L114)
+- [frontend/src/stores/auth.js:160-177](file://frontend/src/stores/auth.js#L160-L177)
+- [frontend/src/plugins/performance/views/Performance.vue:72-93](file://frontend/src/plugins/performance/views/Performance.vue#L72-L93)
+- [frontend/src/plugins/customer_services/views/CustomerServices.vue:88](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L88)
 
 **Section sources**
 - [backend/app/core/plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
 - [frontend/src/stores/pluginRegistry.js:26-36](file://frontend/src/stores/pluginRegistry.js#L26-L36)
 - [frontend/src/components/layout/Sidebar.vue:78-114](file://frontend/src/components/layout/Sidebar.vue#L78-L114)
+
+### Performance Monitoring with Secure Authentication
+- Performance plugin provides comprehensive system monitoring capabilities
+- Uses authFetch method for all API communications, ensuring consistent authentication
+- Implements automatic token refresh for continuous monitoring without manual intervention
+- Demonstrates best practices for secure monitoring request handling
+
+**New** Comprehensive documentation of the performance monitoring plugin's secure authentication implementation, showcasing how the authFetch method centralizes authentication logic for all monitoring requests.
+
+```mermaid
+sequenceDiagram
+participant P as "Performance Component"
+participant A as "Auth Store"
+participant API as "Performance API"
+P->>A : authFetch('/api/v1/plugins/performance/system/overview')
+A->>A : Check token validity
+A->>API : GET /api/v1/plugins/performance/system/overview
+API-->>A : 200 OK {metrics, containers, alarms}
+A-->>P : Response data
+Note over P,A : Auto-refresh every 5 seconds
+P->>A : authFetch('/api/v1/plugins/performance/system/overview')
+A->>API : GET /api/v1/plugins/performance/system/overview
+API-->>A : 200 OK
+A-->>P : Updated data
+```
+
+**Diagram sources**
+- [frontend/src/plugins/performance/views/Performance.vue:72-93](file://frontend/src/plugins/performance/views/Performance.vue#L72-L93)
+- [backend/app/plugins/performance/endpoints.py:289-300](file://backend/app/plugins/performance/endpoints.py#L289-L300)
+
+**Section sources**
+- [backend/app/plugins/performance/plugin.py:1-16](file://backend/app/plugins/performance/plugin.py#L1-L16)
+- [backend/app/plugins/performance/endpoints.py:1-300](file://backend/app/plugins/performance/endpoints.py#L1-L300)
+- [frontend/src/plugins/performance/views/Performance.vue:67-126](file://frontend/src/plugins/performance/views/Performance.vue#L67-L126)
 
 ## Dependency Analysis
 - Endpoints depend on services and schemas; services depend on models and security utilities; models depend on database base
@@ -476,6 +534,9 @@ H --> I["Update Sidebar Navigation"]
 - Frontend depends on backend endpoints for authentication operations
 - **New** Plugin system depends on security utilities for access control
 - **New** Frontend plugin registry depends on backend plugin manifests
+- **New** All plugin components depend on authFetch method for secure API communication
+
+**Updated** Enhanced dependency analysis to include the new authFetch method dependency across all plugin components, demonstrating centralized authentication logic.
 
 ```mermaid
 graph LR
@@ -494,6 +555,10 @@ FE_STORE["Auth Store"] --> AUTH_EP
 FE_STORE --> USERS_EP
 FE_PLUGIN_REGISTRY["Plugin Registry"] --> FE_SIDEBAR["Sidebar"]
 FE_SIDEBAR --> PLUGINS
+FE_PERFORMANCE["Performance Component"] --> FE_STORE
+FE_CUSTOMER_SERVICES["Customer Services Component"] --> FE_STORE
+FE_INCIDENTS["Incidents Component"] --> FE_STORE
+FE_IPAM["IPAM Component"] --> FE_STORE
 ```
 
 **Diagram sources**
@@ -524,6 +589,9 @@ FE_SIDEBAR --> PLUGINS
 - Frontend caching: Store tokens in secure storage and avoid unnecessary re-authentication by leveraging refresh automatically
 - **New** Plugin access control: Role-based access checks are performed server-side with minimal overhead
 - **New** Section-based navigation: Frontend computes visible sections based on user role for efficient UI rendering
+- **New** Centralized authFetch method: Reduces authentication overhead by eliminating redundant token management across components
+
+**Updated** Added performance considerations for the new authFetch method and centralized authentication approach, highlighting reduced overhead and improved efficiency.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -535,8 +603,10 @@ Common issues and resolutions:
 - **New** Superuser access denied: Returned when attempting superuser-only operations with insufficient privileges
 - **New** Plugin access denied: Returned when user role lacks permission for specific plugin section
 - **New** Plugin loading errors: Check ENABLED_PLUGINS configuration and plugin directory structure
+- **New** authFetch method failures: Verify token validity and automatic refresh functionality
+- **New** Performance monitoring authentication errors: Check authFetch method implementation and token refresh logic
 
-**Updated** Added troubleshooting guidance for superuser access and plugin access controls
+**Updated** Added troubleshooting guidance for superuser access, plugin access controls, and the new authFetch method implementation.
 
 **Section sources**
 - [backend/app/api/v1/endpoints/auth.py:26-36](file://backend/app/api/v1/endpoints/auth.py#L26-L36)
@@ -548,7 +618,11 @@ Common issues and resolutions:
 - [frontend/src/stores/auth.js:168-177](file://frontend/src/stores/auth.js#L168-L177)
 
 ## Conclusion
-The system implements a robust JWT-based authentication and authorization framework with enhanced role-based access control, refresh token rotation, and plugin integration. The addition of superuser validation and plugin access controls provides fine-grained security with section-based navigation. The backend provides clear separation of concerns across endpoints, services, models, and security utilities, while the frontend integrates seamlessly with the backend through a centralized authentication store and plugin registry. The dynamic plugin system allows for extensible functionality with built-in access control. Adhering to the documented best practices and using the provided examples will ensure secure and maintainable authentication across the platform.
+The system implements a robust JWT-based authentication and authorization framework with enhanced role-based access control, refresh token rotation, and plugin integration. The addition of superuser validation and plugin access controls provides fine-grained security with section-based navigation. The backend provides clear separation of concerns across endpoints, services, models, and security utilities, while the frontend integrates seamlessly with the backend through a centralized authentication store and plugin registry. The dynamic plugin system allows for extensible functionality with built-in access control. 
+
+**Updated** The system now includes a comprehensive secure authentication framework with the authFetch method centralizing authentication logic across all plugin components, ensuring consistent security practices for performance monitoring and other plugin integrations. The centralized approach addresses security vulnerabilities by providing a single point of authentication management and automatic token refresh handling.
+
+Adhering to the documented best practices and using the provided examples will ensure secure and maintainable authentication across the platform.
 
 ## Appendices
 
@@ -596,7 +670,12 @@ The system implements a robust JWT-based authentication and authorization framew
   - Response: PluginAccessResponse
   - Errors: 401 Unauthorized
 
-**Updated** Added new user permissions and plugin access endpoints
+- **New** GET /api/v1/plugins/performance/system/overview
+  - Description: Get complete system overview for performance monitoring
+  - Response: SystemOverviewResponse
+  - Errors: 401 Unauthorized, 403 Forbidden
+
+**Updated** Added new user permissions and plugin access endpoints, plus performance monitoring endpoints that demonstrate secure authentication usage.
 
 Schema references:
 - TokenPairWithUser: [backend/app/schemas/auth.py:16-17](file://backend/app/schemas/auth.py#L16-L17)
@@ -606,6 +685,7 @@ Schema references:
 - StatusResponse: [backend/app/schemas/common.py:5-7](file://backend/app/schemas/common.py#L5-L7)
 - UserPermissionsResponse: [backend/app/api/v1/endpoints/users.py:20-24](file://backend/app/api/v1/endpoints/users.py#L20-L24)
 - PluginAccessResponse: [backend/app/api/v1/endpoints/users.py:33-38](file://backend/app/api/v1/endpoints/users.py#L33-L38)
+- SystemOverviewResponse: [backend/app/plugins/performance/endpoints.py:294-299](file://backend/app/plugins/performance/endpoints.py#L294-L299)
 
 **Section sources**
 - [backend/app/api/v1/endpoints/auth.py:20-105](file://backend/app/api/v1/endpoints/auth.py#L20-L105)
@@ -630,11 +710,12 @@ Schema references:
   - Implement automatic token refresh on 401 responses
   - Clear tokens on logout and redirect to login
   - Use HTTPS and secure cookies if applicable
-  - **New** Implement plugin registry for dynamic plugin management
+  - **New** Implement centralized authFetch method for all plugin components
   - **New** Use section-based navigation with role-aware visibility
   - **New** Cache user permissions for efficient access control
+  - **New** Ensure all monitoring requests use authFetch for consistent authentication
 
-**Updated** Added security considerations for superuser access and plugin integration
+**Updated** Added security considerations for superuser access, plugin integration, and the new centralized authFetch method that ensures consistent authentication across all plugin components.
 
 ### Plugin Access Control Matrix
 - **Superuser Role**: Full access to all plugin sections
@@ -651,6 +732,57 @@ Schema references:
   - Admin: ❌ Denied
   - General: ✅ Allowed (for core navigation)
 
+**Updated** Enhanced access control matrix to reflect the new plugin access controls and section-based navigation system.
+
 **Section sources**
 - [backend/app/core/security.py:113-133](file://backend/app/core/security.py#L113-L133)
 - [frontend/src/components/layout/Sidebar.vue:29-45](file://frontend/src/components/layout/Sidebar.vue#L29-L45)
+
+### Secure Authentication Implementation Examples
+
+#### Performance Monitoring Component Usage
+The performance monitoring component demonstrates secure authentication through the authFetch method:
+
+```javascript
+// Performance component example
+async function fetchSystemData() {
+  try {
+    const response = await authStore.authFetch('/api/v1/plugins/performance/system/overview')
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Session expired. Please login again.')
+      }
+      throw new Error(`HTTP ${response.status}`)
+    }
+    
+    const data = await response.json()
+    // Process system metrics, containers, alarms
+  } catch (err) {
+    console.error('Failed to fetch system data:', err)
+  }
+}
+```
+
+#### Other Plugin Components
+All other plugin components follow the same secure authentication pattern:
+
+```javascript
+// Customer Services component example
+const response = await authStore.authFetch(`/api/v1/plugins/customer_services/services?${params.toString()}`)
+
+// Incidents component example  
+const response = await authStore.authFetch('/api/v1/plugins/incidents/')
+
+// IPAM component example
+const response = await authStore.authFetch('/api/v1/plugins/ipam/validate', {
+  method: 'POST'
+})
+```
+
+**New** Comprehensive examples of secure authentication implementation across all plugin components, demonstrating the centralized authFetch method approach.
+
+**Section sources**
+- [frontend/src/plugins/performance/views/Performance.vue:72-93](file://frontend/src/plugins/performance/views/Performance.vue#L72-L93)
+- [frontend/src/plugins/customer_services/views/CustomerServices.vue:88](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L88)
+- [frontend/src/plugins/incidents/views/IncidentsList.vue:45](file://frontend/src/plugins/incidents/views/IncidentsList.vue#L45)
+- [frontend/src/plugins/ipam/views/Ipam.vue:57](file://frontend/src/plugins/ipam/views/Ipam.vue#L57)

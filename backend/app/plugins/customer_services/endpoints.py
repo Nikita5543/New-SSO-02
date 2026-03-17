@@ -10,6 +10,7 @@ from app.core.security import get_current_active_user
 from app.models.user import User
 from app.plugins.customer_services.models import CustomerService
 from app.plugins.customer_services.schemas import (
+    CustomerServiceCreate,
     CustomerServiceUpdate,
     CustomerServiceResponse,
     CustomerServiceListResponse,
@@ -131,6 +132,20 @@ async def list_services(
         "count": total,
         "results": [service.to_dict() for service in services]
     }
+
+
+@router.post("/services", response_model=CustomerServiceResponse)
+async def create_service(
+    service_data: CustomerServiceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Create new service"""
+    service = CustomerService(**service_data.model_dump(exclude_unset=True))
+    db.add(service)
+    db.commit()
+    db.refresh(service)
+    return service.to_dict()
 
 
 @router.get("/services/{service_id}", response_model=CustomerServiceResponse)

@@ -16,7 +16,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit,
-  X
+  X,
+  Plus,
+  Save
 } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
@@ -30,7 +32,9 @@ const totalItems = ref(0)
 const selectedService = ref(null)
 const isModalOpen = ref(false)
 const isEditing = ref(false)
+const isNewService = ref(false)
 const editForm = ref({})
+const saving = ref(false)
 
 // Table columns (subset for display)
 const displayColumns = [
@@ -104,12 +108,49 @@ function openServiceModal(service) {
   editForm.value = { ...service }
   isModalOpen.value = true
   isEditing.value = false
+  isNewService.value = false
+}
+
+function openNewServiceModal() {
+  selectedService.value = {}
+  editForm.value = {
+    base_id: '',
+    activity: '',
+    client: '',
+    contract: '',
+    type_of_service: '',
+    status: 'Планирование',
+    order_num: '',
+    first_point: '',
+    second_point: '',
+    speed: '',
+    vlan_id: '',
+    switchboard_first_point: '',
+    switch_port_first_point: '',
+    port_settings_first_point: '',
+    switchboard_second_point: '',
+    switch_port_second_point: '',
+    port_settings_second_point: '',
+    subnets: '',
+    router: '',
+    interface: '',
+    auto_network: '',
+    end_client: '',
+    last_mile: '',
+    id_servicepipe: '',
+    comment: '',
+    responsible_department: '',
+  }
+  isModalOpen.value = true
+  isEditing.value = true
+  isNewService.value = true
 }
 
 function closeModal() {
   isModalOpen.value = false
   selectedService.value = null
   isEditing.value = false
+  isNewService.value = false
 }
 
 function startEditing() {
@@ -122,22 +163,38 @@ function cancelEditing() {
 }
 
 async function saveChanges() {
+  saving.value = true
   try {
-    const response = await authStore.authFetch(`/api/v1/plugins/customer_services/services/${selectedService.value.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editForm.value)
-    })
+    let response
+    
+    if (isNewService.value) {
+      // Create new service
+      response = await authStore.authFetch(`/api/v1/plugins/customer_services/services`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm.value)
+      })
+    } else {
+      // Update existing service
+      response = await authStore.authFetch(`/api/v1/plugins/customer_services/services/${selectedService.value.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm.value)
+      })
+    }
     
     if (response.ok) {
       const updated = await response.json()
       selectedService.value = updated
       isEditing.value = false
+      isNewService.value = false
       // Refresh list
       fetchServices()
     }
   } catch (e) {
     console.error('Error saving service:', e)
+  } finally {
+    saving.value = false
   }
 }
 
@@ -171,10 +228,16 @@ onMounted(() => {
         <h1 class="text-3xl font-bold tracking-tight">Customer Services</h1>
         <p class="text-muted-foreground mt-1">Service database management</p>
       </div>
-      <Button variant="outline" @click="fetchServices" :disabled="loading">
-        <RefreshCw :class="['h-4 w-4 mr-2', loading ? 'animate-spin' : '']" />
-        Refresh
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button @click="openNewServiceModal" class="gap-2">
+          <Plus class="h-4 w-4" />
+          Add Service
+        </Button>
+        <Button variant="outline" @click="fetchServices" :disabled="loading">
+          <RefreshCw :class="['h-4 w-4 mr-2', loading ? 'animate-spin' : '']" />
+          Refresh
+        </Button>
+      </div>
     </div>
 
     <!-- Filters -->
@@ -344,12 +407,14 @@ onMounted(() => {
         <!-- Modal Header -->
         <div class="flex items-center justify-between border-b p-4">
           <div>
-            <h2 class="text-xl font-semibold">Service Card</h2>
-            <p class="text-sm text-muted-foreground">ID: {{ selectedService?.base_id }}</p>
+            <h2 class="text-xl font-semibold">
+              {{ isNewService ? 'New Service' : 'Service Card' }}
+            </h2>
+            <p v-if="!isNewService" class="text-sm text-muted-foreground">ID: {{ selectedService?.base_id }}</p>
           </div>
           <div class="flex items-center gap-2">
             <Button 
-              v-if="!isEditing" 
+              v-if="!isEditing && !isNewService" 
               variant="outline" 
               size="sm"
               @click="startEditing"
@@ -405,8 +470,14 @@ onMounted(() => {
 
         <!-- Modal Footer -->
         <div v-if="isEditing" class="flex items-center justify-end gap-2 border-t p-4">
-          <Button variant="outline" @click="cancelEditing">Cancel</Button>
-          <Button @click="saveChanges">Save Changes</Button>
+          <Button variant="outline" @click="isNewService ? closeModal() : cancelEditing()">
+            Cancel
+          </Button>
+          <Button @click="saveChanges" :disabled="saving" class="gap-2">
+            <Save v-if="saving" class="h-4 w-4 animate-spin" />
+            <Save v-else class="h-4 w-4" />
+            {{ isNewService ? 'Create Service' : 'Save Changes' }}
+          </Button>
         </div>
       </div>
     </div>

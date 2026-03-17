@@ -11,6 +11,8 @@
 - [endpoints.py (Inventory)](file://backend/app/plugins/inventory/endpoints.py)
 - [plugin.py (Performance)](file://backend/app/plugins/performance/plugin.py)
 - [endpoints.py (Performance)](file://backend/app/plugins/performance/endpoints.py)
+- [models.py (Performance)](file://backend/app/plugins/performance/models.py)
+- [schemas.py (Performance)](file://backend/app/plugins/performance/schemas.py)
 - [plugin.py (Security Module)](file://backend/app/plugins/security_module/plugin.py)
 - [plugin.py (Accounting)](file://backend/app/plugins/accounting/plugin.py)
 - [plugin.py (Configuration)](file://backend/app/plugins/configuration/plugin.py)
@@ -20,21 +22,25 @@
 - [endpoints.py (Customer Services)](file://backend/app/plugins/customer_services/endpoints.py)
 - [models.py (Customer Services)](file://backend/app/plugins/customer_services/models.py)
 - [schemas.py (Customer Services)](file://backend/app/plugins/customer_services/schemas.py)
+- [plugin.py (VLAN)](file://backend/app/plugins/vlan/plugin.py)
+- [endpoints.py (VLAN)](file://backend/app/plugins/vlan/endpoints.py)
 - [pluginRegistry.js](file://frontend/src/stores/pluginRegistry.js)
 - [IncidentsList.vue](file://frontend/src/plugins/incidents/views/IncidentsList.vue)
 - [Performance.vue](file://frontend/src/plugins/performance/views/Performance.vue)
 - [Ipam.vue](file://frontend/src/plugins/ipam/views/Ipam.vue)
 - [CustomerServices.vue](file://frontend/src/plugins/customer_services/views/CustomerServices.vue)
+- [Vlan.vue](file://frontend/src/plugins/vlan/views/Vlan.vue)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive documentation for the Customer Services plugin as the 8th built-in plugin
-- Updated the plugin count from 7 to 8 built-in plugins
-- Enhanced the architecture overview to include Customer Services plugin examples
-- Updated configuration and selection criteria to include Customer Services plugin
-- Added detailed component analysis for Customer Services plugin functionality including CSV import, real-time updates, and statistics dashboard
-- Updated frontend integration documentation to include Customer Services Vue component
+- Updated Performance plugin documentation to reflect comprehensive system monitoring capabilities
+- Added detailed coverage of real-time system metrics, Docker container monitoring, and alerting functionality
+- Enhanced Performance plugin API endpoints documentation with new system monitoring routes
+- Updated Performance plugin frontend integration to show complete monitoring dashboard
+- Added VLAN plugin documentation as the 8th built-in plugin
+- Updated plugin count from 7 to 9 built-in plugins
+- Enhanced architecture overview to include expanded Performance plugin examples
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -49,7 +55,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document provides a comprehensive overview of the eight built-in plugins that ship with the system: Incidents, Inventory, Performance, Security Module, Accounting, Configuration, IPAM, and Customer Services. It explains each plugin's purpose, functionality, and integration within the overall platform, and demonstrates how these plugins illustrate the plugin architecture and serve as examples for developing custom plugins. It also covers plugin selection criteria, enable/disable mechanisms, and configuration options for each built-in plugin.
+This document provides a comprehensive overview of the nine built-in plugins that ship with the system: Incidents, Inventory, Performance, Security Module, Accounting, Configuration, IPAM, Customer Services, and VLAN. It explains each plugin's purpose, functionality, and integration within the overall platform, and demonstrates how these plugins illustrate the plugin architecture and serve as examples for developing custom plugins. The Performance plugin now serves as a complete system administration tool with comprehensive real-time monitoring and alerting capabilities. It includes system metrics collection, Docker container monitoring, and intelligent alert generation alongside traditional network performance monitoring.
 
 ## Project Structure
 The plugin system is implemented in the backend under a dedicated plugins directory. Each plugin exposes a plugin registration module and an API router. The backend loads plugins at startup, constructs per-plugin API prefixes, and registers routers with the main application. The frontend integrates plugin-managed UI views and menus via a plugin registry store.
@@ -68,11 +74,13 @@ PLUG_ACC["plugins/accounting/plugin.py"]
 PLUG_CFG["plugins/configuration/plugin.py"]
 PLUG_IPAM["plugins/ipam/plugin.py"]
 PLUG_CS["plugins/customer_services/plugin.py"]
+PLUG_VLAN["plugins/vlan/plugin.py"]
 API_INC["plugins/incidents/endpoints.py"]
 API_INV["plugins/inventory/endpoints.py"]
 API_PERF["plugins/performance/endpoints.py"]
 API_IPAM["plugins/ipam/endpoints.py"]
 API_CS["plugins/customer_services/endpoints.py"]
+API_VLAN["plugins/vlan/endpoints.py"]
 end
 subgraph "Frontend"
 REG["pluginRegistry.js<br/>Pinia store"]
@@ -80,6 +88,7 @@ VIEW_INC["IncidentsList.vue"]
 VIEW_PERF["Performance.vue"]
 VIEW_IPAM["Ipam.vue"]
 VIEW_CS["CustomerServices.vue"]
+VIEW_VLAN["Vlan.vue"]
 end
 MAIN --> LOADER
 LOADER --> CFG
@@ -91,20 +100,24 @@ LOADER --> PLUG_ACC
 LOADER --> PLUG_CFG
 LOADER --> PLUG_IPAM
 LOADER --> PLUG_CS
+LOADER --> PLUG_VLAN
 PLUG_INC --> API_INC
 PLUG_INV --> API_INV
 PLUG_PERF --> API_PERF
 PLUG_IPAM --> API_IPAM
 PLUG_CS --> API_CS
+PLUG_VLAN --> API_VLAN
 MAIN --> API_INC
 MAIN --> API_INV
 MAIN --> API_PERF
 MAIN --> API_IPAM
 MAIN --> API_CS
+MAIN --> API_VLAN
 REG --> VIEW_INC
 REG --> VIEW_PERF
 REG --> VIEW_IPAM
 REG --> VIEW_CS
+REG --> VIEW_VLAN
 ```
 
 **Diagram sources**
@@ -119,16 +132,19 @@ REG --> VIEW_CS
 - [plugin.py (Configuration):9-17](file://backend/app/plugins/configuration/plugin.py#L9-L17)
 - [plugin.py (IPAM):9-17](file://backend/app/plugins/ipam/plugin.py#L9-L17)
 - [plugin.py (Customer Services):9-17](file://backend/app/plugins/customer_services/plugin.py#L9-L17)
+- [plugin.py (VLAN):9-17](file://backend/app/plugins/vlan/plugin.py#L9-L17)
 - [endpoints.py (Incidents):15](file://backend/app/plugins/incidents/endpoints.py#L15)
 - [endpoints.py (Inventory):15](file://backend/app/plugins/inventory/endpoints.py#L15)
 - [endpoints.py (Performance):11](file://backend/app/plugins/performance/endpoints.py#L11)
 - [endpoints.py (IPAM):20-109](file://backend/app/plugins/ipam/endpoints.py#L20-L109)
 - [endpoints.py (Customer Services):18-172](file://backend/app/plugins/customer_services/endpoints.py#L18-172)
+- [endpoints.py (VLAN):14-221](file://backend/app/plugins/vlan/endpoints.py#L14-221)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [IncidentsList.vue:1-268](file://frontend/src/plugins/incidents/views/IncidentsList.vue#L1-L268)
-- [Performance.vue:1-34](file://frontend/src/plugins/performance/views/Performance.vue#L1-L34)
+- [Performance.vue:1-465](file://frontend/src/plugins/performance/views/Performance.vue#L1-L465)
 - [Ipam.vue:1-489](file://frontend/src/plugins/ipam/views/Ipam.vue#L1-L489)
 - [CustomerServices.vue:1-384](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L1-L384)
+- [Vlan.vue:1-429](file://frontend/src/plugins/vlan/views/Vlan.vue#L1-L429)
 
 **Section sources**
 - [main.py:17-48](file://backend/app/main.py#L17-L48)
@@ -158,6 +174,7 @@ Key behaviors:
 - [plugin.py (Configuration):1-17](file://backend/app/plugins/configuration/plugin.py#L1-L17)
 - [plugin.py (IPAM):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
 - [plugin.py (Customer Services):1-17](file://backend/app/plugins/customer_services/plugin.py#L1-L17)
+- [plugin.py (VLAN):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
 ## Architecture Overview
@@ -198,6 +215,7 @@ App-->>App : "Expose /api/v1/plugins for status"
 - [plugin.py (Configuration):9-17](file://backend/app/plugins/configuration/plugin.py#L9-L17)
 - [plugin.py (IPAM):9-17](file://backend/app/plugins/ipam/plugin.py#L9-L17)
 - [plugin.py (Customer Services):9-17](file://backend/app/plugins/customer_services/plugin.py#L9-L17)
+- [plugin.py (VLAN):9-17](file://backend/app/plugins/vlan/plugin.py#L9-L17)
 
 ## Detailed Component Analysis
 
@@ -276,38 +294,61 @@ Configuration and selection:
 - [endpoints.py (Inventory):18-130](file://backend/app/plugins/inventory/endpoints.py#L18-L130)
 
 ### Performance Plugin
+**Updated** Comprehensive system monitoring capabilities with real-time metrics and alerting
+
 Purpose:
-- Network performance monitoring with monitor targets and metric samples.
+- Complete system administration tool providing network performance monitoring alongside comprehensive system monitoring, Docker container management, and intelligent alerting.
 
 Functionality:
-- CRUD endpoints for monitor targets and retrieval of metric samples for a given target.
-- Supports listing, creating, retrieving, and deleting monitor targets; fetching recent metrics.
+- **Network Performance Monitoring**: CRUD endpoints for monitor targets and metric samples with threshold-based alerts.
+- **System Metrics Collection**: Real-time CPU, memory, disk, and network I/O monitoring with load averages.
+- **Docker Container Monitoring**: Live container status tracking with health checks and project filtering.
+- **Intelligent Alerting**: Automated detection of system issues with critical, warning, and informational severity levels.
+- **Dashboard Integration**: Complete system overview with metrics, container status, and active alarms.
+
+Real-time monitoring endpoints:
+- GET /system/metrics: Real-time CPU, memory, disk, and network metrics
+- GET /system/containers: Docker container status with health indicators
+- GET /system/alarms: Active system alerts with severity levels
+- GET /system/overview: Complete system dashboard with all monitoring data
 
 Integration:
-- Register function attaches the performance router with a plugin-specific API prefix and tags.
+- Register function attaches the performance router with a plugin-specific API prefix and "Performance" tag.
+- Frontend Performance.vue provides comprehensive monitoring dashboard with auto-refresh and visual indicators.
 
 ```mermaid
 sequenceDiagram
 participant FE as "Performance.vue"
 participant API as "Performance API"
-participant DB as "SQLAlchemy ORM"
-FE->>API : "GET /api/v1/plugins/performance/targets"
-API->>DB : "Query MonitorTarget"
-DB-->>API : "List[MonitorTarget]"
-API-->>FE : "JSON targets"
+participant System as "System Metrics"
+participant Docker as "Docker Daemon"
+participant Alerts as "Alarm Generator"
+FE->>API : "GET /api/v1/plugins/performance/system/overview"
+API->>System : "Collect CPU/Memory/Disk/Network"
+API->>Docker : "Query container status"
+API->>Alerts : "Generate system alarms"
+System-->>API : "System metrics data"
+Docker-->>API : "Container status"
+Alerts-->>API : "Active alarms"
+API-->>FE : "Complete system overview"
+FE->>FE : "Render metrics dashboard with auto-refresh"
 ```
 
 **Diagram sources**
-- [endpoints.py (Performance):14-58](file://backend/app/plugins/performance/endpoints.py#L14-L58)
+- [Performance.vue:68-93](file://frontend/src/plugins/performance/views/Performance.vue#L68-L93)
+- [endpoints.py (Performance):265-299](file://backend/app/plugins/performance/endpoints.py#L265-L299)
 - [plugin.py (Performance):9-17](file://backend/app/plugins/performance/plugin.py#L9-L17)
-- [Performance.vue:1-34](file://frontend/src/plugins/performance/views/Performance.vue#L1-L34)
 
 Configuration and selection:
 - Enable/disable via settings using the plugin directory name "performance".
+- API exposed under /api/v1/plugins/performance with comprehensive monitoring endpoints.
 
 **Section sources**
 - [plugin.py (Performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
-- [endpoints.py (Performance):11-75](file://backend/app/plugins/performance/endpoints.py#L11-L75)
+- [endpoints.py (Performance):11-300](file://backend/app/plugins/performance/endpoints.py#L11-L300)
+- [models.py (Performance):6-29](file://backend/app/plugins/performance/models.py#L6-L29)
+- [schemas.py (Performance):6-38](file://backend/app/plugins/performance/schemas.py#L6-L38)
+- [Performance.vue:1-465](file://frontend/src/plugins/performance/views/Performance.vue#L1-L465)
 
 ### Security Module Plugin
 Purpose:
@@ -370,8 +411,6 @@ Configuration and selection:
 - [plugin.py (Configuration):1-17](file://backend/app/plugins/configuration/plugin.py#L1-L17)
 
 ### IPAM Plugin
-**Updated** Added comprehensive documentation for the IPAM plugin
-
 Purpose:
 - NetBox IP Address Management integration for validating and managing IP addresses across network infrastructure.
 
@@ -422,8 +461,6 @@ Configuration and selection:
 - [Ipam.vue:1-489](file://frontend/src/plugins/ipam/views/Ipam.vue#L1-L489)
 
 ### Customer Services Plugin
-**New** Added comprehensive documentation for the Customer Services plugin as the 8th built-in plugin
-
 Purpose:
 - Customer services management for viewing and editing service database with CSV import capabilities.
 
@@ -489,6 +526,65 @@ Frontend Features:
 - [schemas.py (Customer Services):6-54](file://backend/app/plugins/customer_services/schemas.py#L6-54)
 - [CustomerServices.vue:1-384](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L1-L384)
 
+### VLAN Plugin
+**New** Comprehensive VLAN management and database functionality
+
+Purpose:
+- VLAN management system providing free and occupied VLAN database with advanced filtering and statistics.
+
+Functionality:
+- **Free VLAN Detection**: Identifies VLANs that are available for use based on service status.
+- **Occupied VLAN Tracking**: Monitors VLANs currently in use by active services.
+- **Advanced Filtering**: Supports searching by VLAN ID and previous client information.
+- **Statistics Dashboard**: Provides comprehensive VLAN usage statistics including totals and occupancy rates.
+- **Pagination Support**: Efficient handling of large VLAN datasets with configurable page sizes.
+
+Integration:
+- Register function attaches the VLAN router with a plugin-specific API prefix and "VLAN" tag.
+- Frontend Vue component provides dual-tab interface for free and occupied VLAN management.
+- Implements sophisticated parsing of VLAN ID formats including multiple separators.
+
+```mermaid
+sequenceDiagram
+participant FE as "Vlan.vue"
+participant Auth as "Auth Store"
+participant API as "VLAN API"
+participant DB as "SQLAlchemy ORM"
+FE->>Auth : "authFetch('/api/v1/plugins/vlan/free-vlans?page=1&page_size=100&search=query')"
+Auth->>API : "GET /free-vlans"
+API->>DB : "Query CustomerService with VLAN filtering"
+DB-->>API : "Filtered free VLANs with pagination"
+API-->>FE : "Paginated results with count"
+FE->>Auth : "authFetch('/api/v1/plugins/vlan/vlan-stats')"
+Auth->>API : "GET /vlan-stats"
+API->>DB : "Aggregate VLAN usage statistics"
+DB-->>API : "Statistics data"
+API-->>FE : "Total, occupied, and free VLAN counts"
+```
+
+**Diagram sources**
+- [Vlan.vue:39-94](file://frontend/src/plugins/vlan/views/Vlan.vue#L39-L94)
+- [endpoints.py (VLAN):42-161](file://backend/app/plugins/vlan/endpoints.py#L42-L161)
+- [plugin.py (VLAN):9-17](file://backend/app/plugins/vlan/plugin.py#L9-L17)
+
+Configuration and selection:
+- Enable/disable via settings using the plugin directory name "vlan".
+- API exposed under /api/v1/plugins/vlan with three endpoints:
+  - GET /free-vlans - Lists available VLANs with filtering and pagination
+  - GET /occupied-vlans - Lists VLANs in use with service details
+  - GET /vlan-stats - Returns comprehensive VLAN usage statistics
+
+VLAN Processing Logic:
+- Supports multiple VLAN ID formats: single VLAN, comma-separated, semicolon-separated, or space-separated.
+- VLAN validation ensures IDs are within the valid range (1-4094).
+- Occupancy determination based on service status: "Эксплуатация" (active) vs "Отключен" (disabled).
+- Intelligent free VLAN calculation considering service history and current status.
+
+**Section sources**
+- [plugin.py (VLAN):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
+- [endpoints.py (VLAN):14-221](file://backend/app/plugins/vlan/endpoints.py#L14-L221)
+- [Vlan.vue:1-429](file://frontend/src/plugins/vlan/views/Vlan.vue#L1-L429)
+
 ## Dependency Analysis
 The plugin system exhibits low coupling and high cohesion:
 - Backend loader depends on settings and dynamically imports plugin modules.
@@ -512,6 +608,7 @@ Manifests --> Menu["Aggregated menu items"]
 - [plugin.py (Incidents):1-17](file://backend/app/plugins/incidents/plugin.py#L1-L17)
 - [plugin.py (IPAM):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
 - [plugin.py (Customer Services):1-17](file://backend/app/plugins/customer_services/plugin.py#L1-L17)
+- [plugin.py (VLAN):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
 **Section sources**
@@ -524,9 +621,13 @@ Manifests --> Menu["Aggregated menu items"]
 - Per-plugin API prefixing avoids naming conflicts but increases routing surface; ensure efficient router organization.
 - Role-based endpoints (admin vs active user) reduce unnecessary processing for non-admin operations.
 - Consider pagination and filtering in endpoints to minimize payload sizes for large datasets.
+- **Updated** Performance plugin implements efficient system metrics collection using psutil library with appropriate timeouts.
+- **Updated** Performance plugin includes Docker container monitoring with project filtering to avoid exposing unrelated containers.
+- **Updated** Performance plugin generates intelligent alerts based on configurable thresholds for CPU, memory, disk usage, and container states.
 - **Updated** IPAM plugin endpoints support pagination and filtering for large IP address datasets, with configurable page sizes up to 100 items.
 - **Updated** Customer Services plugin implements efficient CSV import with existence checks to prevent duplicate data loading.
 - **Updated** Customer Services plugin uses SQLAlchemy's count() method for efficient pagination without loading all records.
+- **Updated** VLAN plugin implements optimized queries for large service datasets with efficient parsing and filtering algorithms.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -539,6 +640,11 @@ Common issues and resolutions:
 - Frontend menu missing:
   - Ensure the plugin manifest is registered in the frontend plugin registry store.
   - Confirm the manifest's enabled flag and menu items are properly set.
+- **Updated** Performance plugin specific issues:
+  - System metrics endpoint returns empty: Verify system monitoring permissions and psutil installation.
+  - Docker container monitoring fails: Check Docker daemon accessibility and container project filtering logic.
+  - Alarm generation errors: Verify system resource access and Docker connectivity.
+  - Dashboard not refreshing: Check auto-refresh interval and network connectivity.
 - **Updated** IPAM plugin specific issues:
   - Validation endpoint returns empty results: Verify NetBox connectivity and authentication.
   - Apply endpoint fails: Check NetBox API credentials and permissions.
@@ -548,6 +654,10 @@ Common issues and resolutions:
   - Services endpoint returns empty: Check database connection and ensure CSV data was successfully imported.
   - Modal editing fails: Verify user authentication and proper field validation.
   - Statistics endpoint slow: Large datasets may require pagination or filtering optimization.
+- **Updated** VLAN plugin specific issues:
+  - Free VLAN detection incorrect: Verify service status values match expected "Эксплуатация"/"Отключен" values.
+  - VLAN parsing failures: Check VLAN string format and separator characters.
+  - Occupancy statistics wrong: Verify service-to-VLAN relationship and status interpretation logic.
 
 Operational checks:
 - Startup logs indicate plugin load status and any errors encountered during import.
@@ -559,7 +669,7 @@ Operational checks:
 - [pluginRegistry.js:26-36](file://frontend/src/stores/pluginRegistry.js#L26-L36)
 
 ## Conclusion
-The eight built-in plugins showcase a clean, extensible plugin architecture. They demonstrate consistent patterns for metadata definition, registration, API prefixing, and role-aware endpoints. Their integration with the loader and frontend registry provides a practical blueprint for building custom plugins. Administrators can selectively enable or disable plugins via configuration, while developers can extend the system by adding new plugin directories following the established conventions. The IPAM plugin exemplifies the complete plugin lifecycle with sophisticated API endpoints and comprehensive frontend integration. The newly added Customer Services plugin demonstrates advanced features including CSV import, real-time statistics, and comprehensive data management capabilities.
+The nine built-in plugins showcase a clean, extensible plugin architecture. They demonstrate consistent patterns for metadata definition, registration, API prefixing, and role-aware endpoints. Their integration with the loader and frontend registry provides a practical blueprint for building custom plugins. Administrators can selectively enable or disable plugins via configuration, while developers can extend the system by adding new plugin directories following the established conventions. The Performance plugin exemplifies the complete plugin lifecycle with comprehensive system monitoring, real-time metrics, Docker container management, and intelligent alerting. The IPAM plugin demonstrates sophisticated external system integration, while the VLAN plugin showcases advanced data processing and filtering capabilities. Together, these plugins provide a robust foundation for network operations center functionality and serve as comprehensive examples for custom plugin development.
 
 ## Appendices
 
@@ -581,6 +691,16 @@ The eight built-in plugins showcase a clean, extensible plugin architecture. The
 - Plugin-specific:
   - Each plugin's API prefix is automatically constructed as /api/v1/plugins/{plugin_name}.
   - Tags are applied per plugin for API documentation grouping.
+- **Updated** Performance Plugin Endpoints:
+  - GET /targets - List monitor targets
+  - POST /targets - Create monitor target
+  - GET /targets/{id} - Get specific target
+  - DELETE /targets/{id} - Delete target
+  - GET /metrics/{target_id} - Get metric samples
+  - GET /system/metrics - Real-time system metrics
+  - GET /system/containers - Docker container status
+  - GET /system/alarms - Active system alarms
+  - GET /system/overview - Complete system dashboard
 - **Updated** IPAM Plugin Endpoints:
   - POST /validate: Validates IP address configuration against NetBox
   - POST /apply: Applies validated changes to NetBox
@@ -590,6 +710,10 @@ The eight built-in plugins showcase a clean, extensible plugin architecture. The
   - GET /services/{id}: Retrieves individual service by ID
   - PUT /services/{id}: Updates service information
   - GET /stats: Returns service statistics and status distribution
+- **Updated** VLAN Plugin Endpoints:
+  - GET /free-vlans: Lists available VLANs with filtering and pagination
+  - GET /occupied-vlans: Lists VLANs in use with service details
+  - GET /vlan-stats: Returns comprehensive VLAN usage statistics
 
 **Section sources**
 - [config.py:25-26](file://backend/app/core/config.py#L25-L26)
@@ -602,5 +726,8 @@ The eight built-in plugins showcase a clean, extensible plugin architecture. The
 - [plugin.py (Configuration):12-16](file://backend/app/plugins/configuration/plugin.py#L12-L16)
 - [plugin.py (IPAM):12-16](file://backend/app/plugins/ipam/plugin.py#L12-L16)
 - [plugin.py (Customer Services):12-16](file://backend/app/plugins/customer_services/plugin.py#L12-L16)
+- [plugin.py (VLAN):12-16](file://backend/app/plugins/vlan/plugin.py#L12-L16)
+- [endpoints.py (Performance):202-300](file://backend/app/plugins/performance/endpoints.py#L202-L300)
 - [endpoints.py (IPAM):20-109](file://backend/app/plugins/ipam/endpoints.py#L20-L109)
 - [endpoints.py (Customer Services):18-172](file://backend/app/plugins/customer_services/endpoints.py#L18-172)
+- [endpoints.py (VLAN):42-221](file://backend/app/plugins/vlan/endpoints.py#L42-L221)
