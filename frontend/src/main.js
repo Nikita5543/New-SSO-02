@@ -125,6 +125,15 @@ function getMenuItemsForPlugin(pluginName) {
         section: 'operations',
         order: 30
       }
+    ],
+    vlan: [
+      {
+        label: 'VLAN',
+        icon: icons.Network,
+        path: '/plugins/vlan',
+        section: 'operations',
+        order: 35
+      }
     ]
   }
   
