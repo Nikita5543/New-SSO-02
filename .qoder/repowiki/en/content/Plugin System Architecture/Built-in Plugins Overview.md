@@ -14,10 +14,21 @@
 - [plugin.py (Security Module)](file://backend/app/plugins/security_module/plugin.py)
 - [plugin.py (Accounting)](file://backend/app/plugins/accounting/plugin.py)
 - [plugin.py (Configuration)](file://backend/app/plugins/configuration/plugin.py)
+- [plugin.py (IPAM)](file://backend/app/plugins/ipam/plugin.py)
+- [endpoints.py (IPAM)](file://backend/app/plugins/ipam/endpoints.py)
 - [pluginRegistry.js](file://frontend/src/stores/pluginRegistry.js)
 - [IncidentsList.vue](file://frontend/src/plugins/incidents/views/IncidentsList.vue)
 - [Performance.vue](file://frontend/src/plugins/performance/views/Performance.vue)
+- [Ipam.vue](file://frontend/src/plugins/ipam/views/Ipam.vue)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added comprehensive documentation for the IPAM plugin
+- Updated the plugin count from 6 to 7 built-in plugins
+- Enhanced the architecture overview to include IPAM plugin examples
+- Updated configuration and selection criteria to include IPAM plugin
+- Added detailed component analysis for IPAM plugin functionality
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -32,7 +43,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document provides a comprehensive overview of the six built-in plugins that ship with the system: Incidents, Inventory, Performance, Security Module, Accounting, and Configuration. It explains each plugin’s purpose, functionality, and integration within the overall platform, and demonstrates how these plugins illustrate the plugin architecture and serve as examples for developing custom plugins. It also covers plugin selection criteria, enable/disable mechanisms, and configuration options for each built-in plugin.
+This document provides a comprehensive overview of the seven built-in plugins that ship with the system: Incidents, Inventory, Performance, Security Module, Accounting, Configuration, and IPAM. It explains each plugin's purpose, functionality, and integration within the overall platform, and demonstrates how these plugins illustrate the plugin architecture and serve as examples for developing custom plugins. It also covers plugin selection criteria, enable/disable mechanisms, and configuration options for each built-in plugin.
 
 ## Project Structure
 The plugin system is implemented in the backend under a dedicated plugins directory. Each plugin exposes a plugin registration module and an API router. The backend loads plugins at startup, constructs per-plugin API prefixes, and registers routers with the main application. The frontend integrates plugin-managed UI views and menus via a plugin registry store.
@@ -49,14 +60,17 @@ PLUG_PERF["plugins/performance/plugin.py"]
 PLUG_SEC["plugins/security_module/plugin.py"]
 PLUG_ACC["plugins/accounting/plugin.py"]
 PLUG_CFG["plugins/configuration/plugin.py"]
+PLUG_IPAM["plugins/ipam/plugin.py"]
 API_INC["plugins/incidents/endpoints.py"]
 API_INV["plugins/inventory/endpoints.py"]
 API_PERF["plugins/performance/endpoints.py"]
+API_IPAM["plugins/ipam/endpoints.py"]
 end
 subgraph "Frontend"
 REG["pluginRegistry.js<br/>Pinia store"]
 VIEW_INC["IncidentsList.vue"]
 VIEW_PERF["Performance.vue"]
+VIEW_IPAM["Ipam.vue"]
 end
 MAIN --> LOADER
 LOADER --> CFG
@@ -66,14 +80,18 @@ LOADER --> PLUG_PERF
 LOADER --> PLUG_SEC
 LOADER --> PLUG_ACC
 LOADER --> PLUG_CFG
+LOADER --> PLUG_IPAM
 PLUG_INC --> API_INC
 PLUG_INV --> API_INV
 PLUG_PERF --> API_PERF
+PLUG_IPAM --> API_IPAM
 MAIN --> API_INC
 MAIN --> API_INV
 MAIN --> API_PERF
+MAIN --> API_IPAM
 REG --> VIEW_INC
 REG --> VIEW_PERF
+REG --> VIEW_IPAM
 ```
 
 **Diagram sources**
@@ -86,12 +104,15 @@ REG --> VIEW_PERF
 - [plugin.py (Security Module):9-17](file://backend/app/plugins/security_module/plugin.py#L9-L17)
 - [plugin.py (Accounting):9-17](file://backend/app/plugins/accounting/plugin.py#L9-L17)
 - [plugin.py (Configuration):9-17](file://backend/app/plugins/configuration/plugin.py#L9-L17)
+- [plugin.py (IPAM):9-17](file://backend/app/plugins/ipam/plugin.py#L9-L17)
 - [endpoints.py (Incidents):15](file://backend/app/plugins/incidents/endpoints.py#L15)
 - [endpoints.py (Inventory):15](file://backend/app/plugins/inventory/endpoints.py#L15)
 - [endpoints.py (Performance):11](file://backend/app/plugins/performance/endpoints.py#L11)
+- [endpoints.py (IPAM):20-109](file://backend/app/plugins/ipam/endpoints.py#L20-109)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [IncidentsList.vue:1-268](file://frontend/src/plugins/incidents/views/IncidentsList.vue#L1-L268)
 - [Performance.vue:1-34](file://frontend/src/plugins/performance/views/Performance.vue#L1-L34)
+- [Ipam.vue:1-489](file://frontend/src/plugins/ipam/views/Ipam.vue#L1-L489)
 
 **Section sources**
 - [main.py:17-48](file://backend/app/main.py#L17-L48)
@@ -100,7 +121,7 @@ REG --> VIEW_PERF
 
 ## Core Components
 - Plugin loader: Discovers plugin directories, conditionally enables plugins, imports models and plugin modules, constructs a per-plugin API prefix, and registers routers into the main application.
-- Plugin registration: Each plugin defines metadata and a register function that includes the plugin’s router with a tag and a plugin-scoped API prefix.
+- Plugin registration: Each plugin defines metadata and a register function that includes the plugin's router with a tag and a plugin-scoped API prefix.
 - Configuration: The settings object exposes an environment variable to filter enabled plugins.
 - Frontend plugin registry: A Pinia store manages plugin manifests, enabled plugins, and aggregated menu items for rendering.
 
@@ -119,14 +140,15 @@ Key behaviors:
 - [plugin.py (Security Module):1-17](file://backend/app/plugins/security_module/plugin.py#L1-L17)
 - [plugin.py (Accounting):1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
 - [plugin.py (Configuration):1-17](file://backend/app/plugins/configuration/plugin.py#L1-L17)
+- [plugin.py (IPAM):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
 ## Architecture Overview
 The plugin architecture centers on a shared loader and per-plugin modules. At startup, the loader:
 - Reads settings to determine enabled plugins.
-- Imports each plugin’s models (if present) and plugin module.
+- Imports each plugin's models (if present) and plugin module.
 - Extracts metadata and register function.
-- Constructs a PluginContext and calls register to attach the plugin’s router to the main app.
+- Constructs a PluginContext and calls register to attach the plugin's router to the main app.
 
 ```mermaid
 sequenceDiagram
@@ -157,6 +179,7 @@ App-->>App : "Expose /api/v1/plugins for status"
 - [plugin.py (Security Module):9-17](file://backend/app/plugins/security_module/plugin.py#L9-L17)
 - [plugin.py (Accounting):9-17](file://backend/app/plugins/accounting/plugin.py#L9-L17)
 - [plugin.py (Configuration):9-17](file://backend/app/plugins/configuration/plugin.py#L9-L17)
+- [plugin.py (IPAM):9-17](file://backend/app/plugins/ipam/plugin.py#L9-L17)
 
 ## Detailed Component Analysis
 
@@ -193,7 +216,7 @@ FE->>FE : "Render cards and controls"
 - [plugin.py (Incidents):9-17](file://backend/app/plugins/incidents/plugin.py#L9-L17)
 
 Configuration and selection:
-- Enable/disable via settings using the plugin directory name “incidents”.
+- Enable/disable via settings using the plugin directory name "incidents".
 - API exposed under /api/v1/plugins/incidents.
 
 **Section sources**
@@ -228,7 +251,7 @@ API-->>FE : "JSON devices"
 - [plugin.py (Inventory):9-17](file://backend/app/plugins/inventory/plugin.py#L9-L17)
 
 Configuration and selection:
-- Enable/disable via settings using the plugin directory name “inventory”.
+- Enable/disable via settings using the plugin directory name "inventory".
 
 **Section sources**
 - [plugin.py (Inventory):1-17](file://backend/app/plugins/inventory/plugin.py#L1-L17)
@@ -262,7 +285,7 @@ API-->>FE : "JSON targets"
 - [Performance.vue:1-34](file://frontend/src/plugins/performance/views/Performance.vue#L1-L34)
 
 Configuration and selection:
-- Enable/disable via settings using the plugin directory name “performance”.
+- Enable/disable via settings using the plugin directory name "performance".
 
 **Section sources**
 - [plugin.py (Performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
@@ -291,7 +314,7 @@ Tags --> Ready["Ready for endpoints"]
 - [plugin.py (Security Module):9-17](file://backend/app/plugins/security_module/plugin.py#L9-L17)
 
 Configuration and selection:
-- Enable/disable via settings using the plugin directory name “security”.
+- Enable/disable via settings using the plugin directory name "security".
 
 **Section sources**
 - [plugin.py (Security Module):1-17](file://backend/app/plugins/security_module/plugin.py#L1-L17)
@@ -307,7 +330,7 @@ Integration:
 - Register function attaches the accounting router with a plugin-specific API prefix and tags.
 
 Configuration and selection:
-- Enable/disable via settings using the plugin directory name “accounting”.
+- Enable/disable via settings using the plugin directory name "accounting".
 
 **Section sources**
 - [plugin.py (Accounting):1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
@@ -323,15 +346,67 @@ Integration:
 - Register function attaches the configuration router with a plugin-specific API prefix and tags.
 
 Configuration and selection:
-- Enable/disable via settings using the plugin directory name “configuration”.
+- Enable/disable via settings using the plugin directory name "configuration".
 
 **Section sources**
 - [plugin.py (Configuration):1-17](file://backend/app/plugins/configuration/plugin.py#L1-L17)
 
+### IPAM Plugin
+**Updated** Added comprehensive documentation for the IPAM plugin
+
+Purpose:
+- NetBox IP Address Management integration for validating and managing IP addresses across network infrastructure.
+
+Functionality:
+- Provides three main API endpoints: validation, apply, and database querying.
+- Supports IP address validation comparing NetBox data with actual network state.
+- Enables batch application of IP address changes to NetBox.
+- Offers comprehensive database querying with filtering, sorting, and pagination capabilities.
+
+Integration:
+- Register function attaches the IPAM router with a plugin-specific API prefix and "IPAM" tag.
+- Frontend Vue component provides dual-tab interface for validation and database management.
+- Implements sophisticated filtering, sorting, and pagination for large IP address datasets.
+
+```mermaid
+sequenceDiagram
+participant FE as "Ipam.vue"
+participant Auth as "Auth Store"
+participant API as "IPAM API"
+participant NetBox as "NetBox API"
+FE->>Auth : "authFetch('/api/v1/plugins/ipam/validate')"
+Auth->>API : "POST /validate"
+API->>NetBox : "Execute validation script"
+NetBox-->>API : "Validation results"
+API-->>FE : "Added/Removed changes"
+FE->>Auth : "authFetch('/api/v1/plugins/ipam/apply')"
+Auth->>API : "POST /apply with changes"
+API->>NetBox : "Apply changes to NetBox"
+NetBox-->>API : "Confirmation"
+API-->>FE : "Success response"
+```
+
+**Diagram sources**
+- [Ipam.vue:53-100](file://frontend/src/plugins/ipam/views/Ipam.vue#L53-L100)
+- [endpoints.py (IPAM):20-58](file://backend/app/plugins/ipam/endpoints.py#L20-58)
+- [plugin.py (IPAM):9-17](file://backend/app/plugins/ipam/plugin.py#L9-L17)
+
+Configuration and selection:
+- Enable/disable via settings using the plugin directory name "ipam".
+- API exposed under /api/v1/plugins/ipam with three endpoints:
+  - POST /validate - Validates IP address configuration against NetBox
+  - POST /apply - Applies validated changes to NetBox
+  - GET /database - Retrieves IP address database with filtering and pagination
+
+**Section sources**
+- [plugin.py (IPAM):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
+- [endpoints.py (IPAM):20-109](file://backend/app/plugins/ipam/endpoints.py#L20-L109)
+- [Ipam.vue:1-489](file://frontend/src/plugins/ipam/views/Ipam.vue#L1-L489)
+
 ## Dependency Analysis
 The plugin system exhibits low coupling and high cohesion:
 - Backend loader depends on settings and dynamically imports plugin modules.
-- Each plugin module depends only on the loader’s PluginContext and FastAPI router.
+- Each plugin module depends only on the loader's PluginContext and FastAPI router.
 - Frontend registry depends on plugin manifests and aggregates menu items.
 
 ```mermaid
@@ -349,6 +424,7 @@ Manifests --> Menu["Aggregated menu items"]
 - [config.py:25-26](file://backend/app/core/config.py#L25-L26)
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
 - [plugin.py (Incidents):1-17](file://backend/app/plugins/incidents/plugin.py#L1-L17)
+- [plugin.py (IPAM):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
 **Section sources**
@@ -361,6 +437,7 @@ Manifests --> Menu["Aggregated menu items"]
 - Per-plugin API prefixing avoids naming conflicts but increases routing surface; ensure efficient router organization.
 - Role-based endpoints (admin vs active user) reduce unnecessary processing for non-admin operations.
 - Consider pagination and filtering in endpoints to minimize payload sizes for large datasets.
+- **Updated** IPAM plugin endpoints support pagination and filtering for large IP address datasets, with configurable page sizes up to 100 items.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -372,7 +449,11 @@ Common issues and resolutions:
   - Check that models are imported before registering routers to ensure database tables are created.
 - Frontend menu missing:
   - Ensure the plugin manifest is registered in the frontend plugin registry store.
-  - Confirm the manifest’s enabled flag and menu items are properly set.
+  - Confirm the manifest's enabled flag and menu items are properly set.
+- **Updated** IPAM plugin specific issues:
+  - Validation endpoint returns empty results: Verify NetBox connectivity and authentication.
+  - Apply endpoint fails: Check NetBox API credentials and permissions.
+  - Database endpoint slow: Use pagination parameters and filters to reduce payload size.
 
 Operational checks:
 - Startup logs indicate plugin load status and any errors encountered during import.
@@ -384,7 +465,7 @@ Operational checks:
 - [pluginRegistry.js:26-36](file://frontend/src/stores/pluginRegistry.js#L26-L36)
 
 ## Conclusion
-The six built-in plugins showcase a clean, extensible plugin architecture. They demonstrate consistent patterns for metadata definition, registration, API prefixing, and role-aware endpoints. Their integration with the loader and frontend registry provides a practical blueprint for building custom plugins. Administrators can selectively enable or disable plugins via configuration, while developers can extend the system by adding new plugin directories following the established conventions.
+The seven built-in plugins showcase a clean, extensible plugin architecture. They demonstrate consistent patterns for metadata definition, registration, API prefixing, and role-aware endpoints. Their integration with the loader and frontend registry provides a practical blueprint for building custom plugins. Administrators can selectively enable or disable plugins via configuration, while developers can extend the system by adding new plugin directories following the established conventions. The IPAM plugin exemplifies the complete plugin lifecycle with sophisticated API endpoints and comprehensive frontend integration.
 
 ## Appendices
 
@@ -404,8 +485,12 @@ The six built-in plugins showcase a clean, extensible plugin architecture. They 
 - Global:
   - ENABLED_PLUGINS: Comma-separated list of plugin names to load.
 - Plugin-specific:
-  - Each plugin’s API prefix is automatically constructed as /api/v1/plugins/{plugin_name}.
+  - Each plugin's API prefix is automatically constructed as /api/v1/plugins/{plugin_name}.
   - Tags are applied per plugin for API documentation grouping.
+- **Updated** IPAM Plugin Endpoints:
+  - POST /validate: Validates IP address configuration against NetBox
+  - POST /apply: Applies validated changes to NetBox
+  - GET /database: Retrieves IP address database with filtering and pagination
 
 **Section sources**
 - [config.py:25-26](file://backend/app/core/config.py#L25-L26)
@@ -416,3 +501,5 @@ The six built-in plugins showcase a clean, extensible plugin architecture. They 
 - [plugin.py (Security Module):12-16](file://backend/app/plugins/security_module/plugin.py#L12-L16)
 - [plugin.py (Accounting):12-16](file://backend/app/plugins/accounting/plugin.py#L12-L16)
 - [plugin.py (Configuration):12-16](file://backend/app/plugins/configuration/plugin.py#L12-L16)
+- [plugin.py (IPAM):12-16](file://backend/app/plugins/ipam/plugin.py#L12-L16)
+- [endpoints.py (IPAM):20-109](file://backend/app/plugins/ipam/endpoints.py#L20-L109)
