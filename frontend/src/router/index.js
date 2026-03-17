@@ -21,9 +21,15 @@ import Users from '@/views/users/Users.vue'
 
 // Help view
 import Help from '@/views/help/Help.vue'
+import Documentation from '@/views/help/Documentation.vue'
 
 // Plugin views
 const IncidentsList = () => import('@/plugins/incidents/views/IncidentsList.vue')
+const Accounting = () => import('@/plugins/accounting/views/Accounting.vue')
+const Inventory = () => import('@/plugins/inventory/views/Inventory.vue')
+const Performance = () => import('@/plugins/performance/views/Performance.vue')
+const Security = () => import('@/plugins/security/views/Security.vue')
+const Configuration = () => import('@/plugins/configuration/views/Configuration.vue')
 
 const routes = [
   {
@@ -100,11 +106,41 @@ const routes = [
         name: 'Help',
         component: Help
       },
+      {
+        path: 'help/documentation',
+        name: 'Documentation',
+        component: Documentation
+      },
       // Plugin routes
       {
         path: 'plugins/incidents',
         name: 'PluginsIncidents',
         component: IncidentsList
+      },
+      {
+        path: 'plugins/accounting',
+        name: 'PluginsAccounting',
+        component: Accounting
+      },
+      {
+        path: 'plugins/inventory',
+        name: 'PluginsInventory',
+        component: Inventory
+      },
+      {
+        path: 'plugins/performance',
+        name: 'PluginsPerformance',
+        component: Performance
+      },
+      {
+        path: 'plugins/security',
+        name: 'PluginsSecurity',
+        component: Security
+      },
+      {
+        path: 'plugins/configuration',
+        name: 'PluginsConfiguration',
+        component: Configuration
       }
     ]
   },

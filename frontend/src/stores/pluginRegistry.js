@@ -24,7 +24,7 @@ export const usePluginRegistryStore = defineStore('pluginRegistry', () => {
   }
 
   function registerPlugin(manifest) {
-    if (!manifest || !manifest.name || !manifest.routes) {
+    if (!manifest || !manifest.name) {
       console.warn('Invalid plugin manifest:', manifest)
       return
     }

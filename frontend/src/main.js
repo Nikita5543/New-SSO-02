@@ -35,7 +35,7 @@ async function initializePlugins() {
             version: plugin.version,
             description: plugin.description,
             enabled: true,
-            menuItems: getMenuItemsForPlugin(plugin.name)
+            menuItems: getMenuItemsForPlugin(plugin.name) || []
           }
           
           pluginRegistry.registerPlugin(manifest)
@@ -55,7 +55,7 @@ function getMenuItemsForPlugin(pluginName) {
   const menuConfig = {
     incidents: [
       {
-        title: 'Incidents',
+        label: 'Incidents',
         icon: icons.AlertTriangle,
         path: '/plugins/incidents',
         section: 'operations',
@@ -64,7 +64,7 @@ function getMenuItemsForPlugin(pluginName) {
     ],
     inventory: [
       {
-        title: 'Inventory',
+        label: 'Inventory',
         icon: icons.Package,
         path: '/plugins/inventory',
         section: 'operations',
@@ -73,7 +73,7 @@ function getMenuItemsForPlugin(pluginName) {
     ],
     performance: [
       {
-        title: 'Performance',
+        label: 'Performance',
         icon: icons.Activity,
         path: '/plugins/performance',
         section: 'analytics',
@@ -82,7 +82,7 @@ function getMenuItemsForPlugin(pluginName) {
     ],
     security_module: [
       {
-        title: 'Security',
+        label: 'Security',
         icon: icons.Shield,
         path: '/plugins/security',
         section: 'security',
@@ -91,7 +91,7 @@ function getMenuItemsForPlugin(pluginName) {
     ],
     accounting: [
       {
-        title: 'Accounting',
+        label: 'Accounting',
         icon: icons.DollarSign,
         path: '/plugins/accounting',
         section: 'admin',
@@ -100,7 +100,7 @@ function getMenuItemsForPlugin(pluginName) {
     ],
     configuration: [
       {
-        title: 'Configuration',
+        label: 'Configuration',
         icon: icons.Settings,
         path: '/plugins/configuration',
         section: 'admin',

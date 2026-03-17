@@ -22,20 +22,21 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      - DATABASE_URL=postgresql+psycopg2://noc:noc_password@db:5432/noc_vision
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
-      - ALLOWED_ORIGINS=http://localhost:3000,http://frontend:3000
-      - DEBUG=true
-      - DEFAULT_ADMIN_USERNAME=admin
-      - DEFAULT_ADMIN_PASSWORD=admin
-      - DEFAULT_ADMIN_EMAIL=admin@nocvision.local
+      DATABASE_URL: postgresql+psycopg2://noc:noc_password@db:5432/noc_vision
+      SECRET_KEY: dev-secret-key-change-in-production
+      DEBUG: "true"
+      DEFAULT_ADMIN_USERNAME: admin
+      DEFAULT_ADMIN_PASSWORD: admin
+      DEFAULT_ADMIN_EMAIL: admin@nocvision.local
     ports:
-      - "8000:8000"
+      - "8003:8000"
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - ./backend:/app
+    working_dir: /app
+    command: sh -c "python run.py"
 
   frontend:
     build:

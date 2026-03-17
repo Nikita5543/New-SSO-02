@@ -5,10 +5,17 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const accessToken = ref(localStorage.getItem('accessToken') || null)
   const refreshToken = ref(localStorage.getItem('refreshToken') || null)
+  const tokenExpiry = ref(localStorage.getItem('tokenExpiry') || null)
   const loading = ref(false)
   const error = ref(null)
 
-  const isAuthenticated = computed(() => !!accessToken.value && !!user.value)
+  const isAuthenticated = computed(() => {
+    // Проверяем наличие токена и не истёк ли он
+    if (!accessToken.value || !tokenExpiry.value) return false
+    const now = new Date().getTime()
+    return now < parseInt(tokenExpiry.value)
+  })
+  
   const isAdmin = computed(() => user.value?.role === 'admin')
   const userRole = computed(() => user.value?.role || 'user')
 
@@ -42,8 +49,14 @@ export const useAuthStore = defineStore('auth', () => {
       accessToken.value = data.access_token
       refreshToken.value = data.refresh_token
       user.value = data.user
+      
+      // Сохраняем токены на 3 часа (10800 секунд)
+      const expiryTime = new Date().getTime() + (3 * 60 * 60 * 1000)
       localStorage.setItem('accessToken', data.access_token)
       localStorage.setItem('refreshToken', data.refresh_token)
+      localStorage.setItem('tokenExpiry', expiryTime.toString())
+      tokenExpiry.value = expiryTime.toString()
+      
       return true
     } catch (e) {
       error.value = e.message
@@ -105,8 +118,14 @@ export const useAuthStore = defineStore('auth', () => {
       accessToken.value = data.access_token
       refreshToken.value = data.refresh_token
       user.value = data.user
+      
+      // Обновляем время экспирации
+      const expiryTime = new Date().getTime() + (3 * 60 * 60 * 1000)
       localStorage.setItem('accessToken', data.access_token)
       localStorage.setItem('refreshToken', data.refresh_token)
+      localStorage.setItem('tokenExpiry', expiryTime.toString())
+      tokenExpiry.value = expiryTime.toString()
+      
       return true
     } catch {
       await logout()
@@ -132,8 +151,10 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     accessToken.value = null
     refreshToken.value = null
+    tokenExpiry.value = null
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
+    localStorage.removeItem('tokenExpiry')
   }
 
   async function authFetch(url, options = {}) {
@@ -159,6 +180,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     accessToken,
     refreshToken,
+    tokenExpiry,
     loading,
     error,
     isAuthenticated,

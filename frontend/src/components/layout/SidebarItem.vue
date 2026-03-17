@@ -35,10 +35,10 @@ const hasChildren = computed(() =>
     <template #trigger="{ isOpen }">
       <div
         class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent"
-        :class="isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'"
+        :class="isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-accent-foreground'"
       >
         <component :is="item.icon" v-if="item.icon" class="h-4 w-4 shrink-0" />
-        <span class="flex-1 truncate">{{ item.label }}</span>
+        <span class="flex-1 truncate font-medium">{{ item.label }}</span>
         <ChevronRight
           class="h-4 w-4 shrink-0 transition-transform duration-200"
           :class="{ 'rotate-90': isOpen }"
@@ -59,7 +59,7 @@ const hasChildren = computed(() =>
   <RouterLink
     v-else
     :to="item.path"
-    class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent"
+    class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent hover:text-accent-foreground"
     :class="[
       route.path === item.path
         ? 'bg-accent text-accent-foreground font-medium'
@@ -68,6 +68,6 @@ const hasChildren = computed(() =>
     ]"
   >
     <component :is="item.icon" v-if="item.icon && !isSubItem" class="h-4 w-4 shrink-0" />
-    <span class="truncate">{{ item.label }}</span>
+    <span class="truncate font-medium">{{ item.label }}</span>
   </RouterLink>
 </template>
