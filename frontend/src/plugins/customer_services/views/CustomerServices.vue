@@ -241,7 +241,10 @@ onMounted(() => {
               <tr
                 v-for="service in services"
                 :key="service.id"
-                class="border-b last:border-b-0 hover:bg-muted/50 cursor-pointer transition-colors"
+                :class="[
+                  'border-b last:border-b-0 cursor-pointer transition-colors',
+                  service.status === 'Отключен' ? 'bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30' : 'hover:bg-muted/50'
+                ]"
                 @click="openServiceModal(service)"
               >
                 <td 
