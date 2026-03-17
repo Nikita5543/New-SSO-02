@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
 import { usePluginRegistryStore } from './stores/pluginRegistry'
+import { useThemeStore } from './stores/theme'
 import * as icons from 'lucide-vue-next'
 
 // Import styles
@@ -123,7 +124,11 @@ function getMenuItemsForPlugin(pluginName) {
 
 // Initialize auth state before mounting
 async function initApp() {
+  const themeStore = useThemeStore()
   const authStore = useAuthStore()
+  
+  // Initialize theme first (apply Light mode by default)
+  themeStore.initTheme()
   
   // Try to restore user session if token exists
   if (authStore.accessToken) {

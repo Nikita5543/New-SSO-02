@@ -30,6 +30,12 @@ export const useThemeStore = defineStore('theme', () => {
   }
 
   function initTheme() {
+    // Set default theme to light if not set
+    if (!localStorage.getItem('theme')) {
+      localStorage.setItem('theme', 'light')
+      theme.value = 'light'
+    }
+    
     // Listen for system theme changes
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     mediaQuery.addEventListener('change', (e) => {
