@@ -116,6 +116,15 @@ function getMenuItemsForPlugin(pluginName) {
         section: 'operations',
         order: 25
       }
+    ],
+    customer_services: [
+      {
+        label: 'Customer Services',
+        icon: icons.Briefcase,
+        path: '/plugins/customer-services',
+        section: 'operations',
+        order: 30
+      }
     ]
   }
   

@@ -31,6 +31,7 @@ const Performance = () => import('@/plugins/performance/views/Performance.vue')
 const Security = () => import('@/plugins/security/views/Security.vue')
 const Configuration = () => import('@/plugins/configuration/views/Configuration.vue')
 const Ipam = () => import('@/plugins/ipam/views/Ipam.vue')
+const CustomerServices = () => import('@/plugins/customer_services/views/CustomerServices.vue')
 
 const routes = [
   {
@@ -147,6 +148,11 @@ const routes = [
         path: 'plugins/ipam',
         name: 'PluginsIpam',
         component: Ipam
+      },
+      {
+        path: 'plugins/customer-services',
+        name: 'PluginsCustomerServices',
+        component: CustomerServices
       }
     ]
   },
