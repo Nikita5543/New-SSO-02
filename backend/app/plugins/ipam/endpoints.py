@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
+import httpx
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -15,6 +17,41 @@ class ValidationChange(BaseModel):
 
 class ApplyRequest(BaseModel):
     changes: List[ValidationChange]
+
+
+async def get_netbox_data(endpoint: str, params: Optional[Dict] = None):
+    """
+    Получить данные из NetBox API.
+    
+    Args:
+        endpoint: Endpoint относительно базового URL (например, 'ipam/ip-addresses/')
+        params: Параметры запроса
+    
+    Returns:
+        JSON ответ от NetBox
+    """
+    url = f"{settings.NETBOX_URL.rstrip('/')}/{endpoint.lstrip('/')}"
+    
+    headers = {
+        "Authorization": f"Bearer {settings.NETBOX_TOKEN}",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(url, headers=headers, params=params)
+        
+        if response.status_code == 401:
+            raise HTTPException(status_code=500, detail="NetBox authentication failed")
+        elif response.status_code == 403:
+            raise HTTPException(status_code=500, detail="NetBox permission denied")
+        elif response.status_code != 200:
+            raise HTTPException(
+                status_code=500,
+                detail=f"NetBox API error: {response.status_code} - {response.text[:200]}"
+            )
+        
+        return response.json()
 
 
 @router.post("/validate")
@@ -60,8 +97,8 @@ async def apply_changes(request: ApplyRequest):
 
 @router.get("/database")
 async def get_database(
-    page: int = 1,
-    page_size: int = 25,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
     q: Optional[str] = None,
     ordering: Optional[str] = None,
     vrf_id: Optional[str] = None,
@@ -69,40 +106,67 @@ async def get_database(
     vlan_vid: Optional[str] = None
 ):
     """
-    Получает все IP адреса из NetBox.
+    Получает все IP адреса из NetBox API.
     
-    TODO: Реализовать запрос к NetBox API
+    Поддерживаемые параметры:
+    - page: Номер страницы
+    - page_size: Количество элементов на странице (1-100)
+    - q: Поиск по всем полям
+    - ordering: Сортировка (prefix: 'field', desc: '-field')
+    - vrf_id: Фильтр по VRF
+    - status: Фильтр по статусу
+    - vlan_vid: Фильтр по VLAN ID
     """
-    # Заглушка - в реальности здесь будет запрос к NetBox API
-    return {
-        "count": 3,
-        "results": [
-            {
-                "id": 1,
-                "address": "192.168.1.1/24",
-                "vrf": {"name": "Management"},
-                "status": {"value": "active", "label": "Active"},
-                "vlan": {"vid": 100, "name": "MGMT"},
-                "description": "Management interface",
-                "interface": {"name": "eth0"}
-            },
-            {
-                "id": 2,
-                "address": "10.0.0.1/24",
-                "vrf": None,
-                "status": {"value": "reserved", "label": "Reserved"},
-                "vlan": {"vid": 200, "name": "DATA"},
-                "description": "Data network",
-                "interface": {"name": "ge-0/0/1"}
-            },
-            {
-                "id": 3,
-                "address": "172.16.0.1/24",
-                "vrf": {"name": "Production"},
-                "status": {"value": "dhcp", "label": "DHCP"},
-                "vlan": {"vid": 300, "name": "VOICE"},
-                "description": "Voice VLAN",
-                "interface": {"name": "ge-0/0/2"}
-            }
-        ]
+    params = {
+        "limit": page_size,
+        "offset": (page - 1) * page_size,
     }
+    
+    # Добавить фильтры
+    if q:
+        params["q"] = q
+    if vrf_id:
+        params["vrf_id"] = vrf_id
+    if status:
+        params["status"] = status
+    if vlan_vid:
+        params["vlan_vid"] = vlan_vid
+    if ordering:
+        params["ordering"] = ordering
+    
+    try:
+        data = await get_netbox_data("ipam/ip-addresses/", params)
+        
+        # Преобразовать данные в формат frontend
+        results = []
+        for item in data.get("results", []):
+            # Извлечь интерфейс, если есть
+            interface_name = "N/A"
+            if item.get("assigned_object"):
+                assigned_obj = item["assigned_object"]
+                interface_name = assigned_obj.get("name", "N/A")
+            
+            results.append({
+                "id": item.get("id"),
+                "address": item.get("address"),
+                "vrf": item.get("vrf") or {"name": "Global"},
+                "status": item.get("status"),
+                "vlan": item.get("vlan") or {"vid": "N/A"},
+                "description": item.get("description", ""),
+                "interface": {"name": interface_name}
+            })
+        
+        return {
+            "count": data.get("count", 0),
+            "next": data.get("next"),
+            "previous": data.get("previous"),
+            "results": results
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching data from NetBox: {str(e)}"
+        )

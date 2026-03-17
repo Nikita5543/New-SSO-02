@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     DEFAULT_ADMIN_PASSWORD: str = "admin"
     DEFAULT_ADMIN_EMAIL: str = "admin@nocvision.local"
 
+    # NetBox API Configuration
+    NETBOX_URL: str = "http://10.100.22.11:8000/api"
+    NETBOX_TOKEN: str = ""
+    NETBOX_API_VERSION: str = "v2"
+
     model_config = {
         "env_file": ".env",
         "case_sensitive": True,
