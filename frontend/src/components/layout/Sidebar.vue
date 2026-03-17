@@ -123,7 +123,14 @@ function isItemVisible(item) {
     <!-- Logo -->
     <div class="flex h-14 items-center border-b px-4">
       <RouterLink to="/dashboard" class="flex items-center gap-2" @click="emit('close')">
-        <img src="/logo.png" alt="NOC Vision" class="h-8 w-8" />
+        <div class="h-8 w-8 rounded-full bg-gradient-to-br from-lime-400 to-lime-500 flex items-center justify-center">
+          <svg viewBox="0 0 100 100" class="h-5 w-5">
+            <rect x="10" y="35" width="40" height="8" fill="#7c3aed" rx="2"/>
+            <rect x="25" y="55" width="35" height="8" fill="#7c3aed" rx="2" transform="rotate(45 42.5 59)"/>
+            <rect x="65" y="35" width="8" height="40" fill="#7c3aed" rx="2"/>
+            <circle cx="75" cy="25" r="10" fill="#5b21b6"/>
+          </svg>
+        </div>
         <span class="text-lg font-semibold">NOC Vision</span>
       </RouterLink>
     </div>
