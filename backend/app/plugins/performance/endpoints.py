@@ -16,10 +16,10 @@ router = APIRouter()
 
 
 def get_docker_containers():
-    """Get Docker container statuses"""
+    """Get Docker container statuses - only current project containers"""
     try:
         result = subprocess.run(
-            ['docker', 'ps', '-a', '--format', '{{.Names}}|{{.Status}}|{{.Image}}'],
+            ['docker', 'ps', '-a', '--format', '{{.Names}}|{{.Status}}|{{.Image}}|{{.Labels}}'],
             capture_output=True, text=True, timeout=10
         )
         containers = []
@@ -30,9 +30,19 @@ def get_docker_containers():
                     name = parts[0]
                     status = parts[1]
                     image = parts[2] if len(parts) > 2 else ''
+                    labels = parts[3] if len(parts) > 3 else ''
+                    
+                    # Filter: show only containers from this project (new-sso-02) or compose projects
+                    # Skip containers from other projects unless they're running
+                    is_our_project = 'new-sso-02' in name or 'com.docker.compose' in labels
+                    is_running = 'Up' in status
+                    
+                    # Skip stopped containers from other projects
+                    if not is_our_project and not is_running:
+                        continue
                     
                     # Parse status
-                    if 'Up' in status:
+                    if is_running:
                         state = 'running'
                         health = 'healthy' if 'healthy' in status else 'unknown'
                     elif 'Exited' in status:
