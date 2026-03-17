@@ -162,51 +162,74 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Alarms Section -->
-    <div v-if="alarms.length > 0" class="space-y-3">
-      <h2 class="text-lg font-semibold flex items-center gap-2">
-        <AlertTriangle class="h-5 w-5 text-red-500" />
-        Active Alarms ({{ alarms.length }})
-      </h2>
-      <div class="grid gap-3">
-        <div 
-          v-for="alarm in alarms" 
-          :key="alarm.timestamp + alarm.title"
-          :class="[
-            'flex items-start gap-3 p-4 rounded-lg border-l-4',
-            alarmColors[alarm.level].bgColor,
-            alarmColors[alarm.level].borderColor
-          ]"
-        >
-          <component 
-            :is="alarmColors[alarm.level].icon" 
-            :class="['h-5 w-5 mt-0.5', alarmColors[alarm.level].color]" 
-          />
-          <div class="flex-1">
-            <div class="flex items-center gap-2">
-              <span class="font-semibold" :class="alarmColors[alarm.level].color">
-                {{ alarm.title }}
-              </span>
-              <Badge :variant="alarm.level === 'critical' ? 'destructive' : 'secondary'">
-                {{ alarm.level.toUpperCase() }}
-              </Badge>
-            </div>
-            <p class="text-sm text-muted-foreground mt-1">{{ alarm.message }}</p>
-            <p class="text-xs text-muted-foreground mt-1">
-              {{ new Date(alarm.timestamp).toLocaleString() }}
-            </p>
+    <!-- Alarms Section - Always visible, no flickering -->
+    <Card class="border-l-4" :class="alarms.length > 0 ? 'border-l-red-500' : 'border-l-green-500'">
+      <CardHeader class="pb-3">
+        <div class="flex items-center justify-between">
+          <CardTitle class="flex items-center gap-2 text-lg">
+            <component 
+              :is="alarms.length > 0 ? AlertTriangle : CheckCircle" 
+              :class="alarms.length > 0 ? 'text-red-500' : 'text-green-500'"
+              class="h-5 w-5"
+            />
+            <span v-if="alarms.length > 0" class="text-red-600 dark:text-red-400">
+              Active Alarms ({{ alarms.length }})
+            </span>
+            <span v-else class="text-green-600 dark:text-green-400">
+              All Systems Operational
+            </span>
+          </CardTitle>
+          <div v-if="loading" class="flex items-center gap-2 text-sm text-muted-foreground">
+            <RefreshCw class="h-4 w-4 animate-spin" />
+            Updating...
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- No Alarms -->
-    <div v-else-if="!loading" class="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
-      <div class="flex items-center gap-2 text-green-600 dark:text-green-400">
-        <CheckCircle class="h-5 w-5" />
-        <span class="font-medium">All systems operational - no active alarms</span>
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent>
+        <!-- Alarms List -->
+        <div v-if="alarms.length > 0" class="grid gap-3">
+          <div 
+            v-for="alarm in alarms" 
+            :key="alarm.timestamp + alarm.title"
+            :class="[
+              'flex items-start gap-3 p-4 rounded-lg border-l-4',
+              alarmColors[alarm.level].bgColor,
+              alarmColors[alarm.level].borderColor
+            ]"
+          >
+            <component 
+              :is="alarmColors[alarm.level].icon" 
+              :class="['h-5 w-5 mt-0.5', alarmColors[alarm.level].color]" 
+            />
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold" :class="alarmColors[alarm.level].color">
+                  {{ alarm.title }}
+                </span>
+                <Badge :variant="alarm.level === 'critical' ? 'destructive' : 'secondary'">
+                  {{ alarm.level.toUpperCase() }}
+                </Badge>
+              </div>
+              <p class="text-sm text-muted-foreground mt-1">{{ alarm.message }}</p>
+              <p class="text-xs text-muted-foreground mt-1">
+                {{ new Date(alarm.timestamp).toLocaleString() }}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- No Alarms State -->
+        <div v-else class="flex items-center gap-3 p-4 bg-green-50/50 dark:bg-green-950/20 rounded-lg">
+          <div class="p-2 bg-green-500/10 rounded-full">
+            <CheckCircle class="h-6 w-6 text-green-500" />
+          </div>
+          <div>
+            <p class="font-medium text-green-700 dark:text-green-300">No active alarms</p>
+            <p class="text-sm text-muted-foreground">All monitored systems are running normally</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
 
     <!-- System Metrics Grid -->
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
