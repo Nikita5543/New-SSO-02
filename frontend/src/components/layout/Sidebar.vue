@@ -12,7 +12,6 @@ import {
   User,
   CreditCard,
   Bell,
-  Monitor,
   HelpCircle,
   AlertTriangle,
   Package,
@@ -124,7 +123,7 @@ function isItemVisible(item) {
     <!-- Logo -->
     <div class="flex h-14 items-center border-b px-4">
       <RouterLink to="/dashboard" class="flex items-center gap-2" @click="emit('close')">
-        <Monitor class="h-6 w-6 text-primary" />
+        <img src="/logo.png" alt="NOC Vision" class="h-8 w-8" />
         <span class="text-lg font-semibold">NOC Vision</span>
       </RouterLink>
     </div>
@@ -259,8 +258,23 @@ function isItemVisible(item) {
     <!-- User info -->
     <div class="border-t p-4">
       <div class="flex items-center gap-3">
-        <div class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-          {{ (authStore.user?.full_name || authStore.user?.username || '?').charAt(0).toUpperCase() }}
+        <!-- Avatar -->
+        <div class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium overflow-hidden">
+          <img 
+            v-if="authStore.user?.avatar_url && authStore.user.avatar_url.startsWith('system:')"
+            :src="`/avatars/avatar-${authStore.user.avatar_url.split(':')[1]}.svg`"
+            alt="Avatar"
+            class="h-full w-full object-cover"
+          />
+          <img 
+            v-else-if="authStore.user?.avatar_url"
+            :src="authStore.user.avatar_url"
+            alt="Avatar"
+            class="h-full w-full object-cover"
+          />
+          <template v-else>
+            {{ (authStore.user?.full_name || authStore.user?.username || '?').charAt(0).toUpperCase() }}
+          </template>
         </div>
         <div class="flex-1 truncate">
           <p class="text-sm font-medium truncate">

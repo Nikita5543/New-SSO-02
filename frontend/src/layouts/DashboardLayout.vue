@@ -82,7 +82,16 @@ async function handleLogout() {
         <DropdownMenu>
           <template #trigger>
             <button class="flex items-center gap-2 rounded-md p-1 hover:bg-accent">
-              <Avatar
+              <!-- Avatar with system or custom image -->
+              <div v-if="authStore.user?.avatar_url && authStore.user.avatar_url.startsWith('system:')" 
+                   class="h-8 w-8 overflow-hidden rounded-full">
+                <img :src="`/avatars/avatar-${authStore.user.avatar_url.split(':')[1]}.svg`" 
+                     alt="Avatar" class="h-full w-full object-cover" />
+              </div>
+              <div v-else-if="authStore.user?.avatar_url" class="h-8 w-8 overflow-hidden rounded-full">
+                <img :src="authStore.user.avatar_url" alt="Avatar" class="h-full w-full object-cover" />
+              </div>
+              <Avatar v-else
                 :alt="authStore.user?.full_name || authStore.user?.username"
                 size="sm"
               />

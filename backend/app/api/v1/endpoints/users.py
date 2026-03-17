@@ -24,6 +24,17 @@ async def get_user_permissions(
     }
 
 
+@router.put("/me/avatar", response_model=UserResponse)
+async def update_my_avatar(
+    avatar_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Обновить аватар текущего пользователя"""
+    avatar_url = avatar_data.get("avatar_url")
+    return user_service.update_user(db, current_user, avatar_url=avatar_url)
+
+
 @router.get("/plugins/access/{section}")
 async def check_plugin_section_access(
     section: str,
