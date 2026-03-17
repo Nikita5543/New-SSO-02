@@ -21,24 +21,35 @@
 - [package.json](file://frontend/package.json)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated Application Bootstrap section to reflect improved initialization sequence
+- Enhanced Core Components section with detailed initialization flow
+- Added new section on Application Initialization Sequence
+- Updated Architecture Overview to show proper initialization order
+- Modified Detailed Component Analysis to include initialization sequence details
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
-3. [Core Components](#core-components)
-4. [Architecture Overview](#architecture-overview)
-5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+3. [Application Initialization Sequence](#application-initialization-sequence)
+4. [Core Components](#core-components)
+5. [Architecture Overview](#architecture-overview)
+6. [Detailed Component Analysis](#detailed-component-analysis)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
+11. [Appendices](#appendices)
 
 ## Introduction
 This document describes the frontend architecture of the Vue 3 application. It covers the component-based architecture, state management with Pinia, routing with Vue Router, and the plugin registry system. It also documents the layout system, reusable UI components, integration with backend APIs, component hierarchy, data flow patterns, and communication between the frontend and backend. Additional topics include the plugin view integration system, dynamic component loading, theme management, responsive design principles, accessibility considerations, and performance optimization strategies.
 
+**Updated** The application now implements an improved initialization sequence that ensures consistent visual presentation from the moment users access the interface.
+
 ## Project Structure
-The frontend is organized around a clear separation of concerns:
-- Application bootstrap and initialization in main.js
+The frontend is organized around a clear separation of concerns with an optimized initialization sequence:
+- Application bootstrap and initialization in main.js with proper ordering
 - Root component rendering via App.vue
 - Routing configuration and navigation guards in router/index.js
 - Feature-specific views under views/
@@ -54,6 +65,10 @@ graph TB
 subgraph "Bootstrap"
 MJS["main.js"]
 APP["App.vue"]
+INIT["initApp() sequence"]
+THEME["stores/theme.js"]
+AUTH["stores/auth.js"]
+REG["stores/pluginRegistry.js"]
 end
 subgraph "Routing"
 ROUTER["router/index.js"]
@@ -67,18 +82,12 @@ subgraph "UI Components"
 BTN["components/ui/Button.vue"]
 TT["components/ui/ThemeToggle.vue"]
 end
-subgraph "Stores"
-AUTH["stores/auth.js"]
-REG["stores/pluginRegistry.js"]
-THEME["stores/theme.js"]
-end
-subgraph "Views"
-INC["plugins/incidents/views/IncidentsList.vue"]
-end
+MJS --> INIT
+INIT --> THEME
+INIT --> AUTH
+INIT --> REG
 MJS --> APP
 MJS --> ROUTER
-MJS --> AUTH
-MJS --> REG
 APP --> ROUTER
 ROUTER --> DL
 DL --> SB
@@ -87,31 +96,74 @@ DL --> BTN
 DL --> TT
 SB --> REG
 DL --> AUTH
-INC --> AUTH
 ```
 
 **Diagram sources**
-- [main.js:1-132](file://frontend/src/main.js#L1-L132)
-- [App.vue:1-17](file://frontend/src/App.vue#L1-L17)
-- [router/index.js:1-174](file://frontend/src/router/index.js#L1-L174)
-- [layouts/DashboardLayout.vue:1-125](file://frontend/src/layouts/DashboardLayout.vue#L1-L125)
-- [components/layout/Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
-- [components/layout/SidebarItem.vue:1-74](file://frontend/src/components/layout/SidebarItem.vue#L1-L74)
-- [components/ui/Button.vue:1-66](file://frontend/src/components/ui/Button.vue#L1-L66)
-- [components/ui/ThemeToggle.vue:1-36](file://frontend/src/components/ui/ThemeToggle.vue#L1-L36)
-- [stores/auth.js:1-198](file://frontend/src/stores/auth.js#L1-L198)
+- [main.js:125-143](file://frontend/src/main.js#L125-L143)
+- [stores/theme.js:32-46](file://frontend/src/stores/theme.js#L32-L46)
+- [stores/auth.js:91-103](file://frontend/src/stores/auth.js#L91-L103)
 - [stores/pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
-- [stores/theme.js:1-53](file://frontend/src/stores/theme.js#L1-L53)
-- [plugins/incidents/views/IncidentsList.vue:1-268](file://frontend/src/plugins/incidents/views/IncidentsList.vue#L1-L268)
 
 **Section sources**
-- [main.js:1-132](file://frontend/src/main.js#L1-L132)
-- [router/index.js:1-174](file://frontend/src/router/index.js#L1-L174)
+- [main.js:1-146](file://frontend/src/main.js#L1-L146)
+- [router/index.js:1-180](file://frontend/src/router/index.js#L1-L180)
+
+## Application Initialization Sequence
+The application implements a carefully orchestrated initialization sequence to ensure optimal user experience:
+
+### Initialization Order
+1. **Theme Store Initialization** (`initTheme()`)
+   - Sets default light theme if not configured
+   - Applies CSS classes to document element
+   - Listens for system theme changes
+   - Ensures consistent visual presentation immediately
+
+2. **Authentication State Restoration**
+   - Checks for existing access tokens
+   - Restores user session if tokens are valid
+   - Handles expired or invalid tokens gracefully
+
+3. **Plugin Registry Setup**
+   - Fetches plugin metadata from backend
+   - Registers plugins with menu items
+   - Sets initialization flag for downstream components
+
+4. **Application Mounting**
+   - Mounts the Vue application
+   - Router becomes active
+   - Components render with proper theme and state
+
+```mermaid
+sequenceDiagram
+participant M as "main.js"
+participant TS as "Theme Store"
+participant AS as "Auth Store"
+participant PR as "Plugin Registry"
+M->>TS : "initTheme()"
+TS->>TS : "Set default theme"
+TS->>TS : "Apply CSS classes"
+M->>AS : "fetchUser() if tokens exist"
+AS->>AS : "Restore user session"
+M->>PR : "initializePlugins()"
+PR->>PR : "Fetch plugin list"
+PR->>PR : "Register plugins"
+M->>M : "app.mount('#app')"
+```
+
+**Diagram sources**
+- [main.js:125-143](file://frontend/src/main.js#L125-L143)
+- [stores/theme.js:32-46](file://frontend/src/stores/theme.js#L32-L46)
+- [stores/auth.js:91-103](file://frontend/src/stores/auth.js#L91-L103)
+
+**Section sources**
+- [main.js:125-143](file://frontend/src/main.js#L125-L143)
+- [stores/theme.js:32-46](file://frontend/src/stores/theme.js#L32-L46)
 
 ## Core Components
-- Application bootstrap initializes Pinia, Vue Router, and performs pre-mount tasks:
-  - Initializes authentication state by restoring tokens and fetching user profile
-  - Dynamically loads plugin metadata from the backend and registers them
+- **Application bootstrap** initializes Pinia, Vue Router, and performs pre-mount tasks in the correct order:
+  - **Critical improvement**: Theme store is initialized first to ensure consistent visual presentation
+  - Authentication state restoration with proper error handling
+  - Dynamic plugin metadata loading and registration
   - Mounts the root application
 - Root component renders the active route via RouterView
 - Router defines core routes, nested settings routes, help pages, and plugin routes with lazy loading
@@ -121,30 +173,38 @@ INC --> AUTH
   - Theme store manages light/dark/system themes and applies CSS classes
 
 Key responsibilities:
-- main.js orchestrates initialization and plugin registration
+- main.js orchestrates initialization with proper ordering and error handling
 - router/index.js controls navigation and guards
 - stores provide centralized state for auth, plugins, and theme
 - views and components consume stores and render UI
 
+**Updated** The initialization sequence now prioritizes theme setup before authentication to prevent visual inconsistencies during the loading process.
+
 **Section sources**
-- [main.js:1-132](file://frontend/src/main.js#L1-L132)
+- [main.js:1-146](file://frontend/src/main.js#L1-L146)
 - [App.vue:1-17](file://frontend/src/App.vue#L1-L17)
-- [router/index.js:1-174](file://frontend/src/router/index.js#L1-L174)
+- [router/index.js:1-180](file://frontend/src/router/index.js#L1-L180)
 - [stores/auth.js:1-198](file://frontend/src/stores/auth.js#L1-L198)
 - [stores/pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
-- [stores/theme.js:1-53](file://frontend/src/stores/theme.js#L1-L53)
+- [stores/theme.js:1-59](file://frontend/src/stores/theme.js#L1-L59)
 
 ## Architecture Overview
-The frontend follows a layered architecture:
+The frontend follows a layered architecture with optimized initialization:
 - Presentation Layer: Views and components
 - Layout Layer: DashboardLayout and Sidebar
-- State Management: Pinia stores
+- State Management: Pinia stores with proper initialization order
 - Routing: Vue Router with lazy-loaded plugin routes
 - Styling: Tailwind CSS with CSS custom properties and dark mode support
 - Backend Integration: REST endpoints accessed via fetch wrappers
 
 ```mermaid
 graph TB
+subgraph "Initialization Phase"
+INIT["initApp() sequence"]
+THEME["Theme Store<br/>initTheme()"]
+AUTH["Auth Store<br/>fetchUser()"]
+REG["Plugin Registry<br/>initializePlugins()"]
+end
 subgraph "Presentation"
 VIEWS["Views (Dashboard, Settings, Help, Plugins)"]
 UI["UI Components (Button, Card, Input, Dropdown, etc.)"]
@@ -154,9 +214,9 @@ DL["DashboardLayout"]
 SB["Sidebar"]
 end
 subgraph "State"
-AUTH["Auth Store"]
-REG["Plugin Registry Store"]
-THEME["Theme Store"]
+AUTHSTORE["Auth Store"]
+REGSTORE["Plugin Registry Store"]
+THEMESTORE["Theme Store"]
 end
 subgraph "Routing"
 ROUTER["Vue Router"]
@@ -167,30 +227,81 @@ end
 subgraph "Backend"
 API["/api/v1/* endpoints"]
 end
+INIT --> THEME
+INIT --> AUTH
+INIT --> REG
+THEME --> THEMESTORE
+AUTH --> AUTHSTORE
+REG --> REGSTORE
 DL --> SB
 DL --> VIEWS
 VIEWS --> UI
-VIEWS --> AUTH
-SB --> REG
-DL --> THEME
+VIEWS --> AUTHSTORE
+SB --> REGSTORE
+DL --> THEMESTORE
 ROUTER --> VIEWS
 VIEWS --> API
-AUTH --> API
+AUTHSTORE --> API
 CSS --> UI
 CSS --> DL
 ```
 
 **Diagram sources**
-- [layouts/DashboardLayout.vue:1-125](file://frontend/src/layouts/DashboardLayout.vue#L1-L125)
-- [components/layout/Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
-- [router/index.js:1-174](file://frontend/src/router/index.js#L1-L174)
-- [stores/auth.js:1-198](file://frontend/src/stores/auth.js#L1-L198)
-- [stores/pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
-- [stores/theme.js:1-53](file://frontend/src/stores/theme.js#L1-L53)
-- [assets/css/main.css:1-77](file://frontend/src/assets/css/main.css#L1-L77)
-- [plugins/incidents/views/IncidentsList.vue:1-268](file://frontend/src/plugins/incidents/views/IncidentsList.vue#L1-L268)
+- [main.js:125-143](file://frontend/src/main.js#L125-L143)
+- [stores/theme.js:32-46](file://frontend/src/stores/theme.js#L32-L46)
+- [stores/auth.js:91-103](file://frontend/src/stores/auth.js#L91-L103)
+- [stores/pluginRegistry.js:19-52](file://frontend/src/stores/pluginRegistry.js#L19-L52)
 
 ## Detailed Component Analysis
+
+### Application Bootstrap and Initialization
+The main application file implements a sophisticated initialization sequence:
+
+**Initialization Steps**:
+1. **Theme Setup** (`initTheme()`)
+   - Sets default light theme if not configured
+   - Applies CSS classes to document element immediately
+   - Listens for system theme changes
+   - Prevents visual flickering during loading
+
+2. **Authentication Restoration**
+   - Checks for existing access tokens in localStorage
+   - Validates token expiration
+   - Restores user session if tokens are valid
+   - Handles expired or invalid tokens gracefully
+
+3. **Plugin Registration**
+   - Fetches plugin metadata from `/api/v1/plugins`
+   - Registers plugins with menu items and sections
+   - Sets initialization flag for downstream components
+
+4. **Application Mounting**
+   - Mounts the Vue application
+   - Router becomes active
+   - Components render with proper theme and state
+
+```mermaid
+flowchart TD
+Start(["Application Start"]) --> InitTheme["initTheme()"]
+InitTheme --> CheckTokens{"Access token exists?"}
+CheckTokens --> |Yes| RestoreUser["fetchUser()"]
+CheckTokens --> |No| LoadPlugins["initializePlugins()"]
+RestoreUser --> ValidateToken{"Token valid?"}
+ValidateToken --> |Yes| LoadPlugins
+ValidateToken --> |No| LoadPlugins
+LoadPlugins --> RegisterPlugins["Register plugin manifests"]
+RegisterPlugins --> MountApp["app.mount('#app')"]
+MountApp --> End(["Application Ready"])
+```
+
+**Diagram sources**
+- [main.js:125-143](file://frontend/src/main.js#L125-L143)
+- [stores/theme.js:32-46](file://frontend/src/stores/theme.js#L32-L46)
+- [stores/auth.js:91-103](file://frontend/src/stores/auth.js#L91-L103)
+
+**Section sources**
+- [main.js:125-143](file://frontend/src/main.js#L125-L143)
+- [stores/theme.js:32-46](file://frontend/src/stores/theme.js#L32-L46)
 
 ### Authentication and Session Management
 The authentication store encapsulates:
@@ -254,11 +365,11 @@ SetInit --> End(["Ready"])
 ```
 
 **Diagram sources**
-- [main.js:18-51](file://frontend/src/main.js#L18-L51)
+- [main.js:19-52](file://frontend/src/main.js#L19-L52)
 - [stores/pluginRegistry.js:26-40](file://frontend/src/stores/pluginRegistry.js#L26-L40)
 
 **Section sources**
-- [main.js:18-132](file://frontend/src/main.js#L18-L132)
+- [main.js:19-146](file://frontend/src/main.js#L19-L146)
 - [stores/pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
 ### Routing and Navigation Guards
@@ -282,10 +393,10 @@ CheckAdmin --> |No| Proceed["next()"]
 ```
 
 **Diagram sources**
-- [router/index.js:159-171](file://frontend/src/router/index.js#L159-L171)
+- [router/index.js:165-177](file://frontend/src/router/index.js#L165-L177)
 
 **Section sources**
-- [router/index.js:1-174](file://frontend/src/router/index.js#L1-L174)
+- [router/index.js:1-180](file://frontend/src/router/index.js#L1-L180)
 
 ### Layout System and Sidebar
 DashboardLayout coordinates:
@@ -360,12 +471,12 @@ ThemeToggle --> ThemeStore : "uses"
 **Diagram sources**
 - [components/ui/Button.vue:1-66](file://frontend/src/components/ui/Button.vue#L1-L66)
 - [components/ui/ThemeToggle.vue:1-36](file://frontend/src/components/ui/ThemeToggle.vue#L1-L36)
-- [stores/theme.js:1-53](file://frontend/src/stores/theme.js#L1-L53)
+- [stores/theme.js:1-59](file://frontend/src/stores/theme.js#L1-L59)
 
 **Section sources**
 - [components/ui/Button.vue:1-66](file://frontend/src/components/ui/Button.vue#L1-L66)
 - [components/ui/ThemeToggle.vue:1-36](file://frontend/src/components/ui/ThemeToggle.vue#L1-L36)
-- [stores/theme.js:1-53](file://frontend/src/stores/theme.js#L1-L53)
+- [stores/theme.js:1-59](file://frontend/src/stores/theme.js#L1-L59)
 
 ### Plugin View Integration and Data Flow
 Incidents plugin view illustrates:
@@ -408,9 +519,13 @@ Theme store:
 - Watches theme changes and updates DOM accordingly
 - Initializes listener for OS theme changes
 
+**Updated** The theme initialization now occurs before authentication restoration, ensuring immediate visual consistency.
+
 ```mermaid
 flowchart TD
-Init(["initTheme()"]) --> WatchOS["Listen to OS theme changes"]
+Init(["initTheme()"]) --> DefaultTheme["Set default to light if not set"]
+DefaultTheme --> ApplyCSS["Apply CSS class to root"]
+ApplyCSS --> WatchOS["Listen to OS theme changes"]
 WatchOS --> UpdateSys["Update systemTheme"]
 Select["setTheme(newTheme)"] --> Persist["Persist to localStorage"]
 Persist --> Apply["Apply CSS class to root"]
@@ -418,10 +533,10 @@ Apply --> Render["Components re-render with new theme"]
 ```
 
 **Diagram sources**
-- [stores/theme.js:32-42](file://frontend/src/stores/theme.js#L32-L42)
+- [stores/theme.js:32-46](file://frontend/src/stores/theme.js#L32-L46)
 
 **Section sources**
-- [stores/theme.js:1-53](file://frontend/src/stores/theme.js#L1-L53)
+- [stores/theme.js:1-59](file://frontend/src/stores/theme.js#L1-L59)
 - [assets/css/main.css:31-51](file://frontend/src/assets/css/main.css#L31-L51)
 
 ## Dependency Analysis
@@ -462,7 +577,9 @@ Vite --> Proxy["/api proxy -> 8000"]
 - Tailwind CSS utility classes reduce CSS overhead while enabling rapid iteration
 - Local storage caching for tokens avoids repeated network requests during sessions
 - Dark mode via CSS classes avoids expensive runtime computations
-- Vite’s development server with proxy enables efficient local iteration
+- Vite's development server with proxy enables efficient local iteration
+
+**Updated** The improved initialization sequence prevents visual flickering and ensures consistent theme application from page load.
 
 Recommendations:
 - Keep plugin manifests minimal; defer heavy assets to plugin views
@@ -470,8 +587,6 @@ Recommendations:
 - Debounce frequent UI interactions (filters, search) in plugin views
 - Consider pagination for large datasets in plugin views
 - Audit Tailwind classes to remove unused styles in production builds
-
-[No sources needed since this section provides general guidance]
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -488,17 +603,19 @@ Common issues and resolutions:
 - Styling inconsistencies:
   - Confirm Tailwind directives and custom properties are present
   - Check for conflicting CSS overrides
+- **New**: Initialization sequence issues:
+  - Verify theme store initializes before authentication
+  - Check for proper error handling in initApp()
+  - Ensure plugin initialization completes before mounting
 
 **Section sources**
 - [stores/auth.js:136-177](file://frontend/src/stores/auth.js#L136-L177)
-- [main.js:18-51](file://frontend/src/main.js#L18-L51)
-- [stores/theme.js:23-42](file://frontend/src/stores/theme.js#L23-L42)
+- [main.js:125-143](file://frontend/src/main.js#L125-L143)
+- [stores/theme.js:23-46](file://frontend/src/stores/theme.js#L23-L46)
 - [assets/css/main.css:1-77](file://frontend/src/assets/css/main.css#L1-L77)
 
 ## Conclusion
-The frontend employs a clean, modular architecture centered on Vue 3, Pinia, and Vue Router. The plugin registry system enables dynamic integration of features, while the layout and UI components provide a consistent, accessible, and responsive experience. Theme management and Tailwind CSS support both light and dark modes. The authentication store ensures secure, resilient communication with backend APIs. Together, these patterns deliver a scalable and maintainable frontend foundation.
-
-[No sources needed since this section summarizes without analyzing specific files]
+The frontend employs a clean, modular architecture centered on Vue 3, Pinia, and Vue Router. The recent improvements to the application initialization sequence ensure consistent visual presentation from the moment users access the interface. The plugin registry system enables dynamic integration of features, while the layout and UI components provide a consistent, accessible, and responsive experience. Theme management and Tailwind CSS support both light and dark modes. The authentication store ensures secure, resilient communication with backend APIs. Together, these patterns deliver a scalable and maintainable frontend foundation with improved user experience.
 
 ## Appendices
 
