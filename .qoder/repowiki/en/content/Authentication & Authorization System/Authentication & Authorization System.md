@@ -17,7 +17,15 @@
 - [backend/app/main.py](file://backend/app/main.py)
 - [frontend/src/stores/auth.js](file://frontend/src/stores/auth.js)
 - [frontend/src/views/auth/SignIn.vue](file://frontend/src/views/auth/SignIn.vue)
+- [frontend/src/views/auth/SignUp.vue](file://frontend/src/views/auth/SignUp.vue)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated registration endpoint documentation to reflect that it is now accessible to any authenticated user, not just administrators
+- Revised security considerations section to remove admin-only requirement for user registration
+- Updated endpoint specifications to clarify that registration requires authentication but not administrative privileges
+- Enhanced troubleshooting guide to address scenarios where non-admin users attempt registration
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -62,6 +70,7 @@ end
 subgraph "Frontend"
 FE_STORE["Auth Store<br/>Pinia"]
 FE_VIEW["Sign-In View<br/>Vue"]
+FE_SIGNUP["Sign-Up View<br/>Vue"]
 end
 CFG --> SEC
 SEC --> API_AUTH
@@ -77,6 +86,7 @@ SVC_USER --> API_AUTH
 API_ROUTER --> API_AUTH
 MAIN --> API_ROUTER
 FE_STORE --> FE_VIEW
+FE_STORE --> FE_SIGNUP
 FE_STORE --> API_AUTH
 ```
 
@@ -95,6 +105,7 @@ FE_STORE --> API_AUTH
 - [backend/app/main.py:1-87](file://backend/app/main.py#L1-L87)
 - [frontend/src/stores/auth.js:1-198](file://frontend/src/stores/auth.js#L1-L198)
 - [frontend/src/views/auth/SignIn.vue:1-103](file://frontend/src/views/auth/SignIn.vue#L1-L103)
+- [frontend/src/views/auth/SignUp.vue:1-130](file://frontend/src/views/auth/SignUp.vue#L1-L130)
 
 **Section sources**
 - [backend/app/main.py:17-48](file://backend/app/main.py#L17-L48)
@@ -231,7 +242,7 @@ USERS ||--o{ REFRESH_TOKENS : "has many"
 - [backend/app/models/refresh_token.py:7-17](file://backend/app/models/refresh_token.py#L7-L17)
 
 ### Authentication Service: Token Pair, Rotation, Revocation
-- Creates a token pair with a fresh JTI stored as the refresh token’s unique value
+- Creates a token pair with a fresh JTI stored as the refresh token's unique value
 - Stores refresh token metadata with expiration and marks revoked=false
 - Refresh flow decodes refresh token, validates JTI and user, checks expiration, revokes old token, and issues a new pair
 - Supports revocation by JTI or full token and bulk revocation per user
@@ -376,8 +387,6 @@ FE_STORE["Auth Store"] --> AUTH_EP
 - Password hashing: bcrypt cost is implicit in salt generation; avoid excessive re-hashing during registration
 - Frontend caching: Store tokens in secure storage and avoid unnecessary re-authentication by leveraging refresh automatically
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
 Common issues and resolutions:
 - Invalid or expired refresh token: Returned when JTI is missing, user not found, token revoked, or expired; client should log out and re-authenticate
@@ -385,6 +394,9 @@ Common issues and resolutions:
 - Credentials validation failure: Incorrect username or password; ensure proper encoding and credentials
 - 401 Unauthorized after initial login: Indicates access token expired; the frontend automatically attempts refresh; if refresh fails, prompt login again
 - CORS errors: Verify allowed origins in configuration match the frontend origin
+- Registration failures: Ensure proper authentication before attempting registration; non-admin users can now register successfully
+
+**Updated** Added troubleshooting guidance for registration endpoint accessibility
 
 **Section sources**
 - [backend/app/api/v1/endpoints/auth.py:26-36](file://backend/app/api/v1/endpoints/auth.py#L26-L36)
@@ -395,8 +407,6 @@ Common issues and resolutions:
 
 ## Conclusion
 The system implements a robust JWT-based authentication and authorization framework with refresh token rotation, role-based access control, and secure password handling. The backend provides clear separation of concerns across endpoints, services, models, and security utilities, while the frontend integrates seamlessly with the backend through a centralized authentication store. Adhering to the documented best practices and using the provided examples will ensure secure and maintainable authentication across the platform.
-
-[No sources needed since this section summarizes without analyzing specific files]
 
 ## Appendices
 
@@ -414,10 +424,10 @@ The system implements a robust JWT-based authentication and authorization framew
   - Errors: 401 Unauthorized (invalid/expired refresh token)
 
 - POST /api/v1/auth/register
-  - Description: Register a new user (admin-only)
+  - Description: Register a new user (authenticated users only)
   - Request: UserCreate
   - Response: UserResponse
-  - Errors: 400 Bad Request (duplicate username/email), 403 Forbidden (not admin)
+  - Errors: 400 Bad Request (duplicate username/email), 401 Unauthorized (authentication required)
 
 - POST /api/v1/auth/logout
   - Description: Revoke the refresh token
@@ -433,6 +443,8 @@ The system implements a robust JWT-based authentication and authorization framew
 - POST /api/v1/auth/init
   - Description: Initialize default admin if none exists
   - Response: StatusResponse
+
+**Updated** Registration endpoint now accessible to authenticated users, not just administrators
 
 Schema references:
 - TokenPairWithUser: [backend/app/schemas/auth.py:16-17](file://backend/app/schemas/auth.py#L16-L17)
@@ -454,11 +466,13 @@ Schema references:
   - Clean up expired refresh tokens regularly
   - Enforce role-based access checks for sensitive endpoints
   - Validate and sanitize all inputs; avoid exposing internal errors
+  - **Updated** Registration endpoint now requires authentication but not administrative privileges
 
 - Frontend
   - Store tokens securely; avoid keeping long-lived tokens in memory
   - Implement automatic token refresh on 401 responses
   - Clear tokens on logout and redirect to login
   - Use HTTPS and secure cookies if applicable
+  - **Updated** Registration functionality is now available to authenticated users
 
-[No sources needed since this section provides general guidance]
+**Updated** Added security considerations for the updated registration endpoint accessibility

@@ -17,6 +17,13 @@
 - [signup_view.js](file://frontend/src/views/auth/SignUp.vue)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated registration endpoint documentation to reflect that it no longer requires administrative privileges
+- Clarified that registration is now available to all authenticated users
+- Updated implementation details to show that registration endpoint has no authentication requirements
+- Revised security considerations to reflect the change in access control
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -30,6 +37,8 @@
 
 ## Introduction
 This document provides comprehensive API documentation for the authentication endpoints in the NOC Vision SSO system. It covers HTTP methods, URL patterns, request/response schemas, authentication requirements, JWT token structure, refresh token rotation, and practical client implementation examples. The system implements JWT-based authentication with separate access and refresh tokens, supporting secure login, registration, token refresh, and logout flows.
+
+**Updated** The registration endpoint is now available to all authenticated users without requiring administrative privileges, while maintaining proper authentication mechanisms for other endpoints.
 
 ## Project Structure
 The authentication system is organized across backend and frontend components:
@@ -61,7 +70,7 @@ SignUpView --> AuthStore
 
 **Diagram sources**
 - [router.py:1-10](file://backend/app/api/v1/router.py#L1-L10)
-- [auth.py:1-106](file://backend/app/api/v1/endpoints/auth.py#L1-L106)
+- [auth.py:1-105](file://backend/app/api/v1/endpoints/auth.py#L1-L105)
 - [auth_service.py:1-139](file://backend/app/services/auth_service.py#L1-L139)
 
 **Section sources**
@@ -69,11 +78,11 @@ SignUpView --> AuthStore
 - [main.py:66-67](file://backend/app/main.py#L66-L67)
 
 ## Core Components
-The authentication system consists of four primary endpoints under `/api/v1/auth`:
+The authentication system consists of five primary endpoints under `/api/v1/auth`:
 
 ### Endpoint Catalog
 - **POST /api/v1/auth/login** - User login and token issuance
-- **POST /api/v1/auth/register** - User registration (admin-only)
+- **POST /api/v1/auth/register** - User registration (available to all authenticated users)
 - **POST /api/v1/auth/refresh** - Token refresh using refresh token
 - **POST /api/v1/auth/logout** - Token revocation and logout
 - **GET /api/v1/auth/me** - Get current user information
@@ -160,12 +169,12 @@ The login process validates credentials, checks user activation status, creates 
 - [config.py:10-13](file://backend/app/core/config.py#L10-L13)
 
 ### Registration Endpoint
-The registration endpoint creates new user accounts with administrative privileges.
+The registration endpoint creates new user accounts with default user privileges.
 
 #### Endpoint Details
 - **Method**: POST
 - **URL**: `/api/v1/auth/register`
-- **Authentication**: Requires admin role
+- **Authentication**: No authentication required (available to all users)
 - **Response**: UserResponse
 
 #### Request Schema
@@ -179,10 +188,10 @@ The registration endpoint creates new user accounts with administrative privileg
 Returns the created user object with all fields from UserResponse.
 
 #### Implementation Details
-The endpoint validates uniqueness of username and email, then creates a new user with hashed password. Only administrators can access this endpoint.
+The endpoint validates uniqueness of username and email, then creates a new user with hashed password and default role "user". **Updated** This endpoint no longer requires administrative privileges and is accessible to all users. The registration process maintains security through password hashing and unique constraint validation.
 
 **Section sources**
-- [auth.py:54-80](file://backend/app/api/v1/endpoints/auth.py#L54-L80)
+- [auth.py:54-79](file://backend/app/api/v1/endpoints/auth.py#L54-L79)
 - [user_schemas.py:6-12](file://backend/app/schemas/user.py#L6-L12)
 - [auth_service.py:113-119](file://backend/app/services/auth_service.py#L113-L119)
 
@@ -229,7 +238,7 @@ The logout endpoint revokes refresh tokens and ends sessions.
 The endpoint revokes the specified refresh token, preventing future access token rotations. The access token remains valid until expiration.
 
 **Section sources**
-- [auth.py:83-90](file://backend/app/api/v1/endpoints/auth.py#L83-L90)
+- [auth.py:82-89](file://backend/app/api/v1/endpoints/auth.py#L82-L89)
 - [auth_schemas.py:24-25](file://backend/app/schemas/auth.py#L24-L25)
 - [auth_service.py:77-90](file://backend/app/services/auth_service.py#L77-L90)
 
@@ -374,11 +383,14 @@ await fetch('/api/v1/auth/logout', {
 ## Conclusion
 The NOC Vision authentication system provides a secure, production-ready JWT-based authentication solution with comprehensive token management. The implementation includes proper error handling, refresh token rotation, and client-side integration patterns. The system balances security with usability through configurable token expiration times and automatic refresh capabilities.
 
+**Updated** The registration endpoint change enhances accessibility while maintaining security through proper validation and password hashing. The system now allows users to register themselves without administrative intervention, streamlining the user onboarding process.
+
 Key security features include:
 - Separate access and refresh tokens with different lifespans
 - Refresh token rotation preventing replay attacks
 - Database-backed token revocation
 - Role-based access control
 - Secure password hashing with bcrypt
+- Proper validation of unique usernames and emails during registration
 
 The documented endpoints and schemas provide a solid foundation for client integration while maintaining the system's security posture.
