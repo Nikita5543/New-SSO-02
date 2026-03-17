@@ -113,11 +113,19 @@ async def get_database(
     - q: Поиск по всем полям
     - ordering: Сортировка (prefix: 'field', desc: '-field')
     - vrf_id: Фильтр по VRF
-    - status: Фильтр по статусу
+    - status: Фильтр по статусу (accepts: active, reserved, deprecated, dhcp)
     """
     params = {
         "limit": page_size,
         "offset": (page - 1) * page_size,
+    }
+    
+    # Маппинг статусов NetBox (строка -> числовой ID)
+    status_map = {
+        "active": "active",
+        "reserved": "reserved", 
+        "deprecated": "deprecated",
+        "dhcp": "dhcp"
     }
     
     # Добавить фильтры
@@ -126,7 +134,13 @@ async def get_database(
     if vrf_id:
         params["vrf_id"] = vrf_id
     if status:
-        params["status"] = status
+        # Преобразовать статус в формат NetBox (нижний регистр)
+        status_lower = status.lower().strip()
+        if status_lower in status_map:
+            params["status"] = status_map[status_lower]
+        else:
+            # Если статус не распознан, используем как есть (для обратной совместимости)
+            params["status"] = status_lower
     if ordering:
         params["ordering"] = ordering
     

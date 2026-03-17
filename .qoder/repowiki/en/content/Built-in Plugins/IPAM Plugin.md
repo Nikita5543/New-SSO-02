@@ -16,12 +16,11 @@
 
 ## Update Summary
 **Changes Made**
-- Updated architecture overview to reflect production-ready NetBox integration
-- Enhanced HTTP client integration documentation with comprehensive error handling
-- Added detailed documentation for advanced filtering capabilities
-- Updated asynchronous architecture coverage for real-time data fetching
-- Expanded database endpoint functionality documentation
-- Added comprehensive API endpoint implementation details
+- Updated to reflect Applied Changes: Removed VLAN filtering functionality from both backend and frontend
+- Added refresh button functionality for manual data refresh in the Database tab
+- Improved filter placeholder text for better user experience
+- Streamlined table layout by removing VLAN column from the IP addresses table
+- Updated architecture to reflect simplified filtering capabilities
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -35,12 +34,12 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-The IPAM (IP Address Management) plugin integrates with NetBox to validate and manage IP addresses within the NOC Vision platform. This production-ready implementation provides comprehensive IP address management capabilities with real-time data synchronization, advanced filtering, and robust error handling. The plugin follows the platform's modular plugin architecture, enabling dynamic loading and seamless integration with the broader NOC Vision ecosystem.
+The IPAM (IP Address Management) plugin integrates with NetBox to validate and manage IP addresses within the NOC Vision platform. This production-ready implementation provides comprehensive IP address management capabilities with real-time data synchronization, streamlined filtering, and robust error handling. The plugin follows the platform's modular plugin architecture, enabling dynamic loading and seamless integration with the broader NOC Vision ecosystem.
 
 The plugin exposes three primary endpoints:
 - **Validation endpoint** to compare NetBox data with real network state
 - **Apply endpoint** to synchronize changes in NetBox  
-- **Database endpoint** to retrieve IP address records with advanced filtering
+- **Database endpoint** to retrieve IP address records with simplified filtering
 
 These endpoints support both administrative operations and operational monitoring, with comprehensive filtering and sorting capabilities for database queries, real-time data fetching, and production-grade error handling.
 
@@ -105,7 +104,8 @@ The IPAM plugin consists of several key components that work together to provide
 ### Frontend Components
 - **Vue.js View**: Interactive interface for IPAM operations with comprehensive state management
 - **State Management**: Integration with the plugin registry system and authentication store
-- **Advanced Filtering**: Real-time search, sorting, and filtering capabilities
+- **Advanced Filtering**: Real-time search, sorting, and filtering capabilities (streamlined without VLAN)
+- **Manual Refresh**: Dedicated refresh button for manual data refresh in the Database tab
 - **Pagination Support**: Efficient data loading with configurable page sizes
 - **Error Handling**: Comprehensive user feedback and error recovery mechanisms
 
@@ -251,7 +251,7 @@ NetBoxDataFetcher --> ValidationChange : "transforms"
 **Diagram sources**
 - [endpoints.py](file://backend/app/plugins/ipam/endpoints.py)
 
-The validation endpoint provides a placeholder implementation with comprehensive error handling for future remote VM integration. The apply endpoint includes a stub implementation ready for NetBox API synchronization. The database endpoint implements advanced filtering, pagination, and real-time data fetching from NetBox API with comprehensive error handling.
+The validation endpoint provides a placeholder implementation with comprehensive error handling for future remote VM integration. The apply endpoint includes a stub implementation ready for NetBox API synchronization. The database endpoint implements simplified filtering (without VLAN), pagination, and real-time data fetching from NetBox API with comprehensive error handling.
 
 **Section sources**
 - [endpoints.py](file://backend/app/plugins/ipam/endpoints.py)
@@ -286,7 +286,7 @@ The HTTP client implementation includes comprehensive error handling for authent
 - [endpoints.py](file://backend/app/plugins/ipam/endpoints.py)
 
 ### Frontend Integration Architecture
-The frontend component provides a comprehensive user interface for IPAM operations, integrating seamlessly with the Vue.js ecosystem and authentication system. The implementation includes advanced filtering, pagination, and real-time data management.
+The frontend component provides a comprehensive user interface for IPAM operations, integrating seamlessly with the Vue.js ecosystem and authentication system. The implementation includes advanced filtering, pagination, and real-time data management with improved user experience.
 
 ```mermaid
 flowchart TD
@@ -312,7 +312,7 @@ M --> Q[Update UI]
 **Diagram sources**
 - [Ipam.vue](file://frontend/src/plugins/ipam/views/Ipam.vue)
 
-The frontend implementation includes comprehensive state management, error handling, and user experience features such as loading indicators, sorting, filtering, pagination, and real-time data updates. The component supports advanced filtering with VRF, status, and VLAN ID criteria.
+The frontend implementation includes comprehensive state management, error handling, and user experience features such as loading indicators, sorting, filtering, pagination, and real-time data updates. The component supports streamlined filtering with VRF and status criteria, improved placeholder text, and a dedicated refresh button for manual data refresh.
 
 **Section sources**
 - [Ipam.vue](file://frontend/src/plugins/ipam/views/Ipam.vue)
@@ -417,7 +417,7 @@ The plugin leverages httpx AsyncClient for efficient network operations with con
 The plugin implements intelligent caching mechanisms for frequently accessed data, reducing database load and improving response times for common operations. The system includes proper cache invalidation and refresh strategies.
 
 ### Pagination and Filtering
-Database queries support pagination and advanced filtering to prevent memory exhaustion and optimize query performance for large datasets. The implementation includes efficient query building and result processing.
+Database queries support pagination and streamlined filtering to prevent memory exhaustion and optimize query performance for large datasets. The implementation includes efficient query building and result processing without VLAN filtering complexity.
 
 ### Connection Management
 The plugin leverages connection pooling and efficient resource management to minimize overhead and maximize throughput. The HTTP client includes proper connection lifecycle management and resource cleanup.
@@ -465,16 +465,19 @@ Common issues and their solutions when working with the IPAM plugin:
 - [endpoints.py](file://backend/app/plugins/ipam/endpoints.py)
 
 ## Conclusion
-The IPAM plugin represents a production-ready solution for network IP address management within the NOC Vision platform. Its comprehensive implementation demonstrates adherence to modern software engineering principles with robust NetBox integration, advanced filtering capabilities, and real-time data fetching.
+The IPAM plugin represents a production-ready solution for network IP address management within the NOC Vision platform. Its comprehensive implementation demonstrates adherence to modern software engineering principles with robust NetBox integration, streamlined filtering capabilities, and real-time data fetching.
 
 Key strengths of the implementation include:
 - **Production-ready architecture** with comprehensive HTTP client integration and error handling
 - **Real-time data fetching** from NetBox API with proper authentication and timeout management
-- **Advanced filtering capabilities** for database queries with VRF, status, and VLAN ID filtering
+- **Streamlined filtering capabilities** for database queries with VRF and status filtering (without VLAN complexity)
 - **Comprehensive error handling** with proper exception propagation and user feedback
 - **Asynchronous processing** for improved performance and scalability
 - **Clean separation of concerns** between validation, synchronization, and data retrieval operations
 - **Seamless integration** with existing NOC Vision infrastructure and authentication systems
+- **Enhanced user experience** with manual refresh functionality and improved filter placeholders
 - **Extensible design** supporting future enhancements while maintaining backward compatibility
 
 The plugin serves as an excellent foundation for network operations teams, providing essential tools for maintaining accurate IP address records and ensuring network infrastructure reliability. Its robust architecture and comprehensive feature set make it suitable for production environments with demanding performance and reliability requirements.
+
+**Updated** Removed VLAN filtering functionality from both backend and frontend, added refresh button functionality for manual data refresh, improved filter placeholder text, and streamlined table layout by removing VLAN column from the IP addresses table.
