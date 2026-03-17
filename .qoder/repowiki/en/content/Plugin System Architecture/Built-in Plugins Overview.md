@@ -16,19 +16,25 @@
 - [plugin.py (Configuration)](file://backend/app/plugins/configuration/plugin.py)
 - [plugin.py (IPAM)](file://backend/app/plugins/ipam/plugin.py)
 - [endpoints.py (IPAM)](file://backend/app/plugins/ipam/endpoints.py)
+- [plugin.py (Customer Services)](file://backend/app/plugins/customer_services/plugin.py)
+- [endpoints.py (Customer Services)](file://backend/app/plugins/customer_services/endpoints.py)
+- [models.py (Customer Services)](file://backend/app/plugins/customer_services/models.py)
+- [schemas.py (Customer Services)](file://backend/app/plugins/customer_services/schemas.py)
 - [pluginRegistry.js](file://frontend/src/stores/pluginRegistry.js)
 - [IncidentsList.vue](file://frontend/src/plugins/incidents/views/IncidentsList.vue)
 - [Performance.vue](file://frontend/src/plugins/performance/views/Performance.vue)
 - [Ipam.vue](file://frontend/src/plugins/ipam/views/Ipam.vue)
+- [CustomerServices.vue](file://frontend/src/plugins/customer_services/views/CustomerServices.vue)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive documentation for the IPAM plugin
-- Updated the plugin count from 6 to 7 built-in plugins
-- Enhanced the architecture overview to include IPAM plugin examples
-- Updated configuration and selection criteria to include IPAM plugin
-- Added detailed component analysis for IPAM plugin functionality
+- Added comprehensive documentation for the Customer Services plugin as the 8th built-in plugin
+- Updated the plugin count from 7 to 8 built-in plugins
+- Enhanced the architecture overview to include Customer Services plugin examples
+- Updated configuration and selection criteria to include Customer Services plugin
+- Added detailed component analysis for Customer Services plugin functionality including CSV import, real-time updates, and statistics dashboard
+- Updated frontend integration documentation to include Customer Services Vue component
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -43,7 +49,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document provides a comprehensive overview of the seven built-in plugins that ship with the system: Incidents, Inventory, Performance, Security Module, Accounting, Configuration, and IPAM. It explains each plugin's purpose, functionality, and integration within the overall platform, and demonstrates how these plugins illustrate the plugin architecture and serve as examples for developing custom plugins. It also covers plugin selection criteria, enable/disable mechanisms, and configuration options for each built-in plugin.
+This document provides a comprehensive overview of the eight built-in plugins that ship with the system: Incidents, Inventory, Performance, Security Module, Accounting, Configuration, IPAM, and Customer Services. It explains each plugin's purpose, functionality, and integration within the overall platform, and demonstrates how these plugins illustrate the plugin architecture and serve as examples for developing custom plugins. It also covers plugin selection criteria, enable/disable mechanisms, and configuration options for each built-in plugin.
 
 ## Project Structure
 The plugin system is implemented in the backend under a dedicated plugins directory. Each plugin exposes a plugin registration module and an API router. The backend loads plugins at startup, constructs per-plugin API prefixes, and registers routers with the main application. The frontend integrates plugin-managed UI views and menus via a plugin registry store.
@@ -61,16 +67,19 @@ PLUG_SEC["plugins/security_module/plugin.py"]
 PLUG_ACC["plugins/accounting/plugin.py"]
 PLUG_CFG["plugins/configuration/plugin.py"]
 PLUG_IPAM["plugins/ipam/plugin.py"]
+PLUG_CS["plugins/customer_services/plugin.py"]
 API_INC["plugins/incidents/endpoints.py"]
 API_INV["plugins/inventory/endpoints.py"]
 API_PERF["plugins/performance/endpoints.py"]
 API_IPAM["plugins/ipam/endpoints.py"]
+API_CS["plugins/customer_services/endpoints.py"]
 end
 subgraph "Frontend"
 REG["pluginRegistry.js<br/>Pinia store"]
 VIEW_INC["IncidentsList.vue"]
 VIEW_PERF["Performance.vue"]
 VIEW_IPAM["Ipam.vue"]
+VIEW_CS["CustomerServices.vue"]
 end
 MAIN --> LOADER
 LOADER --> CFG
@@ -81,17 +90,21 @@ LOADER --> PLUG_SEC
 LOADER --> PLUG_ACC
 LOADER --> PLUG_CFG
 LOADER --> PLUG_IPAM
+LOADER --> PLUG_CS
 PLUG_INC --> API_INC
 PLUG_INV --> API_INV
 PLUG_PERF --> API_PERF
 PLUG_IPAM --> API_IPAM
+PLUG_CS --> API_CS
 MAIN --> API_INC
 MAIN --> API_INV
 MAIN --> API_PERF
 MAIN --> API_IPAM
+MAIN --> API_CS
 REG --> VIEW_INC
 REG --> VIEW_PERF
 REG --> VIEW_IPAM
+REG --> VIEW_CS
 ```
 
 **Diagram sources**
@@ -105,14 +118,17 @@ REG --> VIEW_IPAM
 - [plugin.py (Accounting):9-17](file://backend/app/plugins/accounting/plugin.py#L9-L17)
 - [plugin.py (Configuration):9-17](file://backend/app/plugins/configuration/plugin.py#L9-L17)
 - [plugin.py (IPAM):9-17](file://backend/app/plugins/ipam/plugin.py#L9-L17)
+- [plugin.py (Customer Services):9-17](file://backend/app/plugins/customer_services/plugin.py#L9-L17)
 - [endpoints.py (Incidents):15](file://backend/app/plugins/incidents/endpoints.py#L15)
 - [endpoints.py (Inventory):15](file://backend/app/plugins/inventory/endpoints.py#L15)
 - [endpoints.py (Performance):11](file://backend/app/plugins/performance/endpoints.py#L11)
-- [endpoints.py (IPAM):20-109](file://backend/app/plugins/ipam/endpoints.py#L20-109)
+- [endpoints.py (IPAM):20-109](file://backend/app/plugins/ipam/endpoints.py#L20-L109)
+- [endpoints.py (Customer Services):18-172](file://backend/app/plugins/customer_services/endpoints.py#L18-172)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [IncidentsList.vue:1-268](file://frontend/src/plugins/incidents/views/IncidentsList.vue#L1-L268)
 - [Performance.vue:1-34](file://frontend/src/plugins/performance/views/Performance.vue#L1-L34)
 - [Ipam.vue:1-489](file://frontend/src/plugins/ipam/views/Ipam.vue#L1-L489)
+- [CustomerServices.vue:1-384](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L1-L384)
 
 **Section sources**
 - [main.py:17-48](file://backend/app/main.py#L17-L48)
@@ -141,6 +157,7 @@ Key behaviors:
 - [plugin.py (Accounting):1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
 - [plugin.py (Configuration):1-17](file://backend/app/plugins/configuration/plugin.py#L1-L17)
 - [plugin.py (IPAM):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
+- [plugin.py (Customer Services):1-17](file://backend/app/plugins/customer_services/plugin.py#L1-L17)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
 ## Architecture Overview
@@ -180,6 +197,7 @@ App-->>App : "Expose /api/v1/plugins for status"
 - [plugin.py (Accounting):9-17](file://backend/app/plugins/accounting/plugin.py#L9-L17)
 - [plugin.py (Configuration):9-17](file://backend/app/plugins/configuration/plugin.py#L9-L17)
 - [plugin.py (IPAM):9-17](file://backend/app/plugins/ipam/plugin.py#L9-L17)
+- [plugin.py (Customer Services):9-17](file://backend/app/plugins/customer_services/plugin.py#L9-L17)
 
 ## Detailed Component Analysis
 
@@ -388,7 +406,7 @@ API-->>FE : "Success response"
 
 **Diagram sources**
 - [Ipam.vue:53-100](file://frontend/src/plugins/ipam/views/Ipam.vue#L53-L100)
-- [endpoints.py (IPAM):20-58](file://backend/app/plugins/ipam/endpoints.py#L20-58)
+- [endpoints.py (IPAM):20-58](file://backend/app/plugins/ipam/endpoints.py#L20-L58)
 - [plugin.py (IPAM):9-17](file://backend/app/plugins/ipam/plugin.py#L9-L17)
 
 Configuration and selection:
@@ -402,6 +420,74 @@ Configuration and selection:
 - [plugin.py (IPAM):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
 - [endpoints.py (IPAM):20-109](file://backend/app/plugins/ipam/endpoints.py#L20-L109)
 - [Ipam.vue:1-489](file://frontend/src/plugins/ipam/views/Ipam.vue#L1-L489)
+
+### Customer Services Plugin
+**New** Added comprehensive documentation for the Customer Services plugin as the 8th built-in plugin
+
+Purpose:
+- Customer services management for viewing and editing service database with CSV import capabilities.
+
+Functionality:
+- Provides comprehensive CRUD operations for customer services with advanced filtering and pagination.
+- Supports CSV import functionality to populate the service database automatically.
+- Includes real-time statistics dashboard showing service distribution by status.
+- Features modal-based editing interface with extensive field support for service management.
+
+Integration:
+- Register function attaches the customer services router with a plugin-specific API prefix and "Customer Services" tag.
+- Frontend Vue component provides table-based interface with search, filtering, pagination, and modal editing.
+- Implements sophisticated data loading with automatic CSV-to-database migration.
+
+```mermaid
+sequenceDiagram
+participant FE as "CustomerServices.vue"
+participant Auth as "Auth Store"
+participant API as "Customer Services API"
+participant DB as "SQLAlchemy ORM"
+FE->>Auth : "authFetch('/api/v1/plugins/customer_services/services?page=1&page_size=50')"
+Auth->>API : "GET /services"
+API->>DB : "Query CustomerService with filters"
+DB-->>API : "Paginated results with count"
+API-->>FE : "JSON with count and results"
+FE->>FE : "Render table with pagination controls"
+FE->>Auth : "authFetch('/api/v1/plugins/customer_services/stats')"
+Auth->>API : "GET /stats"
+API->>DB : "Count services and group by status"
+DB-->>API : "Statistics data"
+API-->>FE : "Total and status distribution"
+```
+
+**Diagram sources**
+- [CustomerServices.vue:77-100](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L77-L100)
+- [endpoints.py (Customer Services):69-112](file://backend/app/plugins/customer_services/endpoints.py#L69-112)
+- [plugin.py (Customer Services):9-17](file://backend/app/plugins/customer_services/plugin.py#L9-L17)
+
+Configuration and selection:
+- Enable/disable via settings using the plugin directory name "customer_services".
+- API exposed under /api/v1/plugins/customer_services with four endpoints:
+  - GET /services - Lists services with pagination, search, and filtering
+  - GET /services/{id} - Retrieves individual service by ID
+  - PUT /services/{id} - Updates service information
+  - GET /stats - Returns service statistics and status distribution
+
+Data Model and Schema:
+- CustomerService model includes 20+ fields covering service identification, client information, network details, and operational data.
+- Automatic CSV import from CSV_PATH with semicolon-delimited format.
+- Real-time statistics aggregation with status distribution counting.
+
+Frontend Features:
+- Responsive table interface with 8 visible columns and 25+ editable fields in modal view.
+- Advanced filtering by search term, status, and client with live updates.
+- Pagination with configurable page size (1-100 items).
+- Status-based visual indicators with color coding.
+- Modal-based editing with cancel/save functionality.
+
+**Section sources**
+- [plugin.py (Customer Services):1-17](file://backend/app/plugins/customer_services/plugin.py#L1-L17)
+- [endpoints.py (Customer Services):18-172](file://backend/app/plugins/customer_services/endpoints.py#L18-172)
+- [models.py (Customer Services):6-74](file://backend/app/plugins/customer_services/models.py#L6-74)
+- [schemas.py (Customer Services):6-54](file://backend/app/plugins/customer_services/schemas.py#L6-54)
+- [CustomerServices.vue:1-384](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L1-L384)
 
 ## Dependency Analysis
 The plugin system exhibits low coupling and high cohesion:
@@ -425,6 +511,7 @@ Manifests --> Menu["Aggregated menu items"]
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
 - [plugin.py (Incidents):1-17](file://backend/app/plugins/incidents/plugin.py#L1-L17)
 - [plugin.py (IPAM):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
+- [plugin.py (Customer Services):1-17](file://backend/app/plugins/customer_services/plugin.py#L1-L17)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
 **Section sources**
@@ -438,6 +525,8 @@ Manifests --> Menu["Aggregated menu items"]
 - Role-based endpoints (admin vs active user) reduce unnecessary processing for non-admin operations.
 - Consider pagination and filtering in endpoints to minimize payload sizes for large datasets.
 - **Updated** IPAM plugin endpoints support pagination and filtering for large IP address datasets, with configurable page sizes up to 100 items.
+- **Updated** Customer Services plugin implements efficient CSV import with existence checks to prevent duplicate data loading.
+- **Updated** Customer Services plugin uses SQLAlchemy's count() method for efficient pagination without loading all records.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -454,6 +543,11 @@ Common issues and resolutions:
   - Validation endpoint returns empty results: Verify NetBox connectivity and authentication.
   - Apply endpoint fails: Check NetBox API credentials and permissions.
   - Database endpoint slow: Use pagination parameters and filters to reduce payload size.
+- **Updated** Customer Services plugin specific issues:
+  - CSV import not working: Verify CSV file exists at CSV_PATH and has correct semicolon delimiter format.
+  - Services endpoint returns empty: Check database connection and ensure CSV data was successfully imported.
+  - Modal editing fails: Verify user authentication and proper field validation.
+  - Statistics endpoint slow: Large datasets may require pagination or filtering optimization.
 
 Operational checks:
 - Startup logs indicate plugin load status and any errors encountered during import.
@@ -465,7 +559,7 @@ Operational checks:
 - [pluginRegistry.js:26-36](file://frontend/src/stores/pluginRegistry.js#L26-L36)
 
 ## Conclusion
-The seven built-in plugins showcase a clean, extensible plugin architecture. They demonstrate consistent patterns for metadata definition, registration, API prefixing, and role-aware endpoints. Their integration with the loader and frontend registry provides a practical blueprint for building custom plugins. Administrators can selectively enable or disable plugins via configuration, while developers can extend the system by adding new plugin directories following the established conventions. The IPAM plugin exemplifies the complete plugin lifecycle with sophisticated API endpoints and comprehensive frontend integration.
+The eight built-in plugins showcase a clean, extensible plugin architecture. They demonstrate consistent patterns for metadata definition, registration, API prefixing, and role-aware endpoints. Their integration with the loader and frontend registry provides a practical blueprint for building custom plugins. Administrators can selectively enable or disable plugins via configuration, while developers can extend the system by adding new plugin directories following the established conventions. The IPAM plugin exemplifies the complete plugin lifecycle with sophisticated API endpoints and comprehensive frontend integration. The newly added Customer Services plugin demonstrates advanced features including CSV import, real-time statistics, and comprehensive data management capabilities.
 
 ## Appendices
 
@@ -491,6 +585,11 @@ The seven built-in plugins showcase a clean, extensible plugin architecture. The
   - POST /validate: Validates IP address configuration against NetBox
   - POST /apply: Applies validated changes to NetBox
   - GET /database: Retrieves IP address database with filtering and pagination
+- **Updated** Customer Services Plugin Endpoints:
+  - GET /services: Lists services with pagination, search, and filtering
+  - GET /services/{id}: Retrieves individual service by ID
+  - PUT /services/{id}: Updates service information
+  - GET /stats: Returns service statistics and status distribution
 
 **Section sources**
 - [config.py:25-26](file://backend/app/core/config.py#L25-L26)
@@ -502,4 +601,6 @@ The seven built-in plugins showcase a clean, extensible plugin architecture. The
 - [plugin.py (Accounting):12-16](file://backend/app/plugins/accounting/plugin.py#L12-L16)
 - [plugin.py (Configuration):12-16](file://backend/app/plugins/configuration/plugin.py#L12-L16)
 - [plugin.py (IPAM):12-16](file://backend/app/plugins/ipam/plugin.py#L12-L16)
+- [plugin.py (Customer Services):12-16](file://backend/app/plugins/customer_services/plugin.py#L12-L16)
 - [endpoints.py (IPAM):20-109](file://backend/app/plugins/ipam/endpoints.py#L20-L109)
+- [endpoints.py (Customer Services):18-172](file://backend/app/plugins/customer_services/endpoints.py#L18-172)
