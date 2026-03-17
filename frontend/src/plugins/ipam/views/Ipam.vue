@@ -41,8 +41,7 @@ const totalItems = ref(0)
 // Filters
 const filters = ref({
   vrf: '',
-  status: '',
-  vlan: ''
+  status: ''
 })
 
 const tabs = [
@@ -145,7 +144,6 @@ async function fetchDatabaseData() {
     
     if (filters.value.vrf) params.append('vrf_id', filters.value.vrf)
     if (filters.value.status) params.append('status', filters.value.status)
-    if (filters.value.vlan) params.append('vlan_vid', filters.value.vlan)
     
     const response = await authStore.authFetch(`/api/v1/plugins/ipam/database?${params.toString()}`)
     
@@ -192,7 +190,7 @@ function getRowClass(type) {
 
 function resetFilters() {
   searchQuery.value = ''
-  filters.value = { vrf: '', status: '', vlan: '' }
+  filters.value = { vrf: '', status: '' }
   currentPage.value = 1
   fetchDatabaseData()
 }
@@ -327,8 +325,16 @@ onMounted(() => {
     <!-- Database Tab -->
     <Card v-else-if="activeTab === 'database'">
       <CardHeader>
-        <CardTitle>IP Addresses Database</CardTitle>
-        <CardDescription>All IP addresses from NetBox</CardDescription>
+        <div class="flex items-center justify-between">
+          <div>
+            <CardTitle>IP Addresses Database</CardTitle>
+            <CardDescription>All IP addresses from NetBox</CardDescription>
+          </div>
+          <Button variant="outline" @click="fetchDatabaseData" :disabled="databaseLoading">
+            <RefreshCw :class="['h-4 w-4 mr-2', databaseLoading ? 'animate-spin' : '']" />
+            Refresh
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <!-- Search and Filters -->
@@ -352,18 +358,14 @@ onMounted(() => {
           </div>
           
           <!-- Advanced Filters -->
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="text-xs font-medium mb-1 block">VRF</label>
-              <Input v-model="filters.vrf" placeholder="Filter by VRF" />
+              <Input v-model="filters.vrf" placeholder="Filter by VRF ID" />
             </div>
             <div>
               <label class="text-xs font-medium mb-1 block">Status</label>
-              <Input v-model="filters.status" placeholder="Filter by status" />
-            </div>
-            <div>
-              <label class="text-xs font-medium mb-1 block">VLAN</label>
-              <Input v-model="filters.vlan" placeholder="Filter by VLAN" />
+              <Input v-model="filters.status" placeholder="Filter by status (active, reserved, etc.)" />
             </div>
           </div>
         </div>
@@ -412,16 +414,6 @@ onMounted(() => {
                       <ChevronUp v-if="sortField === 'status' && sortDirection === 'desc'" class="h-4 w-4" />
                     </div>
                   </th>
-                  <th 
-                    class="px-4 py-3 text-left font-medium cursor-pointer hover:bg-muted/70 transition-colors"
-                    @click="handleSort('vlan')"
-                  >
-                    <div class="flex items-center gap-2">
-                      VLAN
-                      <ChevronDown v-if="sortField === 'vlan' && sortDirection === 'asc'" class="h-4 w-4" />
-                      <ChevronUp v-if="sortField === 'vlan' && sortDirection === 'desc'" class="h-4 w-4" />
-                    </div>
-                  </th>
                   <th class="px-4 py-3 text-left font-medium">Description</th>
                   <th 
                     class="px-4 py-3 text-left font-medium cursor-pointer hover:bg-muted/70 transition-colors"
@@ -449,7 +441,6 @@ onMounted(() => {
                       {{ item.status?.label || item.status?.value }}
                     </div>
                   </td>
-                  <td class="px-4 py-3">{{ item.vlan?.vid || 'N/A' }}</td>
                   <td class="px-4 py-3 text-muted-foreground">{{ item.description }}</td>
                   <td class="px-4 py-3">{{ item.interface?.name || 'N/A' }}</td>
                 </tr>

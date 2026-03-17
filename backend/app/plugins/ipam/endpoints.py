@@ -102,8 +102,7 @@ async def get_database(
     q: Optional[str] = None,
     ordering: Optional[str] = None,
     vrf_id: Optional[str] = None,
-    status: Optional[str] = None,
-    vlan_vid: Optional[str] = None
+    status: Optional[str] = None
 ):
     """
     Получает все IP адреса из NetBox API.
@@ -115,7 +114,6 @@ async def get_database(
     - ordering: Сортировка (prefix: 'field', desc: '-field')
     - vrf_id: Фильтр по VRF
     - status: Фильтр по статусу
-    - vlan_vid: Фильтр по VLAN ID
     """
     params = {
         "limit": page_size,
@@ -129,8 +127,6 @@ async def get_database(
         params["vrf_id"] = vrf_id
     if status:
         params["status"] = status
-    if vlan_vid:
-        params["vlan_vid"] = vlan_vid
     if ordering:
         params["ordering"] = ordering
     
