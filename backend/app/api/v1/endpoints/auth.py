@@ -55,7 +55,6 @@ async def refresh_token(
 async def register(
     user_data: UserCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
 ):
     from app.services import user_service
 
