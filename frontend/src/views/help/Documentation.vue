@@ -8,11 +8,197 @@ import CardContent from '@/components/ui/CardContent.vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import ScrollArea from '@/components/ui/ScrollArea.vue'
-import { BookOpen, FileText, Code, Package, CheckCircle, ArrowRight } from 'lucide-vue-next'
+import { 
+  BookOpen, FileText, Code, Package, CheckCircle, ArrowRight,
+  Globe, Server, Briefcase, Network, GraduationCap
+} from 'lucide-vue-next'
 
-const activeStep = ref(1)
+const activeSection = ref('plugins')
+const activePlugin = ref(null)
+const activeDevStep = ref(1)
 
-const steps = [
+// Plugin documentation
+const plugins = [
+  {
+    id: 'ipam',
+    name: 'IPAM',
+    icon: Globe,
+    description: 'IP Address Management with NetBox integration',
+    sections: [
+      {
+        title: 'Overview',
+        content: `
+<p class="mb-4">The <strong>IPAM (IP Address Management)</strong> plugin provides integration with NetBox for managing IP addresses in your network infrastructure.</p>
+
+<h3 class="text-lg font-semibold mb-3">Features</h3>
+<ul class="list-disc ml-6 mb-4 space-y-2">
+  <li><strong>Validation Tab:</strong> Run validation scripts and compare with NetBox database</li>
+  <li><strong>Database Tab:</strong> View all IP addresses from NetBox with filtering and sorting</li>
+  <li>Real-time synchronization with NetBox API</li>
+  <li>Search by IP, VRF, status, and description</li>
+  <li>Export and import capabilities</li>
+</ul>
+
+<h3 class="text-lg font-semibold mb-3">NetBox Integration</h3>
+<p class="mb-4">The plugin connects to NetBox API at <code>http://10.100.22.11:8000/api</code> using Bearer Token authentication.</p>
+`
+      },
+      {
+        title: 'Database Tab',
+        content: `
+<h3 class="text-lg font-semibold mb-3">Columns</h3>
+<ul class="list-disc ml-6 mb-4 space-y-2">
+  <li><strong>IP Address:</strong> The IP address with mask (e.g., 10.10.10.1/32)</li>
+  <li><strong>VRF:</strong> Virtual Routing and Forwarding instance</li>
+  <li><strong>Status:</strong> Active, Reserved, Deprecated, etc.</li>
+  <li><strong>Description:</strong> Custom description from NetBox</li>
+  <li><strong>Interface:</strong> Associated network interface</li>
+</ul>
+
+<h3 class="text-lg font-semibold mb-3">Filtering</h3>
+<p class="mb-4">Use the search bar and filters to find specific IP addresses. Press <kbd class="bg-muted px-2 py-1 rounded">Enter</kbd> to apply filters.</p>
+`
+      }
+    ]
+  },
+  {
+    id: 'inventory',
+    name: 'Inventory',
+    icon: Server,
+    description: 'Network equipment and device management',
+    sections: [
+      {
+        title: 'Overview',
+        content: `
+<p class="mb-4">The <strong>Inventory</strong> plugin provides a comprehensive view of all network devices from NetBox DCIM (Device Component Inventory Management).</p>
+
+<h3 class="text-lg font-semibold mb-3">Features</h3>
+<ul class="list-disc ml-6 mb-4 space-y-2">
+  <li>View all network devices in a sortable table</li>
+  <li>Device details: Name, Status, Site, Location, Rack</li>
+  <li>Hardware information: Role, Type, Manufacturer</li>
+  <li>Network details: IP Address, Interface</li>
+  <li>Real-time data from NetBox</li>
+</ul>
+`
+      },
+      {
+        title: 'Devices Tab',
+        content: `
+<h3 class="text-lg font-semibold mb-3">Columns</h3>
+<ul class="list-disc ml-6 mb-4 space-y-2">
+  <li><strong>Name:</strong> Device hostname</li>
+  <li><strong>Status:</strong> Active, Planned, Staged, Offline, etc.</li>
+  <li><strong>Site:</strong> Physical location (datacenter)</li>
+  <li><strong>Location:</strong> Specific location within site</li>
+  <li><strong>Rack:</strong> Rack placement</li>
+  <li><strong>Role:</strong> Device role (Core, Distribution, Access)</li>
+  <li><strong>Type:</strong> Manufacturer and model</li>
+  <li><strong>IP Address:</strong> Primary management IP</li>
+  <li><strong>Description:</strong> Custom description</li>
+</ul>
+
+<h3 class="text-lg font-semibold mb-3">Status Colors</h3>
+<div class="space-y-2 mb-4">
+  <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-500"></span> Active</div>
+  <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Planned</div>
+  <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-purple-500"></span> Staged</div>
+  <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-500"></span> Offline</div>
+</div>
+`
+      }
+    ]
+  },
+  {
+    id: 'customer_services',
+    name: 'Customer Services',
+    icon: Briefcase,
+    description: 'Service database management with CSV import',
+    sections: [
+      {
+        title: 'Overview',
+        content: `
+<p class="mb-4">The <strong>Customer Services</strong> plugin manages your service database imported from CSV files. It provides a complete view of all customer services with editing capabilities.</p>
+
+<h3 class="text-lg font-semibold mb-3">Features</h3>
+<ul class="list-disc ml-6 mb-4 space-y-2">
+  <li>Import services from CSV file</li>
+  <li>Search across all fields (VLAN, address, client, etc.)</li>
+  <li>View service details in modal card</li>
+  <li>Edit any field inline</li>
+  <li>Status highlighting (red for "Отключен")</li>
+  <li>Advanced pagination with page numbers</li>
+</ul>
+`
+      },
+      {
+        title: 'Service Card',
+        content: `
+<p class="mb-4">Click on any row to open the <strong>Service Card</strong> - a detailed view of the service with all 25 fields.</p>
+
+<h3 class="text-lg font-semibold mb-3">Editable Fields</h3>
+<ul class="list-disc ml-6 mb-4 space-y-2">
+  <li>Base ID, Activity, Client, Contract</li>
+  <li>Type of Service, Status, Order Number</li>
+  <li>First/Second Points (addresses)</li>
+  <li>Speed, VLAN ID</li>
+  <li>Switchboard and Port settings</li>
+  <li>Subnets, Router, Interface</li>
+  <li>Comments and more</li>
+</ul>
+
+<p class="mb-4">Click <strong>Edit</strong> to modify fields, then <strong>Save Changes</strong> to persist updates.</p>
+`
+      }
+    ]
+  },
+  {
+    id: 'vlan',
+    name: 'VLAN',
+    icon: Network,
+    description: 'Free and occupied VLAN database',
+    sections: [
+      {
+        title: 'Overview',
+        content: `
+<p class="mb-4">The <strong>VLAN</strong> plugin analyzes your Customer Services database to determine which VLANs are free for use and which are occupied.</p>
+
+<h3 class="text-lg font-semibold mb-3">Logic</h3>
+<div class="bg-muted p-4 rounded-lg mb-4">
+  <p class="mb-2"><strong>Occupied VLAN:</strong> Has at least one service with status "Эксплуатация"</p>
+  <p><strong>Free VLAN:</strong> All services with this VLAN have status "Отключен"</p>
+</div>
+
+<h3 class="text-lg font-semibold mb-3">Features</h3>
+<ul class="list-disc ml-6 mb-4 space-y-2">
+  <li>Statistics dashboard (Total/Free/Occupied)</li>
+  <li>Free VLAN database with previous usage info</li>
+  <li>Occupied VLAN list with active services</li>
+  <li>Search by VLAN ID or client name</li>
+</ul>
+`
+      },
+      {
+        title: 'Free VLAN Database',
+        content: `
+<p class="mb-4">The <strong>FREE VLAN DATABASE</strong> tab shows all VLANs that are available for new services.</p>
+
+<h3 class="text-lg font-semibold mb-3">Columns</h3>
+<ul class="list-disc ml-6 mb-4 space-y-2">
+  <li><strong>VLAN ID:</strong> The VLAN number</li>
+  <li><strong>Previous Services Count:</strong> How many services used this VLAN before</li>
+  <li><strong>Previous Clients:</strong> List of clients who used this VLAN (all disabled)</li>
+</ul>
+
+<p class="mb-4">This helps you identify which VLANs can be safely reused for new customer services.</p>
+`
+      }
+    ]
+  }
+]
+
+// Development guide steps
+const devSteps = [
   {
     id: 1,
     title: '📦 Структура плагина',
@@ -683,61 +869,148 @@ docker-compose logs -f backend
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 max-w-6xl mx-auto">
     <div>
-      <h1 class="text-3xl font-bold tracking-tight">Plugin Development Guide</h1>
-      <p class="text-muted-foreground mt-1">Полное руководство по созданию плагинов</p>
+      <h1 class="text-3xl font-bold tracking-tight">Documentation</h1>
+      <p class="text-muted-foreground mt-2">Complete guide to NOC Vision platform</p>
     </div>
 
-    <!-- Progress Steps -->
-    <div class="flex flex-wrap gap-2">
+    <!-- Main Navigation -->
+    <div class="flex flex-wrap gap-2 border-b pb-4">
       <Button
-        v-for="step in steps"
-        :key="step.id"
-        :variant="activeStep === step.id ? 'default' : 'outline'"
-        size="sm"
-        @click="activeStep = step.id"
-        class="text-xs"
+        :variant="activeSection === 'plugins' ? 'default' : 'outline'"
+        @click="activeSection = 'plugins'; activePlugin = null"
+        class="gap-2"
       >
-        {{ step.id }}. {{ step.title.split(' ')[0] }}
+        <Package class="h-4 w-4" />
+        Plugin Documentation
+      </Button>
+      <Button
+        :variant="activeSection === 'development' ? 'default' : 'outline'"
+        @click="activeSection = 'development'; activeDevStep = 1"
+        class="gap-2"
+      >
+        <GraduationCap class="h-4 w-4" />
+        Plugin Development Guide
       </Button>
     </div>
 
-    <!-- Content -->
-    <div class="grid gap-6">
-      <Card v-for="step in steps" :key="step.id" v-show="activeStep === step.id">
-        <CardHeader>
-          <CardTitle class="text-2xl">{{ step.title }}</CardTitle>
-          <CardDescription>{{ step.description }}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div v-html="step.content"></div>
-          
-          <!-- Navigation -->
-          <div class="flex justify-between mt-8 pt-4 border-t">
-            <Button
-              variant="outline"
-              :disabled="activeStep === 1"
-              @click="activeStep--"
-            >
-              ← Previous
-            </Button>
-            <Button
-              v-if="activeStep < steps.length"
-              @click="activeStep++"
-            >
-              Next →
-            </Button>
-            <Button
-              v-else
-              variant="default"
-              @click="activeStep = 1"
-            >
-              Start Over ↻
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+    <!-- PLUGINS SECTION -->
+    <div v-if="activeSection === 'plugins'" class="space-y-6">
+      <!-- Plugin List -->
+      <div v-if="!activePlugin" class="grid gap-4 md:grid-cols-2">
+        <Card
+          v-for="plugin in plugins"
+          :key="plugin.id"
+          class="cursor-pointer hover:border-primary transition-colors"
+          @click="activePlugin = plugin"
+        >
+          <CardHeader>
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-primary/10 rounded-lg">
+                <component :is="plugin.icon" class="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle>{{ plugin.name }}</CardTitle>
+                <CardDescription>{{ plugin.description }}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div class="flex items-center text-sm text-primary">
+              View Documentation
+              <ArrowRight class="h-4 w-4 ml-2" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <!-- Plugin Detail -->
+      <div v-else class="space-y-6">
+        <Button variant="outline" @click="activePlugin = null">
+          ← Back to Plugins
+        </Button>
+
+        <Card>
+          <CardHeader>
+            <div class="flex items-center gap-3">
+              <div class="p-3 bg-primary/10 rounded-lg">
+                <component :is="activePlugin.icon" class="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <CardTitle class="text-2xl">{{ activePlugin.name }}</CardTitle>
+                <CardDescription>{{ activePlugin.description }}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <!-- Plugin Sections -->
+        <div class="grid gap-6">
+          <Card v-for="(section, index) in activePlugin.sections" :key="index">
+            <CardHeader>
+              <CardTitle class="text-xl">{{ section.title }}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div class="prose dark:prose-invert max-w-none" v-html="section.content"></div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVELOPMENT GUIDE SECTION -->
+    <div v-else class="space-y-6">
+      <!-- Progress Steps -->
+      <div class="flex flex-wrap gap-2">
+        <Button
+          v-for="step in devSteps"
+          :key="step.id"
+          :variant="activeDevStep === step.id ? 'default' : 'outline'"
+          size="sm"
+          @click="activeDevStep = step.id"
+          class="text-xs"
+        >
+          {{ step.id }}. {{ step.title.split(' ')[0] }}
+        </Button>
+      </div>
+
+      <!-- Content -->
+      <div class="grid gap-6">
+        <Card v-for="step in devSteps" :key="step.id" v-show="activeDevStep === step.id">
+          <CardHeader>
+            <CardTitle class="text-2xl">{{ step.title }}</CardTitle>
+            <CardDescription>{{ step.description }}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div v-html="step.content"></div>
+            
+            <!-- Navigation -->
+            <div class="flex justify-between mt-8 pt-4 border-t">
+              <Button
+                variant="outline"
+                :disabled="activeDevStep === 1"
+                @click="activeDevStep--"
+              >
+                ← Previous
+              </Button>
+              <Button
+                v-if="activeDevStep < devSteps.length"
+                @click="activeDevStep++"
+              >
+                Next →
+              </Button>
+              <Button
+                v-else
+                variant="default"
+                @click="activeDevStep = 1"
+              >
+                Start Over ↻
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   </div>
 </template>
