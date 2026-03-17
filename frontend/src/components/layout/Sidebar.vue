@@ -26,6 +26,24 @@ const pluginRegistry = usePluginRegistryStore()
 
 const emit = defineEmits(['close'])
 
+// Check if user has access to section based on role
+function hasSectionAccess(section) {
+  const userRole = authStore.userRole
+  
+  // Superuser has access to all sections
+  if (userRole === 'superuser') {
+    return true
+  }
+  
+  // User role has limited access
+  if (userRole === 'user') {
+    const allowedSections = ['general', 'operations']
+    return allowedSections.includes(section.toLowerCase())
+  }
+  
+  return false
+}
+
 // Core menu items
 const coreGeneralItems = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, order: 10 },
@@ -33,7 +51,8 @@ const coreGeneralItems = [
 
 const corePageItems = computed(() => {
   const items = []
-  if (authStore.isAdmin) {
+  // Only superuser can access Users management
+  if (authStore.userRole === 'superuser') {
     items.push({ label: 'Users', path: '/users', icon: Users, order: 10 })
   }
   return items
@@ -131,7 +150,7 @@ function isItemVisible(item) {
       <Separator class="mb-4" />
 
       <!-- Operations section -->
-      <div v-if="operationsPluginItems.length > 0" class="mb-4">
+      <div v-if="hasSectionAccess('operations') && operationsPluginItems.length > 0" class="mb-4">
         <h4 class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Operations
         </h4>
@@ -146,10 +165,10 @@ function isItemVisible(item) {
         </div>
       </div>
 
-      <Separator v-if="operationsPluginItems.length > 0" class="mb-4" />
+      <Separator v-if="hasSectionAccess('operations') && operationsPluginItems.length > 0" class="mb-4" />
 
       <!-- Analytics section -->
-      <div v-if="analyticsPluginItems.length > 0" class="mb-4">
+      <div v-if="hasSectionAccess('analytics') && analyticsPluginItems.length > 0" class="mb-4">
         <h4 class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Analytics
         </h4>
@@ -164,10 +183,10 @@ function isItemVisible(item) {
         </div>
       </div>
 
-      <Separator v-if="analyticsPluginItems.length > 0" class="mb-4" />
+      <Separator v-if="hasSectionAccess('analytics') && analyticsPluginItems.length > 0" class="mb-4" />
 
       <!-- Security section -->
-      <div v-if="securityPluginItems.length > 0" class="mb-4">
+      <div v-if="hasSectionAccess('security') && securityPluginItems.length > 0" class="mb-4">
         <h4 class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Security
         </h4>
@@ -182,10 +201,10 @@ function isItemVisible(item) {
         </div>
       </div>
 
-      <Separator v-if="securityPluginItems.length > 0" class="mb-4" />
+      <Separator v-if="hasSectionAccess('security') && securityPluginItems.length > 0" class="mb-4" />
 
       <!-- Admin section -->
-      <div v-if="adminPluginItems.length > 0" class="mb-4">
+      <div v-if="hasSectionAccess('admin') && adminPluginItems.length > 0" class="mb-4">
         <h4 class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Admin
         </h4>
@@ -200,7 +219,7 @@ function isItemVisible(item) {
         </div>
       </div>
 
-      <Separator v-if="adminPluginItems.length > 0" class="mb-4" />
+      <Separator v-if="hasSectionAccess('admin') && adminPluginItems.length > 0" class="mb-4" />
 
       <!-- Pages section -->
       <div v-if="pageItems.length > 0" class="mb-4">

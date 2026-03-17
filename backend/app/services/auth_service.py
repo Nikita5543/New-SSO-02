@@ -120,7 +120,7 @@ def authenticate_user(username: str, password: str, db: Session) -> Optional[Use
 
 
 def create_default_admin(db: Session) -> Optional[User]:
-    existing = db.query(User).filter(User.role == "admin").first()
+    existing = db.query(User).filter(User.role == "superuser").first()
     if existing:
         return None
 
@@ -129,7 +129,7 @@ def create_default_admin(db: Session) -> Optional[User]:
         email=settings.DEFAULT_ADMIN_EMAIL,
         full_name="System Administrator",
         hashed_password=get_password_hash(settings.DEFAULT_ADMIN_PASSWORD),
-        role="admin",
+        role="superuser",
         is_active=True,
     )
     db.add(admin)

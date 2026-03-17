@@ -96,3 +96,38 @@ async def get_current_admin_user(
             detail="Not enough permissions",
         )
     return current_user
+
+
+async def get_current_superuser(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """Проверяет, что пользователь имеет роль superuser"""
+    if current_user.role != "superuser":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Superuser access required",
+        )
+    return current_user
+
+
+def check_plugin_access(user_role: str, plugin_section: str) -> bool:
+    """
+    Проверяет доступ пользователя к секции плагинов.
+    
+    Args:
+        user_role: Роль пользователя ('user' или 'superuser')
+        plugin_section: Секция плагина ('operations', 'analytics', 'security', 'admin')
+    
+    Returns:
+        bool: True если доступ разрешён
+    """
+    # Superuser имеет доступ ко всем секциям
+    if user_role == "superuser":
+        return True
+    
+    # User имеет доступ только к operations и general
+    if user_role == "user":
+        allowed_sections = ["operations", "general"]
+        return plugin_section.lower() in allowed_sections
+    
+    return False
