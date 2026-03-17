@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { usePluginRegistryStore } from '@/stores/pluginRegistry'
+import { useAuthStore } from '@/stores/auth'
 import Card from '@/components/ui/Card.vue'
 import CardHeader from '@/components/ui/CardHeader.vue'
 import CardTitle from '@/components/ui/CardTitle.vue'
@@ -14,6 +15,7 @@ import {
 } from 'lucide-vue-next'
 
 const pluginRegistry = usePluginRegistryStore()
+const authStore = useAuthStore()
 
 // System metrics
 const systemMetrics = ref(null)
@@ -68,14 +70,12 @@ async function fetchSystemData() {
   error.value = null
   
   try {
-    const token = localStorage.getItem('token')
-    const response = await fetch('/api/v1/plugins/performance/system/overview', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
+    const response = await authStore.authFetch('/api/v1/plugins/performance/system/overview')
     
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Session expired. Please login again.')
+      }
       throw new Error(`HTTP ${response.status}`)
     }
     
