@@ -361,11 +361,19 @@ onMounted(() => {
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="text-xs font-medium mb-1 block">VRF</label>
-              <Input v-model="filters.vrf" placeholder="Filter by VRF ID" />
+              <Input 
+                v-model="filters.vrf" 
+                placeholder="Filter by VRF ID" 
+                @keyup.enter="fetchDatabaseData"
+              />
             </div>
             <div>
               <label class="text-xs font-medium mb-1 block">Status</label>
-              <Input v-model="filters.status" placeholder="Filter by status (active, reserved, etc.)" />
+              <Input 
+                v-model="filters.status" 
+                placeholder="Filter by status (active, reserved, etc.)"
+                @keyup.enter="fetchDatabaseData"
+              />
             </div>
           </div>
         </div>
