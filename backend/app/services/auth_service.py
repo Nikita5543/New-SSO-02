@@ -120,8 +120,17 @@ def authenticate_user(username: str, password: str, db: Session) -> Optional[Use
 
 
 def create_default_admin(db: Session) -> Optional[User]:
-    existing = db.query(User).filter(User.role == "superuser").first()
+    # Проверяем существование любого admin/superuser
+    existing = db.query(User).filter(
+        (User.role == "admin") | (User.role == "superuser")
+    ).first()
     if existing:
+        # Если есть admin, обновляем его на superuser
+        if existing.role == "admin":
+            existing.role = "superuser"
+            db.commit()
+            db.refresh(existing)
+            return existing
         return None
 
     admin = User(
