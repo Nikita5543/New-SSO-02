@@ -1,129 +1,94 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
-from app.core.database import get_db
-from app.core.security import get_current_active_user, get_current_admin_user
-from app.models.user import User
-from app.plugins.inventory.models import Device, Site, DeviceType
-from app.plugins.inventory.schemas import (
-    DeviceCreate, DeviceUpdate, DeviceResponse,
-    SiteCreate, SiteResponse,
-    DeviceTypeCreate, DeviceTypeResponse,
-)
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
+import httpx
+from app.core.config import settings
 
 router = APIRouter()
 
 
-# --- Devices ---
+async def get_netbox_data(endpoint: str, params: Optional[dict] = None):
+    """Получить данные из NetBox API"""
+    url = f"{settings.NETBOX_URL.rstrip('/')}/{endpoint.lstrip('/')}"
+    
+    headers = {
+        "Authorization": f"Bearer {settings.NETBOX_TOKEN}",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(url, headers=headers, params=params)
+        
+        if response.status_code == 401:
+            raise HTTPException(status_code=500, detail="NetBox authentication failed")
+        elif response.status_code == 403:
+            raise HTTPException(status_code=500, detail="NetBox permission denied")
+        elif response.status_code != 200:
+            raise HTTPException(
+                status_code=500,
+                detail=f"NetBox API error: {response.status_code} - {response.text[:200]}"
+            )
+        
+        return response.json()
 
-@router.get("/devices", response_model=List[DeviceResponse])
-def list_devices(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+
+@router.get("/devices")
+async def list_devices(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+    q: Optional[str] = None,
+    ordering: Optional[str] = None
 ):
-    return db.query(Device).offset(skip).limit(limit).all()
-
-
-@router.post("/devices", response_model=DeviceResponse)
-def create_device(
-    data: DeviceCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
-):
-    device = Device(**data.model_dump())
-    db.add(device)
-    db.commit()
-    db.refresh(device)
-    return device
-
-
-@router.get("/devices/{device_id}", response_model=DeviceResponse)
-def get_device(
-    device_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
-    device = db.query(Device).filter(Device.id == device_id).first()
-    if not device:
-        raise HTTPException(status_code=404, detail="Device not found")
-    return device
-
-
-@router.put("/devices/{device_id}", response_model=DeviceResponse)
-def update_device(
-    device_id: int,
-    data: DeviceUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
-):
-    device = db.query(Device).filter(Device.id == device_id).first()
-    if not device:
-        raise HTTPException(status_code=404, detail="Device not found")
-    for key, value in data.model_dump(exclude_unset=True).items():
-        setattr(device, key, value)
-    db.commit()
-    db.refresh(device)
-    return device
-
-
-@router.delete("/devices/{device_id}")
-def delete_device(
-    device_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
-):
-    device = db.query(Device).filter(Device.id == device_id).first()
-    if not device:
-        raise HTTPException(status_code=404, detail="Device not found")
-    db.delete(device)
-    db.commit()
-    return {"status": "ok", "message": "Device deleted"}
-
-
-# --- Sites ---
-
-@router.get("/sites", response_model=List[SiteResponse])
-def list_sites(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
-    return db.query(Site).all()
-
-
-@router.post("/sites", response_model=SiteResponse)
-def create_site(
-    data: SiteCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
-):
-    site = Site(**data.model_dump())
-    db.add(site)
-    db.commit()
-    db.refresh(site)
-    return site
-
-
-# --- Device Types ---
-
-@router.get("/device-types", response_model=List[DeviceTypeResponse])
-def list_device_types(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
-    return db.query(DeviceType).all()
-
-
-@router.post("/device-types", response_model=DeviceTypeResponse)
-def create_device_type(
-    data: DeviceTypeCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
-):
-    dt = DeviceType(**data.model_dump())
-    db.add(dt)
-    db.commit()
-    db.refresh(dt)
-    return dt
+    """
+    Получить список устройств из NetBox DCIM.
+    
+    Параметры:
+    - page: Номер страницы
+    - page_size: Количество элементов (1-100)
+    - q: Поиск по имени устройства
+    - ordering: Сортировка (name, -name, status, etc.)
+    """
+    params = {
+        "limit": page_size,
+        "offset": (page - 1) * page_size,
+    }
+    
+    if q:
+        params["q"] = q
+    if ordering:
+        params["ordering"] = ordering
+    
+    try:
+        data = await get_netbox_data("dcim/devices/", params)
+        
+        # Преобразовать данные в формат frontend
+        results = []
+        for item in data.get("results", []):
+            results.append({
+                "id": item.get("id"),
+                "name": item.get("name"),
+                "status": item.get("status"),
+                "site": item.get("site"),
+                "location": item.get("location"),
+                "rack": item.get("rack"),
+                "role": item.get("role"),
+                "device_type": item.get("device_type"),
+                "primary_ip": item.get("primary_ip"),
+                "primary_ip4": item.get("primary_ip4"),
+                "description": item.get("description"),
+            })
+        
+        return {
+            "count": data.get("count", 0),
+            "next": data.get("next"),
+            "previous": data.get("previous"),
+            "results": results
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching data from NetBox: {str(e)}"
+        )
