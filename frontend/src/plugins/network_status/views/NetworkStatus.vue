@@ -35,8 +35,11 @@ async function fetchDevices(sync = false) {
     const response = await authStore.authFetch(url)
     if (response.ok) {
       const data = await response.json()
+      console.log('DEBUG API response:', data)
       devices.value = data.devices || []
       summary.value = data.summary || {}
+      console.log('DEBUG devices:', devices.value)
+      console.log('DEBUG summary:', summary.value)
     }
   } catch (e) {
     console.error('Error fetching devices:', e)
