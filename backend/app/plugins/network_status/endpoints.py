@@ -66,7 +66,7 @@ async def sync_devices_from_netbox(db: Session):
             "platform": (router.get("platform") or {}).get("name", ""),
             "device_role": (router.get("device_role") or {}).get("name", ""),
             "site": (router.get("site") or {}).get("name", ""),
-            "status": router.get("status", "active"),
+            "status": (router.get("status") or {}).get("value", "active") if isinstance(router.get("status"), dict) else (router.get("status") or "active"),
         }
         
         if existing:
