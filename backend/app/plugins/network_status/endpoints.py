@@ -63,9 +63,9 @@ async def sync_devices_from_netbox(db: Session):
             "netbox_id": netbox_id,
             "hostname": router.get("name", ""),
             "mgmt_ip": router.get("primary_ip4", {}).get("address", "").split("/")[0] if router.get("primary_ip4") else "",
-            "platform": router.get("platform", {}).get("name", ""),
-            "device_role": router.get("device_role", {}).get("name", ""),
-            "site": router.get("site", {}).get("name", ""),
+            "platform": (router.get("platform") or {}).get("name", ""),
+            "device_role": (router.get("device_role") or {}).get("name", ""),
+            "site": (router.get("site") or {}).get("name", ""),
             "status": router.get("status", "active"),
         }
         
