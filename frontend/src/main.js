@@ -134,6 +134,15 @@ function getMenuItemsForPlugin(pluginName) {
         section: 'operations',
         order: 35
       }
+    ],
+    network_status: [
+      {
+        label: 'Network Status',
+        icon: icons.Activity,
+        path: '/plugins/network-status',
+        section: 'analytics',
+        order: 35
+      }
     ]
   }
   

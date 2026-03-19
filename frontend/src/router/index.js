@@ -33,6 +33,7 @@ const Configuration = () => import('@/plugins/configuration/views/Configuration.
 const Ipam = () => import('@/plugins/ipam/views/Ipam.vue')
 const CustomerServices = () => import('@/plugins/customer_services/views/CustomerServices.vue')
 const Vlan = () => import('@/plugins/vlan/views/Vlan.vue')
+const NetworkStatus = () => import('@/plugins/network_status/views/NetworkStatus.vue')
 
 const routes = [
   {
@@ -159,6 +160,11 @@ const routes = [
         path: 'plugins/vlan',
         name: 'PluginsVlan',
         component: Vlan
+      },
+      {
+        path: 'plugins/network-status',
+        name: 'PluginsNetworkStatus',
+        component: NetworkStatus
       }
     ]
   },
