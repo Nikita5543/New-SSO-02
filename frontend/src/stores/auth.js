@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useThemeStore } from './theme'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -49,6 +50,11 @@ export const useAuthStore = defineStore('auth', () => {
       accessToken.value = data.access_token
       refreshToken.value = data.refresh_token
       user.value = data.user
+      
+      // Apply user's background preference
+      if (data.user?.background_image) {
+        useThemeStore().setBackground(data.user.background_image)
+      }
       
       // Сохраняем токены на 3 часа (10800 секунд)
       const expiryTime = new Date().getTime() + (3 * 60 * 60 * 1000)

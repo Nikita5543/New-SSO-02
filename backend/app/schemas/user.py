@@ -18,6 +18,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     password: Optional[str] = None
     avatar_url: Optional[str] = None
+    background_image: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -27,6 +28,7 @@ class UserResponse(BaseModel):
     full_name: Optional[str] = None
     role: str
     avatar_url: Optional[str] = None
+    background_image: Optional[str] = None
     is_active: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

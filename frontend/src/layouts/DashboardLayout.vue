@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import ThemeToggle from '@/components/ui/ThemeToggle.vue'
 import DropdownMenu from '@/components/ui/DropdownMenu.vue'
@@ -11,8 +12,13 @@ import Avatar from '@/components/ui/Avatar.vue'
 import { Menu, X, LogOut, User, Settings } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
+const themeStore = useThemeStore()
 const router = useRouter()
 const sidebarOpen = ref(false)
+
+onMounted(() => {
+  themeStore.applyBackground()
+})
 
 async function handleLogout() {
   await authStore.logout()
@@ -21,7 +27,7 @@ async function handleLogout() {
 </script>
 
 <template>
-  <div class="flex h-screen overflow-hidden bg-background">
+  <div id="app-background" class="flex h-screen overflow-hidden bg-background">
     <!-- Sidebar (desktop) -->
     <aside class="hidden w-64 shrink-0 border-r bg-card lg:block">
       <Sidebar />

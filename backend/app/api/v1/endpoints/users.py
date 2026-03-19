@@ -1,4 +1,5 @@
 from typing import List
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -33,6 +34,34 @@ async def update_my_avatar(
     """Обновить аватар текущего пользователя"""
     avatar_url = avatar_data.get("avatar_url")
     return user_service.update_user(db, current_user, avatar_url=avatar_url)
+
+
+@router.put("/me/background", response_model=UserResponse)
+async def update_my_background(
+    background_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Обновить фон текущего пользователя"""
+    background_image = background_data.get("background_image")
+    return user_service.update_user(db, current_user, background_image=background_image)
+
+
+@router.get("/me/backgrounds-list")
+async def get_backgrounds_list(
+    current_user: User = Depends(get_current_active_user),
+):
+    """Получить список доступных фонов"""
+    ALLOWED_EXT = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
+    # Path to frontend public/backgrounds served as static
+    backgrounds_dir = Path(__file__).resolve().parents[4] / "frontend" / "public" / "backgrounds"
+    if not backgrounds_dir.exists():
+        return {"backgrounds": []}
+    files = [
+        f.name for f in sorted(backgrounds_dir.iterdir())
+        if f.is_file() and f.suffix.lower() in ALLOWED_EXT
+    ]
+    return {"backgrounds": files}
 
 
 @router.get("/plugins/access/{section}")

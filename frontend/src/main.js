@@ -169,6 +169,10 @@ async function initApp() {
   // Try to restore user session if token exists
   if (authStore.accessToken) {
     await authStore.fetchUser()
+    // Restore user's background preference
+    if (authStore.user?.background_image) {
+      themeStore.setBackground(authStore.user.background_image)
+    }
   }
   
   // Initialize plugins
