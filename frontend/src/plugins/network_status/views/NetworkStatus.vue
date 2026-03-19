@@ -276,18 +276,18 @@ onMounted(() => {
                 </td>
               </tr>
             </tbody>
-            <tfoot v-if="devices.length > 0" class="bg-muted/30 font-medium">
+            <tfoot v-if="devices.length > 0 && summaryStats.length > 0" class="bg-muted/30 font-medium">
               <tr class="border-t-2">
                 <td class="p-3" colspan="4">Failed/Total</td>
                 <td class="p-3">
-                  {{ summaryStats[1].value }}/{{ summaryStats[1].total }}
+                  {{ summaryStats[1]?.value || 0 }}/{{ summaryStats[1]?.total || 0 }}
                 </td>
                 <td class="p-3">
-                  {{ (summary.value.backup?.total || 0) - (summary.value.backup?.ok || 0) }}/{{ summary.value.backup?.total || 0 }}
+                  {{ ((summary.value?.backup?.total || 0) - (summary.value?.backup?.ok || 0)) }}/{{ summary.value?.backup?.total || 0 }}
                 </td>
                 <td class="p-3">—</td>
                 <td class="p-3">
-                  {{ summaryStats[3].value }}/{{ summaryStats[3].total }}
+                  {{ summaryStats[3]?.value || 0 }}/{{ summaryStats[3]?.total || 0 }}
                 </td>
                 <td class="p-3"></td>
               </tr>
