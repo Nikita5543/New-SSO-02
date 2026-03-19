@@ -24,6 +24,10 @@ router = APIRouter()
 
 async def get_netbox_routers() -> List[dict]:
     """Fetch routers from NetBox API"""
+    # Debug: log settings values
+    print(f"DEBUG NETBOX_URL: {settings.NETBOX_URL}")
+    print(f"DEBUG NETBOX_TOKEN: {settings.NETBOX_TOKEN[:10]}..." if settings.NETBOX_TOKEN else "DEBUG NETBOX_TOKEN: EMPTY")
+    
     try:
         async with httpx.AsyncClient() as client:
             headers = {
