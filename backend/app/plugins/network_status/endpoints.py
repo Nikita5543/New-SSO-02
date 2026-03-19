@@ -49,10 +49,9 @@ async def get_netbox_routers() -> List[dict]:
         return []
 
 
-def sync_devices_from_netbox(db: Session):
+async def sync_devices_from_netbox(db: Session):
     """Sync router devices from NetBox to local DB"""
-    import asyncio
-    routers = asyncio.run(get_netbox_routers())
+    routers = await get_netbox_routers()
     
     for router in routers:
         netbox_id = router.get("id")
@@ -138,7 +137,7 @@ async def list_devices_with_status(
     If sync=True, sync devices from NetBox first.
     """
     if sync:
-        sync_devices_from_netbox(db)
+        await sync_devices_from_netbox(db)
     
     devices = db.query(NetworkDevice).all()
     
@@ -255,5 +254,5 @@ async def sync_devices(
     current_user: User = Depends(get_current_active_user),
 ):
     """Manually sync devices from NetBox"""
-    count = sync_devices_from_netbox(db)
+    count = await sync_devices_from_netbox(db)
     return {"status": "success", "synced_devices": count}
