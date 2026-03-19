@@ -21,22 +21,18 @@ from app.plugins.network_status.schemas import (
 
 router = APIRouter()
 
-# NetBox configuration from settings
-NETBOX_URL = settings.NETBOX_URL
-NETBOX_TOKEN = settings.NETBOX_TOKEN
-
 
 async def get_netbox_routers() -> List[dict]:
     """Fetch routers from NetBox API"""
     try:
         async with httpx.AsyncClient() as client:
             headers = {
-                "Authorization": f"Token {NETBOX_TOKEN}",
+                "Authorization": f"Token {settings.NETBOX_TOKEN}",
                 "Content-Type": "application/json",
             }
             # Get devices with role=router
             response = await client.get(
-                f"{NETBOX_URL}/dcim/devices/",
+                f"{settings.NETBOX_URL}/dcim/devices/",
                 headers=headers,
                 params={"role": "router", "status": "active"},
                 timeout=30.0,
