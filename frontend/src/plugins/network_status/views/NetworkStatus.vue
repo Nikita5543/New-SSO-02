@@ -118,9 +118,9 @@ function getStatusColor(status, type) {
 
 // Computed summary stats
 const summaryStats = computed(() => {
-  const op = summary.value.operational || {}
-  const bk = summary.value.backup || {}
-  const cr = summary.value.critical || {}
+  const op = summary.value?.operational || {}
+  const bk = summary.value?.backup || {}
+  const cr = summary.value?.critical || {}
   
   return [
     { label: 'Online', value: op.online || 0, total: op.total || 0, color: 'green' },
