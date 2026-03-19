@@ -1,4 +1,3 @@
-import os
 import subprocess
 import httpx
 from typing import List, Optional
@@ -9,6 +8,7 @@ from sqlalchemy import desc
 
 from app.core.database import get_db
 from app.core.security import get_current_active_user
+from app.core.config import settings
 from app.models.user import User
 from app.plugins.network_status.models import NetworkDevice, DeviceCheckResult
 from app.plugins.network_status.schemas import (
@@ -21,9 +21,9 @@ from app.plugins.network_status.schemas import (
 
 router = APIRouter()
 
-# NetBox configuration
-NETBOX_URL = os.getenv("NETBOX_URL", "http://10.100.22.11:8000")
-NETBOX_TOKEN = os.getenv("NETBOX_TOKEN", "")
+# NetBox configuration from settings
+NETBOX_URL = settings.NETBOX_URL
+NETBOX_TOKEN = settings.NETBOX_TOKEN
 
 
 async def get_netbox_routers() -> List[dict]:
