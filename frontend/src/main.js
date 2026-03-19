@@ -144,6 +144,15 @@ function getMenuItemsForPlugin(pluginName) {
         order: 35
       }
     ],
+    network_tools: [
+      {
+        label: 'Network Tools',
+        icon: icons.Tool,
+        path: '/plugins/network-tools',
+        section: 'analytics',
+        order: 40
+      }
+    ],
   }
   
   return menuConfig[pluginName] || []

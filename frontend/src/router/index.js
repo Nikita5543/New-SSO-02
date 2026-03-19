@@ -34,6 +34,7 @@ const Ipam = () => import('@/plugins/ipam/views/Ipam.vue')
 const CustomerServices = () => import('@/plugins/customer_services/views/CustomerServices.vue')
 const Vlan = () => import('@/plugins/vlan/views/Vlan.vue')
 const NetworkStatus = () => import('@/plugins/network_status/views/NetworkStatus.vue')
+const NetworkTools = () => import('@/plugins/network_tools/views/NetworkTools.vue')
 
 const routes = [
   {
@@ -165,6 +166,11 @@ const routes = [
         path: 'plugins/network-status',
         name: 'PluginsNetworkStatus',
         component: NetworkStatus
+      },
+      {
+        path: 'plugins/network-tools',
+        name: 'PluginsNetworkTools',
+        component: NetworkTools
       }
     ]
   },
