@@ -14,7 +14,8 @@ import {
   RefreshCw, 
   Search,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Terminal
 } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
@@ -76,6 +77,15 @@ function getStatusColor(status) {
     'decommissioned': 'bg-gray-500'
   }
   return colors[status?.value] || 'bg-gray-500'
+}
+
+function openSSH(ipAddress) {
+  if (!ipAddress) return
+  // Remove CIDR suffix if present
+  const cleanIp = ipAddress.split('/')[0]
+  // Open SSH connection
+  const sshUrl = `ssh://admin@${cleanIp}`
+  window.open(sshUrl, '_blank')
 }
 
 function resetFilters() {
@@ -202,6 +212,7 @@ onMounted(() => {
                   <th class="px-4 py-3 text-left font-medium">Type</th>
                   <th class="px-4 py-3 text-left font-medium">IP Address</th>
                   <th class="px-4 py-3 text-left font-medium">Description</th>
+                  <th class="px-4 py-3 text-center font-medium">SSH</th>
                 </tr>
               </thead>
               <tbody>
@@ -235,6 +246,17 @@ onMounted(() => {
                     {{ device.primary_ip4?.address || device.primary_ip?.address || '—' }}
                   </td>
                   <td class="px-4 py-3 text-muted-foreground">{{ device.description || '—' }}</td>
+                  <td class="px-4 py-3 text-center">
+                    <button
+                      v-if="device.primary_ip4?.address || device.primary_ip?.address"
+                      @click="openSSH(device.primary_ip4?.address || device.primary_ip?.address)"
+                      class="p-2 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors"
+                      title="Open SSH connection"
+                    >
+                      <Terminal class="h-4 w-4" />
+                    </button>
+                    <span v-else class="text-muted-foreground">—</span>
+                  </td>
                 </tr>
               </tbody>
             </table>
