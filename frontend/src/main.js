@@ -147,7 +147,7 @@ function getMenuItemsForPlugin(pluginName) {
     network_tools: [
       {
         label: 'Network Tools',
-        icon: icons.Tool,
+        icon: icons.Wrench,
         path: '/plugins/network-tools',
         section: 'analytics',
         order: 40
