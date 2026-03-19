@@ -164,6 +164,7 @@ async def get_vlan_stats(
 async def get_occupied_vlans(
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
+    q: str = Query('', description='Search by VLAN ID or client name'),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -205,6 +206,16 @@ async def get_occupied_vlans(
         for vlan_id, info in vlan_usage.items()
         if info['active']
     ]
+    
+    # Apply search filter if provided
+    search_query = q.strip().lower()
+    if search_query:
+        occupied_vlans = [
+            vlan for vlan in occupied_vlans
+            if search_query in str(vlan['vlan_id']).lower()
+            or any(search_query in (service.get('client') or '').lower() 
+                   for service in vlan['services'])
+        ]
     
     occupied_vlans.sort(key=lambda x: x['vlan_id'])
     

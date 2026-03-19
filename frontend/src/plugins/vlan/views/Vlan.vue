@@ -68,6 +68,8 @@ async function fetchOccupiedVlans() {
       page_size: pageSize.value.toString(),
     })
     
+    if (searchQuery.value) params.append('q', searchQuery.value)
+    
     const response = await authStore.authFetch(`/api/v1/plugins/vlan/occupied-vlans?${params.toString()}`)
     
     if (response.ok) {
