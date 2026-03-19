@@ -19,6 +19,14 @@
 - [pluginRegistry.js](file://frontend/src/stores/pluginRegistry.js)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Added comprehensive Create Service functionality with new POST endpoint
+- Enhanced modal interface to support both create and update operations
+- Updated API documentation to include new create endpoint
+- Modified frontend components to handle dual-mode modal operations
+- Added new service creation workflow with proper form validation
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -35,6 +43,8 @@
 The Customer Services Enhancement project is a comprehensive network operations center (NOC) platform designed to manage and monitor customer service databases for telecommunications infrastructure. This system provides a modern, plugin-based architecture built with FastAPI backend and Vue 3 frontend, offering robust customer service management capabilities with real-time data visualization and administrative controls.
 
 The platform serves as a centralized hub for managing network customer services, providing features such as service database management, real-time monitoring, automated data synchronization from CSV sources, and comprehensive filtering capabilities. The system supports multiple service types including internet access, VPN connections, dedicated channels, and specialized network services with detailed configuration management.
+
+**Updated** The system now includes comprehensive Create Service functionality with a new POST endpoint and enhanced modal interface that supports both create and update operations seamlessly.
 
 ## Project Structure
 
@@ -115,11 +125,13 @@ The Vue 3 frontend delivers a modern, responsive user interface with real-time d
 
 **Dynamic Plugin Integration**: Frontend plugin registry automatically loads and displays available plugins in the navigation sidebar, providing seamless integration with backend plugin systems.
 
+**Enhanced Modal Interface**: The modal interface now supports dual-mode operations - displaying service details in read-only mode and enabling full editing capabilities for both create and update operations. The interface intelligently switches between modes based on whether a new service is being created or an existing service is being edited.
+
 **Section sources**
 - [database.py:1-18](file://backend/app/core/database.py#L1-L18)
 - [security.py:1-134](file://backend/app/core/security.py#L1-L134)
 - [plugin_loader.py:1-100](file://backend/app/core/plugin_loader.py#L1-L100)
-- [CustomerServices.vue:1-424](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L1-L424)
+- [CustomerServices.vue:1-495](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L1-L495)
 
 ## Architecture Overview
 
@@ -141,11 +153,16 @@ API->>Plugin : Route Request
 Plugin->>DB : Query Customer Services
 DB->>Plugin : Service Records
 Plugin->>Client : Service List Response
+Client->>API : POST /api/v1/plugins/customer_services/services
+API->>Plugin : Create Service
+Plugin->>DB : Insert New Record
+DB->>Plugin : Confirmation
+Plugin->>Client : Created Service Response
 Client->>API : PUT /api/v1/plugins/customer_services/services/{id}
 API->>Plugin : Update Service
-Plugin->>DB : Update Record
+Plugin->>DB : Update Existing Record
 DB->>Plugin : Confirmation
-Plugin->>Client : Updated Service
+Plugin->>Client : Updated Service Response
 Note over CSV,DB : Automatic CSV Data Loading
 Plugin->>CSV : Load Service Data
 CSV->>Plugin : CSV Records
@@ -153,8 +170,8 @@ Plugin->>DB : Insert Records
 ```
 
 **Diagram sources**
-- [endpoints.py:69-168](file://backend/app/plugins/customer_services/endpoints.py#L69-L168)
-- [CustomerServices.vue:77-142](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L77-L142)
+- [endpoints.py:69-183](file://backend/app/plugins/customer_services/endpoints.py#L69-L183)
+- [CustomerServices.vue:165-199](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L165-L199)
 
 The architecture ensures loose coupling between components while maintaining efficient data flow and processing capabilities. The system supports horizontal scaling through stateless API design and distributed database connectivity.
 
@@ -231,6 +248,10 @@ class CustomerServiceBase {
 +Optional~String~ comment
 +Optional~String~ responsible_department
 }
+class CustomerServiceCreate {
+<<Pydantic Model>>
++CustomerServiceBase
+}
 class CustomerServiceUpdate {
 <<Pydantic Model>>
 +CustomerServiceBase
@@ -248,6 +269,7 @@ class CustomerServiceListResponse {
 +CustomerServiceResponse[] results
 }
 CustomerService --> CustomerServiceBase : "inherits"
+CustomerServiceCreate --> CustomerServiceBase : "inherits"
 CustomerServiceUpdate --> CustomerServiceBase : "inherits"
 CustomerServiceResponse --> CustomerServiceBase : "contains"
 CustomerServiceListResponse --> CustomerServiceResponse : "contains"
@@ -277,16 +299,20 @@ CSV->>API : Data Loaded
 API->>DB : Query Services with Filters
 DB->>API : Service Results
 API->>Client : JSON Response with Pagination
-Client->>API : PUT /services/{id}
+Client->>API : POST /services (Create New Service)
+API->>DB : Insert New Service Record
+DB->>API : Insertion Confirmation
+API->>Client : Created Service Data
+Client->>API : PUT /services/{id} (Update Existing Service)
 API->>DB : Update Service Record
 DB->>API : Update Confirmation
 API->>Client : Updated Service Data
 ```
 
 **Diagram sources**
-- [endpoints.py:69-168](file://backend/app/plugins/customer_services/endpoints.py#L69-L168)
+- [endpoints.py:69-183](file://backend/app/plugins/customer_services/endpoints.py#L69-L183)
 
-The API implementation includes sophisticated search capabilities across all service fields, status-based filtering, and comprehensive pagination support for handling large datasets efficiently.
+The API implementation includes sophisticated search capabilities across all service fields, status-based filtering, and comprehensive pagination support for handling large datasets efficiently. The new POST endpoint enables seamless service creation workflows.
 
 ### Frontend Service Management Interface
 
@@ -300,31 +326,34 @@ CheckCSV --> |No| LoadCSV[Load CSV Data]
 CheckCSV --> |Yes| RenderTable[Render Service Table]
 LoadCSV --> RenderTable
 RenderTable --> UserAction{User Action}
+UserAction --> |Add Service| OpenNewModal[Open New Service Modal]
 UserAction --> |Search| ApplyFilters[Apply Search Filters]
 UserAction --> |Filter| ApplyStatus[Apply Status Filter]
-UserAction --> |Edit| OpenModal[Open Edit Modal]
+UserAction --> |Edit| OpenEditModal[Open Edit Modal]
 UserAction --> |Pagination| ChangePage[Change Page]
+OpenNewModal --> NewServiceForm[New Service Form]
+OpenEditModal --> EditService[Edit Service Data]
 ApplyFilters --> RenderTable
 ApplyStatus --> RenderTable
-OpenModal --> EditService[Edit Service Data]
-ChangePage --> LoadData
+NewServiceForm --> SaveNewService[Save New Service]
 EditService --> SaveChanges[Save Changes]
-SaveChanges --> CloseModal[Close Modal]
+SaveNewService --> CloseModal[Close Modal]
+SaveChanges --> CloseModal
 CloseModal --> LoadData
 RenderTable --> End([Display Results])
 ```
 
 **Diagram sources**
-- [CustomerServices.vue:77-163](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L77-L163)
+- [CustomerServices.vue:106-199](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L106-L199)
 
-The frontend interface supports advanced features including real-time data refresh, comprehensive search across all service fields, status-based filtering, and detailed service editing with validation.
+The frontend interface supports advanced features including real-time data refresh, comprehensive search across all service fields, status-based filtering, and detailed service editing with validation. The enhanced modal interface now seamlessly handles both create and update operations with intelligent state management.
 
 **Section sources**
 - [plugin.py:1-17](file://backend/app/plugins/customer_services/plugin.py#L1-L17)
-- [endpoints.py:1-193](file://backend/app/plugins/customer_services/endpoints.py#L1-L193)
+- [endpoints.py:1-208](file://backend/app/plugins/customer_services/endpoints.py#L1-L208)
 - [models.py:1-74](file://backend/app/plugins/customer_services/models.py#L1-L74)
 - [schemas.py:1-54](file://backend/app/plugins/customer_services/schemas.py#L1-L54)
-- [CustomerServices.vue:1-424](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L1-L424)
+- [CustomerServices.vue:1-495](file://frontend/src/plugins/customer_services/views/CustomerServices.vue#L1-L495)
 
 ### Plugin Integration System
 
@@ -441,6 +470,8 @@ The Vue 3 frontend utilizes reactive data binding and component lazy loading to 
 
 JSON serialization includes only necessary fields through Pydantic models, reducing payload sizes. Response caching and efficient query construction minimize server processing time for common operations.
 
+**Updated** The new Create Service functionality includes optimized request handling for service creation workflows, with proper validation and error handling to maintain system performance.
+
 ## Troubleshooting Guide
 
 Common issues and their resolutions for the Customer Services Enhancement system:
@@ -469,6 +500,9 @@ Common issues and their resolutions for the Customer Services Enhancement system
 **Problem**: Service list not updating
 **Solution**: Review API endpoint connectivity and response handling. Check for frontend state management issues and component reactivity problems.
 
+**Problem**: Create Service functionality not working
+**Solution**: Verify POST endpoint accessibility and proper form validation. Check frontend modal state management and API request handling for new service creation.
+
 **Section sources**
 - [security.py:113-134](file://backend/app/core/security.py#L113-L134)
 - [endpoints.py:24-67](file://backend/app/plugins/customer_services/endpoints.py#L24-L67)
@@ -479,5 +513,7 @@ Common issues and their resolutions for the Customer Services Enhancement system
 The Customer Services Enhancement project represents a comprehensive solution for network service management, combining modern web technologies with robust backend infrastructure. The system's plugin-based architecture enables scalable functionality expansion while maintaining clean separation of concerns and efficient resource utilization.
 
 Key achievements include comprehensive service data management capabilities, real-time monitoring and reporting features, automated data synchronization from external sources, and intuitive user interfaces for both technical and non-technical users. The modular design supports future enhancements and integration with additional network management systems.
+
+**Updated** The recent addition of Create Service functionality significantly enhances the platform's usability by providing seamless service creation capabilities alongside existing update operations. The enhanced modal interface now offers a unified experience for both creating new services and editing existing ones, improving user productivity and reducing operational complexity.
 
 The platform demonstrates best practices in modern web application development through its use of contemporary frameworks, reactive programming patterns, and cloud-native deployment strategies. The system provides a solid foundation for network operations center functionality while maintaining flexibility for customization and extension based on specific operational requirements.

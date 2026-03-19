@@ -1,21 +1,19 @@
 <script setup>
 import { useAuthStore } from '@/stores/auth'
-import { usePluginRegistryStore } from '@/stores/pluginRegistry'
 import Card from '@/components/ui/Card.vue'
-import CardHeader from '@/components/ui/CardHeader.vue'
-import CardTitle from '@/components/ui/CardTitle.vue'
-import CardDescription from '@/components/ui/CardDescription.vue'
 import CardContent from '@/components/ui/CardContent.vue'
-import Badge from '@/components/ui/Badge.vue'
-import { Package, Shield } from 'lucide-vue-next'
+import { Shield, Clock } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
-const pluginRegistry = usePluginRegistryStore()
 
-const quickStats = [
-  { label: 'Active Plugins', value: pluginRegistry.enabledPlugins.length, icon: Package, color: 'text-blue-500' },
-  { label: 'Your Role', value: authStore.userRole, icon: Shield, color: 'text-green-500' },
-]
+const currentTime = new Date().toLocaleString('ru-RU', {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+})
 </script>
 
 <template>
@@ -29,45 +27,38 @@ const quickStats = [
       </p>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card v-for="stat in quickStats" :key="stat.label">
+    <div class="grid gap-4 md:grid-cols-2">
+      <Card>
         <CardContent class="p-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-muted-foreground">{{ stat.label }}</p>
-              <p class="text-2xl font-bold mt-1">{{ stat.value }}</p>
+              <p class="text-sm text-muted-foreground">Your Role</p>
+              <p class="text-2xl font-bold mt-1 capitalize">{{ authStore.userRole }}</p>
             </div>
-            <component :is="stat.icon" :class="['h-8 w-8', stat.color]" />
+            <Shield class="h-8 w-8 text-green-500" />
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent class="p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-muted-foreground">Current Time</p>
+              <p class="text-lg font-semibold mt-1">{{ currentTime }}</p>
+            </div>
+            <Clock class="h-8 w-8 text-blue-500" />
           </div>
         </CardContent>
       </Card>
     </div>
 
-    <Card>
-      <CardHeader>
-        <CardTitle class="text-xl">Loaded Plugins</CardTitle>
-        <CardDescription>Active system modules</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          <div
-            v-for="plugin in pluginRegistry.enabledPlugins"
-            :key="plugin.name"
-            class="flex items-center gap-3 rounded-lg border p-3"
-          >
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-              <Package class="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div class="flex-1">
-              <p class="text-sm font-medium">{{ plugin.label }}</p>
-              <p class="text-xs text-muted-foreground">v{{ plugin.version || '1.0.0' }}</p>
-            </div>
-            <Badge variant="secondary">Active</Badge>
-          </div>
-        </div>
-        <div v-if="pluginRegistry.enabledPlugins.length === 0" class="text-center py-8 text-muted-foreground">
-          No plugins loaded
-        </div>
+    <Card class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
+      <CardContent class="p-6">
+        <h2 class="text-lg font-semibold mb-2">Quick Navigation</h2>
+        <p class="text-muted-foreground text-sm">
+          Use the sidebar to navigate through plugins. Visit 
+          <strong>Analytics → Performance</strong> for system monitoring and plugin status.
+        </p>
       </CardContent>
     </Card>
   </div>

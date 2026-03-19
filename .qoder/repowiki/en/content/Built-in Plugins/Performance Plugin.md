@@ -24,6 +24,7 @@
 - Enhanced frontend with interactive dashboard and progress bars
 - Added comprehensive API endpoints for system overview and monitoring
 - Updated architecture to support real-time monitoring workflows
+- **Updated Alarms Section**: Improved with card-based layout eliminating flickering issues and better visual feedback
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -91,14 +92,14 @@ R --> V
 - [config.py:1-46](file://backend/app/core/config.py#L1-L46)
 - [database.py:1-18](file://backend/app/core/database.py#L1-L18)
 - [main.py:1-87](file://backend/app/main.py#L1-L87)
-- [Performance.vue:1-465](file://frontend/src/plugins/performance/views/Performance.vue#L1-L465)
+- [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
 **Section sources**
 - [README.md:41-48](file://README.md#L41-L48)
 - [plugin.py:1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
 - [endpoints.py:1-300](file://backend/app/plugins/performance/endpoints.py#L1-L300)
-- [Performance.vue:1-465](file://frontend/src/plugins/performance/views/Performance.vue#L1-L465)
+- [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 
 ## Core Components
 The Performance Plugin now consists of several enhanced components:
@@ -116,7 +117,7 @@ The Performance Plugin now consists of several enhanced components:
 - [models.py:1-29](file://backend/app/plugins/performance/models.py#L1-L29)
 - [schemas.py:1-38](file://backend/app/plugins/performance/schemas.py#L1-L38)
 - [endpoints.py:1-300](file://backend/app/plugins/performance/endpoints.py#L1-L300)
-- [Performance.vue:1-465](file://frontend/src/plugins/performance/views/Performance.vue#L1-L465)
+- [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 
 ## Architecture Overview
 The Performance Plugin adheres to the platform's enhanced plugin architecture with comprehensive monitoring capabilities:
@@ -305,6 +306,42 @@ ContainerAlerts --> Return["Return Alarm List"]
 **Section sources**
 - [endpoints.py:123-199](file://backend/app/plugins/performance/endpoints.py#L123-L199)
 
+### Enhanced Alarms Section with Card-Based Layout
+**Updated** The alarms section has been completely redesigned with a card-based layout that eliminates flickering issues and provides better visual feedback.
+
+The new implementation features:
+
+- **Always Visible Card**: The alarms section is now a persistent Card component that never disappears, eliminating flickering when there are no active alarms
+- **Dynamic Border Color**: The card's left border color dynamically changes based on alarm state (red for critical, green for operational)
+- **Icon-Based Status**: Uses AlertTriangle for active alarms and CheckCircle for normal operation
+- **Severity-Based Styling**: Different background colors and border styles for critical vs warning alarms
+- **Loading States**: Proper loading indicators during data refresh operations
+- **Consistent Layout**: Fixed card structure prevents layout shifts when switching between alarm states
+
+```mermaid
+flowchart TD
+AlarmsCard["Alarms Card Component"] --> Header["Card Header"]
+Header --> StatusIndicator["Status Icon & Title"]
+Header --> LoadingIndicator["Loading Indicator"]
+AlarmsCard --> Content["Card Content"]
+Content --> HasAlarms{"Has Active Alarms?"}
+HasAlarms --> |Yes| AlarmList["Grid of Alarm Cards"]
+HasAlarms --> |No| OperationalState["Operational Message"]
+AlarmList --> IndividualAlarm["Individual Alarm Card"]
+IndividualAlarm --> AlarmIcon["Severity Icon"]
+IndividualAlarm --> AlarmDetails["Title, Level, Message"]
+AlarmDetails --> SeverityBadge["Critical/Warning Badge"]
+OperationalState --> CheckIcon["CheckCircle Icon"]
+OperationalState --> SuccessMessage["Success Message"]
+```
+
+**Diagram sources**
+- [Performance.vue:165-232](file://frontend/src/plugins/performance/views/Performance.vue#L165-L232)
+
+**Section sources**
+- [endpoints.py:123-199](file://backend/app/plugins/performance/endpoints.py#L123-L199)
+- [Performance.vue:165-232](file://frontend/src/plugins/performance/views/Performance.vue#L165-L232)
+
 ## Interactive Dashboard Implementation
 
 ### Frontend Architecture
@@ -320,15 +357,15 @@ The Vue.js dashboard provides comprehensive real-time monitoring:
 ```mermaid
 flowchart TD
 Dashboard["Performance Dashboard"] --> MetricsGrid["System Metrics Grid"]
-Dashboard --> AlarmsSection["Alarm Notifications"]
+Dashboard --> AlarmsSection["Enhanced Alarm Card"]
 Dashboard --> Containers["Docker Containers"]
 Dashboard --> Plugins["Plugin Statistics"]
 MetricsGrid --> CPUCard["CPU Usage Card"]
 MetricsGrid --> MemoryCard["Memory Usage Card"]
 MetricsGrid --> DiskCard["Disk Usage Card"]
 MetricsGrid --> NetworkCard["Network I/O Card"]
-AlarmsSection --> AlarmList["Active Alarms List"]
-AlarmsSection --> NoAlarms["No Alarms Message"]
+AlarmsSection --> AlarmCards["Individual Alarm Cards"]
+AlarmsSection --> OperationalCard["Operational State Card"]
 Containers --> ContainerStats["Container Statistics"]
 Containers --> ContainerList["Container List"]
 Plugins --> PluginStats["Plugin Statistics Cards"]
@@ -336,16 +373,16 @@ Plugins --> PluginList["Plugin List"]
 ```
 
 **Diagram sources**
-- [Performance.vue:133-465](file://frontend/src/plugins/performance/views/Performance.vue#L133-L465)
+- [Performance.vue:133-488](file://frontend/src/plugins/performance/views/Performance.vue#L133-L488)
 
 **Section sources**
-- [Performance.vue:1-465](file://frontend/src/plugins/performance/views/Performance.vue#L1-L465)
+- [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 
 ### Dashboard Components
 The dashboard includes several specialized components:
 
 - **System Metrics Cards**: Real-time CPU, Memory, Disk, and Network monitoring with progress bars
-- **Alarm Management**: Severity-based alert display with automatic color coding
+- **Enhanced Alarm Management**: Severity-based alert display with card-based layout and automatic color coding
 - **Container Monitoring**: Docker container status with running/stopped indicators
 - **Plugin Overview**: System plugin statistics and management
 - **Auto-Refresh**: Configurable refresh intervals with loading states
@@ -426,7 +463,7 @@ Vue --> PluginRegistry["Plugin Registry"]
 - [plugin.py:1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
 - [plugin_loader.py:1-100](file://backend/app/core/plugin_loader.py#L1-L100)
 - [main.py:1-87](file://backend/app/main.py#L1-L87)
-- [Performance.vue:1-465](file://frontend/src/plugins/performance/views/Performance.vue#L1-L465)
+- [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 
 **Section sources**
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
@@ -462,7 +499,9 @@ Enhanced troubleshooting for the comprehensive monitoring system:
 ## Conclusion
 The Performance Plugin has undergone a complete transformation from a simple placeholder to a comprehensive system monitoring solution. The enhanced plugin now provides real-time system metrics, Docker container monitoring, threshold-based alarm notifications, and an interactive dashboard. This transformation delivers a complete monitoring solution that integrates seamlessly with the NOC Vision platform's plugin architecture and shared infrastructure.
 
-The plugin's evolution demonstrates the power of the plugin-based architecture, allowing for rapid feature expansion while maintaining clean separation of concerns. Future enhancements could include customizable alert thresholds, historical trend analysis, and integration with external monitoring systems.
+The plugin's evolution demonstrates the power of the plugin-based architecture, allowing for rapid feature expansion while maintaining clean separation of concerns. Recent improvements to the Alarms section with card-based layout and flicker elimination demonstrate attention to user experience and interface stability.
+
+Future enhancements could include customizable alert thresholds, historical trend analysis, and integration with external monitoring systems.
 
 ## Appendices
 
@@ -589,12 +628,13 @@ The plugin's evolution demonstrates the power of the plugin-based architecture, 
 - [endpoints.py:123-199](file://backend/app/plugins/performance/endpoints.py#L123-L199)
 
 ### Frontend Integration Notes
-- **Enhanced Performance View**: Now includes comprehensive real-time monitoring dashboard with progress bars and alarm notifications
+- **Enhanced Performance View**: Now includes comprehensive real-time monitoring dashboard with progress bars, card-based alarm system, and alarm notifications
 - **Plugin Registry Store**: Supports dynamic menu integration and plugin lifecycle management
 - **Real-time Updates**: Dashboard automatically refreshes every 5 seconds with manual refresh option
 - **Error Handling**: Graceful error display with retry mechanisms and loading states
 - **Responsive Design**: Mobile-friendly dashboard layout with adaptive grid system
+- **Card-Based Layout**: Improved visual hierarchy with persistent alarm cards and consistent spacing
 
 **Section sources**
-- [Performance.vue:1-465](file://frontend/src/plugins/performance/views/Performance.vue#L1-L465)
+- [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
