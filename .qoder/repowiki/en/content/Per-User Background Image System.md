@@ -17,7 +17,15 @@
 - [Dockerfile](file://frontend/Dockerfile)
 - [nginx.conf](file://frontend/nginx.conf)
 - [docker-compose.yml](file://docker-compose.yml)
+- [main.css](file://frontend/src/assets/css/main.css)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated background image availability with new images bg7.webp and bg8.jpg
+- Enhanced visual styling with improved glassmorphism effects and transparency handling
+- Optimized theme management with better CSS variable support
+- Improved background application logic with enhanced visual effects
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -29,14 +37,17 @@
 7. [Security Model](#security-model)
 8. [Deployment Configuration](#deployment-configuration)
 9. [User Experience Flow](#user-experience-flow)
-10. [Troubleshooting Guide](#troubleshooting-guide)
-11. [Conclusion](#conclusion)
+10. [Visual Styling Enhancements](#visual-styling-enhancements)
+11. [Troubleshooting Guide](#troubleshooting-guide)
+12. [Conclusion](#conclusion)
 
 ## Introduction
 
 The Per-User Background Image System is a feature that allows individual users to customize their dashboard experience by selecting personalized background images from a predefined collection. This system integrates seamlessly with the existing Single Sign-On (SSO) infrastructure, providing users with a tailored visual experience while maintaining security and performance standards.
 
 The system consists of three main components: a PostgreSQL database storing user preferences, a FastAPI backend serving user management APIs, and a Vue.js frontend enabling user interaction with background selection capabilities. The implementation follows modern web development practices with proper authentication, authorization, and responsive design principles.
+
+**Updated** Enhanced with new background images (bg7.webp, bg8.jpg) and improved visual styling with glassmorphism effects.
 
 ## System Architecture
 
@@ -48,6 +59,7 @@ subgraph "Frontend Layer"
 FE[Vite Application]
 Store[Pinia Stores]
 UI[Vue Components]
+CSS[Enhanced CSS Styling]
 end
 subgraph "Backend Layer"
 API[FastAPI Server]
@@ -70,11 +82,13 @@ Nginx --> FE
 Docker --> Nginx
 Docker --> API
 Docker --> DB
+CSS --> FE
+CSS --> Store
 ```
 
 **Diagram sources**
 - [main.py:50-87](file://backend/app/main.py#L50-L87)
-- [Display.vue:1-183](file://frontend/src/views/settings/Display.vue#L1-183)
+- [Display.vue:1-185](file://frontend/src/views/settings/Display.vue#L1-185)
 - [nginx.conf:1-20](file://frontend/nginx.conf#L1-20)
 
 The architecture ensures scalability, maintainability, and security through proper separation of concerns and standardized communication protocols.
@@ -273,8 +287,8 @@ ThemeStore --> AuthStore : "applies user preferences"
 - [auth.js:5-204](file://frontend/src/stores/auth.js#L5-L204)
 
 **Section sources**
-- [Display.vue:1-183](file://frontend/src/views/settings/Display.vue#L1-183)
-- [theme.js:1-91](file://frontend/src/stores/theme.js#L1-91)
+- [Display.vue:1-185](file://frontend/src/views/settings/Display.vue#L1-185)
+- [theme.js:1-92](file://frontend/src/stores/theme.js#L1-92)
 - [auth.js:1-204](file://frontend/src/stores/auth.js#L1-204)
 
 ## API Endpoints
@@ -375,7 +389,7 @@ Backend --> DB
 
 **Diagram sources**
 - [docker-compose.yml:1-53](file://docker-compose.yml#L1-L53)
-- [Dockerfile:1-13](file://frontend/Dockerfile#L1-13)
+- [Dockerfile:1-13](file://frontend/Dockerfile#L1-L13)
 
 ### Static Asset Serving
 
@@ -383,8 +397,8 @@ Nginx serves static background images efficiently, reducing load on the backend 
 
 **Section sources**
 - [docker-compose.yml:1-53](file://docker-compose.yml#L1-L53)
-- [nginx.conf:1-20](file://frontend/nginx.conf#L1-20)
-- [Dockerfile:1-13](file://frontend/Dockerfile#L1-13)
+- [nginx.conf:1-20](file://frontend/nginx.conf#L1-L20)
+- [Dockerfile:1-13](file://frontend/Dockerfile#L1-L13)
 
 ## User Experience Flow
 
@@ -409,6 +423,79 @@ DisplayGrid --> [*] : Complete
 ```
 
 The workflow ensures smooth user interaction with immediate feedback and error handling throughout the selection process.
+
+## Visual Styling Enhancements
+
+**Updated** The system now features enhanced visual styling with improved glassmorphism effects and optimized theme management.
+
+### Enhanced Background Application
+
+The theme management system now applies sophisticated visual effects when background images are active, creating a modern glass-like appearance.
+
+```mermaid
+flowchart TD
+ApplyBG["applyBackground() Called"] --> CheckBG{"Has Background?"}
+CheckBG --> |Yes| SetStyles["Set Background Styles"]
+SetStyles --> AddClass["Add 'has-bg' Class"]
+AddClass --> TransparentCards["Make Cards Semi-Transparent"]
+TransparentCards --> GlassBorders["Apply Glass-like Borders"]
+GlassBorders --> EffectComplete["Visual Effects Complete"]
+CheckBG --> |No| RemoveStyles["Remove Background Styles"]
+RemoveStyles --> RemoveClass["Remove 'has-bg' Class"]
+RemoveClass --> ResetStyles["Reset Visual Effects"]
+ResetStyles --> EffectComplete
+```
+
+**Diagram sources**
+- [theme.js:44-61](file://frontend/src/stores/theme.js#L44-L61)
+- [main.css:78-87](file://frontend/src/assets/css/main.css#L78-L87)
+
+### CSS Variable Integration
+
+The system utilizes CSS custom properties for dynamic theming, enabling seamless transitions between light, dark, and system themes.
+
+```mermaid
+classDiagram
+class CSSVariables {
++--background : 0 0% 100%
++--foreground : 240 10% 3.9%
++--card : 0 0% 100%
++--card-foreground : 240 10% 3.9%
++--popover : 0 0% 100%
++--popover-foreground : 240 10% 3.9%
++--primary : 240 5.9% 10%
++--primary-foreground : 0 0% 98%
++--secondary : 240 4.8% 95.9%
++--secondary-foreground : 240 5.9% 10%
++--muted : 240 4.8% 95.9%
++--muted-foreground : 240 3.8% 46.1%
++--accent : 240 4.8% 95.9%
++--accent-foreground : 240 5.9% 10%
++--destructive : 0 84.2% 60.2%
++--destructive-foreground : 0 0% 98%
++--border : 240 5.9% 90%
++--input : 240 5.9% 90%
++--ring : 240 5.9% 10%
++--radius : 0.5rem
+}
+class DarkTheme {
++extends CSSVariables
++overrides for dark mode
+}
+CSSVariables <|-- DarkTheme
+```
+
+**Diagram sources**
+- [main.css:8-51](file://frontend/src/assets/css/main.css#L8-L51)
+
+### New Background Image Support
+
+The system now supports additional image formats and enhanced visual quality with the addition of new background images.
+
+**Section sources**
+- [Display.vue:17-26](file://frontend/src/views/settings/Display.vue#L17-L26)
+- [theme.js:44-61](file://frontend/src/stores/theme.js#L44-L61)
+- [main.css:78-87](file://frontend/src/assets/css/main.css#L78-L87)
 
 ## Troubleshooting Guide
 
@@ -439,6 +526,8 @@ frontend/public/backgrounds/
 **Problem**: Images load but don't appear in UI
 **Solution**: Check browser console for CORS errors and verify nginx configuration
 
+**Updated** New background images (bg7.webp, bg8.jpg) may require verification of file extensions and format support.
+
 ### Authentication Problems
 
 **Problem**: Users cannot save background preferences
@@ -446,6 +535,14 @@ frontend/public/backgrounds/
 
 **Problem**: Background preferences not persisting
 **Solution**: Check database write permissions and connection status
+
+### Visual Styling Issues
+
+**Problem**: Background images not applying correctly
+**Solution**: Verify CSS classes are being applied and check for console errors
+
+**Problem**: Glassmorphism effects not appearing
+**Solution**: Ensure the `has-bg` class is properly toggled and CSS variables are correctly defined
 
 ## Conclusion
 
@@ -455,8 +552,12 @@ Key achievements include:
 
 - **Scalable Architecture**: Clean separation between frontend, backend, and database layers
 - **Security-First Design**: Comprehensive authentication and authorization mechanisms
+- **Enhanced Visual Experience**: Improved glassmorphism effects and optimized theme management
+- **Modern Image Support**: Expanded background image formats including webp and jpg
 - **User Experience**: Intuitive interface with real-time feedback and validation
 - **Deployment Flexibility**: Support for various deployment scenarios through Docker containers
 - **Performance Optimization**: Efficient static asset serving through Nginx proxy
 
 The system provides a solid foundation for future enhancements while maintaining backward compatibility and system stability. The modular design allows for easy extension of background management features and integration with additional customization options.
+
+**Updated** Recent enhancements include expanded background image support with high-quality formats (bg7.webp, bg8.jpg) and sophisticated visual styling that creates a modern, glass-like appearance when background images are applied.
