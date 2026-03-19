@@ -4,6 +4,8 @@
 **Referenced Files in This Document**
 - [plugin_loader.py](file://backend/app/core/plugin_loader.py)
 - [main.py](file://backend/app/main.py)
+- [plugin.py (performance)](file://backend/app/plugins/performance/plugin.py)
+- [endpoints.py (performance)](file://backend/app/plugins/performance/endpoints.py)
 - [plugin.py (vlan)](file://backend/app/plugins/vlan/plugin.py)
 - [endpoints.py (vlan)](file://backend/app/plugins/vlan/endpoints.py)
 - [plugin.py (accounting)](file://backend/app/plugins/accounting/plugin.py)
@@ -11,7 +13,6 @@
 - [plugin.py (incidents)](file://backend/app/plugins/incidents/plugin.py)
 - [plugin.py (inventory)](file://backend/app/plugins/inventory/plugin.py)
 - [plugin.py (ipam)](file://backend/app/plugins/ipam/plugin.py)
-- [plugin.py (performance)](file://backend/app/plugins/performance/plugin.py)
 - [plugin.py (security_module)](file://backend/app/plugins/security_module/plugin.py)
 - [pluginRegistry.js](file://frontend/src/stores/pluginRegistry.js)
 - [main.js](file://frontend/src/main.js)
@@ -19,6 +20,7 @@
 - [Sidebar.vue](file://frontend/src/components/layout/Sidebar.vue)
 - [SidebarItem.vue](file://frontend/src/components/layout/SidebarItem.vue)
 - [DashboardLayout.vue](file://frontend/src/layouts/DashboardLayout.vue)
+- [Performance.vue](file://frontend/src/plugins/performance/views/Performance.vue)
 - [IncidentsList.vue](file://frontend/src/plugins/incidents/views/IncidentsList.vue)
 - [Accounting.vue](file://frontend/src/plugins/accounting/views/Accounting.vue)
 - [Ipam.vue](file://frontend/src/plugins/ipam/views/Ipam.vue)
@@ -27,12 +29,13 @@
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive documentation for the new VLAN plugin integration
-- Updated router configuration to include VLAN plugin routes with lazy loading
-- Enhanced plugin registry integration with VLAN menu items in the operations section
-- Added VLAN plugin view implementation details with network management capabilities
-- Updated sidebar integration documentation for VLAN plugin with Network icon
-- Added VLAN API endpoints documentation covering free/occupied VLAN management and statistics
+- Updated documentation to reflect centralized plugin registry management in Performance page
+- Added comprehensive coverage of Performance plugin's centralized monitoring dashboard
+- Enhanced plugin registry integration with centralized analytics section
+- Updated sidebar integration documentation for Performance plugin with Activity icon
+- Added Performance plugin view implementation details with system monitoring capabilities
+- Updated router configuration to include Performance plugin routes with lazy loading
+- Added Performance API endpoints documentation covering system metrics, containers, and alarms
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -48,7 +51,7 @@
 ## Introduction
 This document explains how backend-loaded plugins are integrated into the frontend plugin registry, how dynamic components are loaded, and how routes are integrated. It documents the plugin registry store, plugin metadata consumption, and the UI component registration process. It also covers plugin-specific routing, lazy loading strategies, component composition patterns, and the communication between the frontend plugin registry and the backend plugin loader.
 
-**Updated** The document now includes comprehensive coverage of the newly integrated VLAN (Virtual Local Area Network) plugin, which provides network management capabilities including free VLAN discovery, occupied VLAN tracking, and VLAN statistics reporting functionality.
+**Updated** The document now focuses on centralized plugin registry management in the Performance page, which serves as the central hub for system monitoring and analytics rather than distributing plugin displays across multiple dashboard cards. The Performance plugin provides comprehensive system monitoring capabilities including real-time metrics, container status, alarms, and plugin statistics.
 
 ## Project Structure
 The plugin integration spans two layers:
@@ -61,48 +64,45 @@ subgraph "Backend"
 A["FastAPI App<br/>main.py"]
 B["Plugin Loader<br/>plugin_loader.py"]
 C["Plugin Modules<br/>plugins/*/plugin.py"]
-D["VLAN Plugin<br/>plugins/vlan/plugin.py"]
-E["VLAN Endpoints<br/>plugins/vlan/endpoints.py"]
+D["Performance Plugin<br/>plugins/performance/plugin.py"]
+E["Performance Endpoints<br/>plugins/performance/endpoints.py"]
+F["VLAN Plugin<br/>plugins/vlan/plugin.py"]
+G["VLAN Endpoints<br/>plugins/vlan/endpoints.py"]
 end
 subgraph "Frontend"
-F["Plugin Registry Store<br/>pluginRegistry.js"]
-G["App Initialization<br/>main.js"]
-H["Router & Lazy Routes<br/>router/index.js"]
-I["UI Layout & Menus<br/>Sidebar.vue"]
-J["Plugin Views<br/>IncidentsList.vue, Accounting.vue, Ipam.vue, Vlan.vue"]
-K["VLAN View<br/>Vlan.vue"]
+H["Plugin Registry Store<br/>pluginRegistry.js"]
+I["App Initialization<br/>main.js"]
+J["Router & Lazy Routes<br/>router/index.js"]
+K["UI Layout & Menus<br/>Sidebar.vue"]
+L["Plugin Views<br/>Performance.vue, IncidentsList.vue, Accounting.vue, Ipam.vue, Vlan.vue"]
+M["Performance View<br/>Performance.vue"]
 end
 A --> B
 B --> C
 B --> D
 D --> E
-A --> |"GET /api/v1/plugins"| F
+B --> F
 F --> G
-G --> H
+A --> |"GET /api/v1/plugins"| H
 H --> I
 I --> J
 J --> K
+K --> L
+L --> M
 ```
 
 **Diagram sources**
 - [main.py:17-87](file://backend/app/main.py#L17-L87)
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
-- [plugin.py (incidents):1-17](file://backend/app/plugins/incidents/plugin.py#L1-L17)
-- [plugin.py (accounting):1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
-- [plugin.py (inventory):1-17](file://backend/app/plugins/inventory/plugin.py#L1-L17)
-- [plugin.py (ipam):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
+- [plugin.py (performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
+- [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
-- [plugin.py (performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
-- [plugin.py (security_module):1-17](file://backend/app/plugins/security_module/plugin.py#L1-L17)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [main.js:18-164](file://frontend/src/main.js#L18-L164)
 - [index.js (router):1-192](file://frontend/src/router/index.js#L1-L192)
-- [Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
-- [IncidentsList.vue:1-268](file://frontend/src/plugins/incidents/views/IncidentsList.vue#L1-L268)
-- [Accounting.vue:1-34](file://frontend/src/plugins/accounting/views/Accounting.vue#L1-L34)
-- [Ipam.vue:1-489](file://frontend/src/plugins/ipam/views/Ipam.vue#L1-L489)
-- [Vlan.vue:1-200](file://frontend/src/plugins/vlan/views/Vlan.vue#L1-L200)
+- [Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
+- [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 
 **Section sources**
 - [main.py:17-87](file://backend/app/main.py#L17-L87)
@@ -110,7 +110,7 @@ J --> K
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [main.js:18-164](file://frontend/src/main.js#L18-L164)
 - [index.js (router):1-192](file://frontend/src/router/index.js#L1-L192)
-- [Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
+- [Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
 
 ## Core Components
 - Backend plugin loader: Discovers plugin directories, imports plugin modules, reads metadata, and registers API routers with plugin-specific prefixes.
@@ -120,18 +120,18 @@ J --> K
 - Frontend router: Defines lazy-loaded routes for plugin views and integrates them into the application layout.
 - Frontend UI layout: Renders plugin menu items grouped by sections and orders, integrating with the router.
 
-**Updated** The system now includes comprehensive support for the VLAN plugin, which provides advanced network management capabilities with free/occupied VLAN discovery, statistics reporting, and database querying functionality.
+**Updated** The system now includes comprehensive support for the Performance plugin, which serves as the centralized monitoring dashboard providing real-time system metrics, container status, alarms, and plugin statistics. The Performance plugin integrates with the plugin registry to provide centralized analytics and monitoring capabilities.
 
 **Section sources**
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
-- [plugin.py (incidents):1-17](file://backend/app/plugins/incidents/plugin.py#L1-L17)
-- [plugin.py (ipam):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
+- [plugin.py (performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
+- [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [main.js:18-164](file://frontend/src/main.js#L18-L164)
 - [index.js (router):1-192](file://frontend/src/router/index.js#L1-L192)
-- [Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
+- [Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
 
 ## Architecture Overview
 The integration follows a clear pipeline:
@@ -145,17 +145,17 @@ sequenceDiagram
 participant BE as "Backend App<br/>main.py"
 participant PL as "Plugin Loader<br/>plugin_loader.py"
 participant PM as "Plugin Modules<br/>plugins/*/plugin.py"
-participant VLAN as "VLAN Plugin<br/>plugins/vlan/plugin.py"
-participant EP as "VLAN Endpoints<br/>plugins/vlan/endpoints.py"
+participant PERF as "Performance Plugin<br/>plugins/performance/plugin.py"
+participant EP as "Performance Endpoints<br/>plugins/performance/endpoints.py"
 participant FE as "Frontend App<br/>main.js"
 participant PR as "Plugin Registry<br/>pluginRegistry.js"
 participant RT as "Router<br/>router/index.js"
 participant UI as "UI Layout<br/>Sidebar.vue"
 BE->>PL : "Startup lifecycle"
 PL->>PM : "Import plugin modules"
-PL->>VLAN : "Import VLAN plugin"
-VLAN->>EP : "Include router with API prefix"
-EP-->>VLAN : "Registered endpoints"
+PL->>PERF : "Import Performance plugin"
+PERF->>EP : "Include router with API prefix"
+EP-->>PERF : "Registered endpoints"
 PM-->>PL : "PLUGIN_META, register()"
 PL->>BE : "include_router(prefix=/api/v1/plugins/{name})"
 BE-->>FE : "GET /api/v1/plugins"
@@ -168,18 +168,14 @@ UI-->>RT : "Render plugin menu items"
 **Diagram sources**
 - [main.py:17-87](file://backend/app/main.py#L17-L87)
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
-- [plugin.py (incidents):1-17](file://backend/app/plugins/incidents/plugin.py#L1-L17)
-- [plugin.py (accounting):1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
-- [plugin.py (inventory):1-17](file://backend/app/plugins/inventory/plugin.py#L1-L17)
-- [plugin.py (ipam):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
+- [plugin.py (performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
+- [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
-- [plugin.py (performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
-- [plugin.py (security_module):1-17](file://backend/app/plugins/security_module/plugin.py#L1-L17)
 - [main.js:18-164](file://frontend/src/main.js#L18-L164)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [index.js (router):1-192](file://frontend/src/router/index.js#L1-L192)
-- [Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
+- [Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
 
 ## Detailed Component Analysis
 
@@ -211,43 +207,44 @@ Skip --> Done
 
 **Section sources**
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
-- [plugin.py (incidents):1-17](file://backend/app/plugins/incidents/plugin.py#L1-L17)
-- [plugin.py (accounting):1-17](file://backend/app/plugins/accounting/plugin.py#L1-L17)
-- [plugin.py (inventory):1-17](file://backend/app/plugins/inventory/plugin.py#L1-L17)
-- [plugin.py (ipam):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
-- [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [plugin.py (performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
-- [plugin.py (security_module):1-17](file://backend/app/plugins/security_module/plugin.py#L1-L17)
+- [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
+- [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
+- [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
 
-### VLAN Plugin Backend Implementation
-The VLAN plugin provides comprehensive network management functionality with three main API endpoints:
+### Performance Plugin Backend Implementation
+The Performance plugin provides comprehensive system monitoring functionality with four main API endpoints:
 
-- **Free VLAN Discovery**: Identifies unused VLAN IDs by checking customer service status and parsing comma-separated VLAN lists
-- **Occupied VLAN Tracking**: Monitors VLAN usage across customer services with operational status filtering
-- **Statistics Reporting**: Provides aggregated metrics on VLAN utilization across the network
+- **System Metrics**: Real-time CPU, memory, disk, and network usage metrics
+- **Container Status**: Docker container monitoring with health checks and status tracking
+- **Alarms**: System alerts for critical conditions like high CPU usage, memory pressure, and stopped containers
+- **System Overview**: Complete system dashboard with metrics, containers, and alarms combined
 
 ```mermaid
 classDiagram
-class VlanPlugin {
+class PerformancePlugin {
 +PLUGIN_META : Object
 +register(app, context) : Function
 }
-class VlanEndpoints {
-+get_free_vlans() : Endpoint
-+get_vlan_stats() : Endpoint
-+get_occupied_vlans() : Endpoint
--parse_vlan_ids() : Function
+class PerformanceEndpoints {
++system_metrics() : Endpoint
++container_status() : Endpoint
++system_alarms() : Endpoint
++system_overview() : Endpoint
++get_system_metrics() : Function
++get_docker_containers() : Function
++get_alarms() : Function
 }
-VlanPlugin --> VlanEndpoints : "includes router"
+PerformancePlugin --> PerformanceEndpoints : "includes router"
 ```
 
 **Diagram sources**
-- [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
-- [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
+- [plugin.py (performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
+- [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 
 **Section sources**
-- [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
-- [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
+- [plugin.py (performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
+- [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 
 ### Frontend Plugin Registry Store
 - Responsibilities: Stores plugin manifests, computes enabled plugins, aggregates menu items, filters by section, and exposes getters.
@@ -280,7 +277,7 @@ class PluginRegistryStore {
 - Menu item mapping: Provides icons, paths, sections, and ordering for each plugin.
 - Initialization flag: Marks registry as ready after successful population.
 
-**Updated** The VLAN plugin is now included in the menu configuration with proper section assignment and ordering.
+**Updated** The Performance plugin is now included in the menu configuration with proper section assignment and ordering in the Analytics section, positioned alongside other monitoring tools.
 
 ```mermaid
 sequenceDiagram
@@ -289,11 +286,11 @@ participant Fetch as "fetch('/api/v1/plugins')"
 participant Reg as "usePluginRegistryStore()"
 participant Menu as "getMenuItemsForPlugin()"
 Init->>Fetch : "GET /api/v1/plugins"
-Fetch-->>Init : "Array of plugin info (including VLAN)"
+Fetch-->>Init : "Array of plugin info (including Performance)"
 Init->>Reg : "registerPlugin(manifest)"
 Reg-->>Init : "Store populated"
-Init->>Menu : "Map plugin names to menu items (VLAN)"
-Menu-->>Init : "Network icon, path, section, order"
+Init->>Menu : "Map plugin names to menu items (Performance)"
+Menu-->>Init : "Activity icon, path, section, order"
 Init->>Reg : "setInitialized()"
 ```
 
@@ -309,14 +306,14 @@ Init->>Reg : "setInitialized()"
 - Route hierarchy: Nested under the dashboard layout with plugin-specific paths.
 - Composition: Integrates with the layout and auth guards.
 
-**Updated** The router now includes the VLAN plugin route with proper lazy loading configuration alongside other network management plugins.
+**Updated** The router now includes the Performance plugin route with proper lazy loading configuration alongside other monitoring and analytics plugins.
 
 ```mermaid
 flowchart TD
 Entry(["App Entry"]) --> LoadRouter["Load router/index.js"]
 LoadRouter --> DefineRoutes["Define routes with lazy components"]
-DefineRoutes --> AddVLAN["Add VLAN route: /plugins/vlan"]
-AddVLAN --> Guard["Apply beforeEach guards"]
+DefineRoutes --> AddPerformance["Add Performance route: /plugins/performance"]
+AddPerformance --> Guard["Apply beforeEach guards"]
 Guard --> Render["Render DashboardLayout with RouterView"]
 Render --> Lazy["On navigation, load plugin view via dynamic import"]
 ```
@@ -335,7 +332,7 @@ Render --> Lazy["On navigation, load plugin view via dynamic import"]
 - Visibility: Respects role-based visibility checks.
 - Icons and links: Uses Lucide icons and router links for navigation.
 
-**Updated** The VLAN plugin is now integrated into the Operations section with proper ordering and Network icon selection, positioned alongside IPAM and other network management tools.
+**Updated** The Performance plugin is now integrated into the Analytics section with proper ordering and Activity icon selection, positioned alongside other monitoring and analytics tools.
 
 ```mermaid
 classDiagram
@@ -362,48 +359,50 @@ Sidebar --> SidebarItem : "renders"
 ```
 
 **Diagram sources**
-- [Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
+- [Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
 - [SidebarItem.vue:1-74](file://frontend/src/components/layout/SidebarItem.vue#L1-L74)
 
 **Section sources**
-- [Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
+- [Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
 - [SidebarItem.vue:1-74](file://frontend/src/components/layout/SidebarItem.vue#L1-L74)
 
 ### Plugin-Specific View Implementation Examples
+- Performance view: Comprehensive system monitoring dashboard with real-time metrics, container status, alarms, and plugin statistics.
 - Incidents list view: Demonstrates state management, API integration via auth store, CRUD actions, and UI composition with badges and forms.
 - Accounting view: Minimal example showcasing a card-based layout and placeholder content.
 - **IPAM view**: Comprehensive IP address management interface with validation, change application, and database querying capabilities.
 - **VLAN view**: Advanced network management interface with VLAN discovery, statistics visualization, and database interaction capabilities.
 
-**Updated** Added detailed documentation for the VLAN plugin view implementation, which includes network management features like VLAN discovery, statistics reporting, and database interaction functionality.
+**Updated** Added detailed documentation for the Performance plugin view implementation, which serves as the centralized monitoring dashboard. The Performance view includes real-time system metrics, container status monitoring, alarm notifications, and plugin statistics, providing comprehensive system oversight.
 
 ```mermaid
 sequenceDiagram
-participant View as "Vlan.vue"
+participant View as "Performance.vue"
 participant Auth as "useAuthStore()"
 participant API as "Backend API"
 participant UI as "Vue Components"
-View->>Auth : "authFetch('/api/v1/plugins/vlan/free-vlans')"
-Auth->>API : "HTTP GET /free-vlans"
-API-->>Auth : "Free VLAN list"
+View->>Auth : "authFetch('/api/v1/plugins/performance/system/overview')"
+Auth->>API : "HTTP GET /system/overview"
+API-->>Auth : "Complete system data"
+Auth-->>View : "Response with metrics, containers, alarms"
+View->>UI : "Render system metrics dashboard"
+View->>Auth : "authFetch('/api/v1/plugins/performance/system/alarms')"
+Auth->>API : "HTTP GET /system/alarms"
+API-->>Auth : "Alarm notifications"
 Auth-->>View : "Response"
-View->>UI : "Render free VLAN table"
-View->>Auth : "authFetch('/api/v1/plugins/vlan/vlan-stats')"
-Auth->>API : "HTTP GET /vlan-stats"
-API-->>Auth : "Statistics data"
+View->>UI : "Render alarm notifications"
+View->>Auth : "authFetch('/api/v1/plugins/performance/system/containers')"
+Auth->>API : "HTTP GET /system/containers"
+API-->>Auth : "Container status"
 Auth-->>View : "Response"
-View->>UI : "Render statistics charts"
-View->>Auth : "authFetch('/api/v1/plugins/vlan/occupied-vlans')"
-Auth->>API : "HTTP GET /occupied-vlans"
-API-->>Auth : "Occupied VLAN list"
-Auth-->>View : "Response"
-View->>UI : "Render occupied VLAN table"
+View->>UI : "Render container status"
 ```
 
 **Diagram sources**
-- [Vlan.vue:1-200](file://frontend/src/plugins/vlan/views/Vlan.vue#L1-L200)
+- [Performance.vue:67-126](file://frontend/src/plugins/performance/views/Performance.vue#L67-L126)
 
 **Section sources**
+- [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 - [IncidentsList.vue:1-268](file://frontend/src/plugins/incidents/views/IncidentsList.vue#L1-L268)
 - [Accounting.vue:1-34](file://frontend/src/plugins/accounting/views/Accounting.vue#L1-L34)
 - [Ipam.vue:1-489](file://frontend/src/plugins/ipam/views/Ipam.vue#L1-L489)
@@ -414,7 +413,7 @@ View->>UI : "Render occupied VLAN table"
 - Frontend initializes by fetching this endpoint, constructing manifests, and registering them in the store.
 - Menu items are mapped based on plugin names and grouped into sections.
 
-**Updated** The communication now includes the VLAN plugin metadata and menu item configuration, providing seamless integration with the network management ecosystem.
+**Updated** The communication now includes the Performance plugin metadata and menu item configuration, providing seamless integration with the centralized monitoring ecosystem.
 
 ```mermaid
 sequenceDiagram
@@ -423,10 +422,10 @@ participant BE as "Backend main.py"
 participant PL as "plugin_loader.py"
 FE->>BE : "GET /api/v1/plugins"
 BE->>PL : "Access app.state.loaded_plugins"
-PL-->>BE : "List of plugin info (including VLAN)"
-BE-->>FE : "JSON array (with VLAN plugin)"
-FE->>FE : "Construct manifests and menu items (VLAN)"
-FE->>FE : "registerPlugin(manifest) for VLAN"
+PL-->>BE : "List of plugin info (including Performance)"
+BE-->>FE : "JSON array (with Performance plugin)"
+FE->>FE : "Construct manifests and menu items (Performance)"
+FE->>FE : "registerPlugin(manifest) for Performance"
 ```
 
 **Diagram sources**
@@ -444,31 +443,33 @@ FE->>FE : "registerPlugin(manifest) for VLAN"
 - Frontend depends on backend for plugin metadata and on the router for navigation.
 - UI layout depends on the plugin registry store for menu composition.
 
-**Updated** Dependencies now include the VLAN plugin integration across all layers, providing comprehensive network management capabilities.
+**Updated** Dependencies now include the Performance plugin integration across all layers, providing comprehensive system monitoring capabilities as the centralized hub for plugin registry management.
 
 ```mermaid
 graph LR
 BE_Main["backend/main.py"] --> BE_Loader["backend/core/plugin_loader.py"]
 BE_Loader --> BE_Plugin["backend/plugins/*/plugin.py"]
+BE_Loader --> BE_Perf["backend/plugins/performance/plugin.py"]
 BE_Loader --> BE_VLAN["backend/plugins/vlan/plugin.py"]
-BE_VLAN --> BE_Endpoints["backend/plugins/vlan/endpoints.py"]
+BE_Perf --> BE_Endpoints["backend/plugins/performance/endpoints.py"]
+BE_VLAN --> BE_VLAN_Endpoints["backend/plugins/vlan/endpoints.py"]
 FE_Init["frontend/src/main.js"] --> FE_Registry["frontend/src/stores/pluginRegistry.js"]
 FE_Registry --> FE_Sidebar["frontend/src/components/layout/Sidebar.vue"]
 FE_Router["frontend/src/router/index.js"] --> FE_VIEWS["frontend/src/plugins/*/views/*.vue"]
-FE_Router --> FE_VLAN_View["frontend/src/plugins/vlan/views/Vlan.vue"]
+FE_Router --> FE_PERF_View["frontend/src/plugins/performance/views/Performance.vue"]
 FE_Sidebar --> FE_Router
 ```
 
 **Diagram sources**
 - [main.py:17-87](file://backend/app/main.py#L17-L87)
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
-- [plugin.py (incidents):1-17](file://backend/app/plugins/incidents/plugin.py#L1-L17)
-- [plugin.py (ipam):1-17](file://backend/app/plugins/ipam/plugin.py#L1-L17)
+- [plugin.py (performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
+- [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
 - [main.js:18-164](file://frontend/src/main.js#L18-L164)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
-- [Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
+- [Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
 - [index.js (router):1-192](file://frontend/src/router/index.js#L1-L192)
 
 **Section sources**
@@ -476,15 +477,16 @@ FE_Sidebar --> FE_Router
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [index.js (router):1-192](file://frontend/src/router/index.js#L1-L192)
-- [Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
+- [Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
 
 ## Performance Considerations
 - Lazy loading: Dynamic imports in router reduce initial bundle size and improve perceived load time.
 - Conditional rendering: Sidebar sections are only rendered when plugin items exist.
 - Computed properties: Aggregations minimize recomputation and keep UI reactive efficiently.
 - Backend filtering: Enabling only required plugins reduces startup overhead.
+- **Performance optimization**: The Performance plugin uses auto-refresh intervals and efficient data fetching to minimize API calls while maintaining real-time updates.
 
-**Updated** Performance considerations now include the VLAN plugin's lazy loading and state management optimizations for network data processing.
+**Updated** Performance considerations now include the Performance plugin's auto-refresh mechanisms and efficient data fetching strategies for real-time system monitoring.
 
 ## Troubleshooting Guide
 - Plugin not appearing in UI:
@@ -496,21 +498,22 @@ FE_Sidebar --> FE_Router
   - Ensure lazy route path matches the plugin view path and component resolves.
 - Authentication gating:
   - Confirm router guards align with required roles and auth store state.
-- **VLAN plugin specific issues**:
-  - Verify `/api/v1/plugins/vlan` endpoint is accessible and returns expected VLAN data.
-  - Check that the VLAN view component properly handles loading states and error conditions.
-  - Ensure proper authentication for VLAN API endpoints.
-  - Verify VLAN ID parsing logic handles various input formats (comma-separated, semicolon-separated, space-separated).
-  - Check that free/occupied VLAN filtering works correctly with customer service status.
+- **Performance plugin specific issues**:
+  - Verify `/api/v1/plugins/performance` endpoint is accessible and returns expected system data.
+  - Check that the Performance view component properly handles loading states and error conditions.
+  - Ensure proper authentication for Performance API endpoints.
+  - Verify system metrics collection works correctly with Docker integration.
+  - Check that alarm thresholds are properly configured and alarms are generated.
+  - Validate that auto-refresh intervals are functioning correctly.
 
-**Updated** Added troubleshooting guidance specifically for VLAN plugin integration issues, including network management specific problems.
+**Updated** Added troubleshooting guidance specifically for Performance plugin integration issues, including system monitoring specific problems.
 
 **Section sources**
 - [main.js:18-164](file://frontend/src/main.js#L18-L164)
 - [index.js (router):1-192](file://frontend/src/router/index.js#L1-L192)
-- [Sidebar.vue:1-258](file://frontend/src/components/layout/Sidebar.vue#L1-L258)
+- [Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
 
 ## Conclusion
 The frontend plugin integration leverages a clean separation of concerns: backend plugins expose metadata and API routes, while the frontend consumes this information to build a dynamic registry, lazy-load views, and compose a responsive UI. This approach supports scalable plugin development, maintainable navigation, and efficient runtime performance.
 
-**Updated** The system now includes comprehensive support for the VLAN plugin, demonstrating advanced plugin integration capabilities with sophisticated state management, API integration, and user interface composition. The VLAN plugin showcases best practices for complex plugin implementations with network management workflows, statistics reporting, and database interaction functionality. This integration enhances the platform's network infrastructure management capabilities alongside existing IPAM and other operational plugins.
+**Updated** The system now focuses on centralized plugin registry management in the Performance page, which serves as the central hub for system monitoring and analytics. The Performance plugin demonstrates advanced plugin integration capabilities with sophisticated state management, real-time data processing, and comprehensive system monitoring functionality. This centralized approach enhances the platform's monitoring capabilities while maintaining the flexibility of the plugin architecture across all operational and administrative domains.

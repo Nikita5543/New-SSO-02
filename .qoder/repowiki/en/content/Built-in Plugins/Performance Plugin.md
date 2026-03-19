@@ -12,19 +12,17 @@
 - [database.py](file://backend/app/core/database.py)
 - [Performance.vue](file://frontend/src/plugins/performance/views/Performance.vue)
 - [pluginRegistry.js](file://frontend/src/stores/pluginRegistry.js)
+- [Dashboard.vue](file://frontend/src/views/dashboard/Dashboard.vue)
 - [README.md](file://README.md)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Complete transformation from placeholder to comprehensive system monitoring plugin
-- Added real-time system metrics collection (CPU, RAM, Disk, Network)
-- Integrated Docker container monitoring with status tracking
-- Implemented alarm system with threshold-based notifications
-- Enhanced frontend with interactive dashboard and progress bars
-- Added comprehensive API endpoints for system overview and monitoring
-- Updated architecture to support real-time monitoring workflows
-- **Updated Alarms Section**: Improved with card-based layout eliminating flickering issues and better visual feedback
+- Enhanced plugin monitoring and system status information now centralized in Performance page
+- Plugin registry integration moved from Dashboard to Performance page for better user experience
+- Updated architecture to support centralized plugin status monitoring
+- Improved user navigation with dedicated Performance monitoring route
+- Enhanced plugin statistics display with real-time system plugin monitoring
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -37,14 +35,17 @@
 8. [Alarm and Notification System](#alarm-and-notification-system)
 9. [Interactive Dashboard Implementation](#interactive-dashboard-implementation)
 10. [API Endpoints and Workflows](#api-endpoints-and-workflows)
-11. [Dependency Analysis](#dependency-analysis)
-12. [Performance Considerations](#performance-considerations)
-13. [Troubleshooting Guide](#troubleshooting-guide)
-14. [Conclusion](#conclusion)
-15. [Appendices](#appendices)
+11. [Plugin Registry Integration](#plugin-registry-integration)
+12. [Dependency Analysis](#dependency-analysis)
+13. [Performance Considerations](#performance-considerations)
+14. [Troubleshooting Guide](#troubleshooting-guide)
+15. [Conclusion](#conclusion)
+16. [Appendices](#appendices)
 
 ## Introduction
 The Performance Plugin has evolved from a simple placeholder into a comprehensive system monitoring solution for the NOC Vision platform. This transformation includes real-time metrics collection, Docker container monitoring, alarm notifications, and an interactive dashboard. The plugin now provides complete system visibility with threshold-based alerting, Docker orchestration monitoring, and real-time performance analytics.
+
+**Updated** The plugin now features centralized plugin monitoring and system status information that was previously displayed on the Dashboard, providing a more integrated user experience.
 
 Key capabilities now implemented:
 - Real-time system metrics collection (CPU, RAM, Disk, Network)
@@ -52,10 +53,12 @@ Key capabilities now implemented:
 - Threshold-based alarm system with critical/warning levels
 - Interactive dashboard with progress bars and real-time updates
 - Comprehensive system overview API for monitoring workflows
+- Centralized plugin registry integration for system status monitoring
+- Enhanced user navigation with dedicated Performance monitoring route
 - Integration with the centralized plugin loader and shared security middleware
 
 ## Project Structure
-The Performance Plugin is organized into backend and frontend components with enhanced functionality:
+The Performance Plugin is organized into backend and frontend components with enhanced functionality and centralized plugin monitoring:
 
 ```mermaid
 graph TB
@@ -72,6 +75,7 @@ end
 subgraph "Frontend"
 V["Performance.vue<br/>Interactive monitoring dashboard"]
 R["pluginRegistry.js<br/>Plugin registry store"]
+DV["Dashboard.vue<br/>Simplified dashboard view"]
 end
 H --> E
 E --> A
@@ -81,6 +85,7 @@ D --> C
 H --> G
 H --> F
 R --> V
+R --> DV
 ```
 
 **Diagram sources**
@@ -94,6 +99,7 @@ R --> V
 - [main.py:1-87](file://backend/app/main.py#L1-L87)
 - [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
+- [Dashboard.vue:1-66](file://frontend/src/views/dashboard/Dashboard.vue#L1-L66)
 
 **Section sources**
 - [README.md:41-48](file://README.md#L41-L48)
@@ -102,7 +108,7 @@ R --> V
 - [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 
 ## Core Components
-The Performance Plugin now consists of several enhanced components:
+The Performance Plugin now consists of several enhanced components with centralized plugin monitoring:
 
 - **Plugin metadata and registration**: Defines plugin identity with comprehensive monitoring capabilities and registers API routes under a plugin-specific prefix.
 - **Data models**: Define relational tables for monitor targets and metric samples (maintained for backward compatibility).
@@ -110,7 +116,8 @@ The Performance Plugin now consists of several enhanced components:
 - **API endpoints**: Expose comprehensive monitoring endpoints including system metrics, container status, alarms, and overview data.
 - **Real-time monitoring functions**: Collect system metrics using psutil and Docker CLI integration.
 - **Alarm generation system**: Implements threshold-based alerting for system resources and container states.
-- **Interactive dashboard**: Vue.js frontend with real-time updates, progress bars, and notification system.
+- **Interactive dashboard**: Vue.js frontend with real-time updates, progress bars, notification system, and centralized plugin monitoring.
+- **Plugin registry integration**: Enhanced plugin status monitoring and system-wide plugin statistics.
 
 **Section sources**
 - [plugin.py:1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
@@ -120,7 +127,7 @@ The Performance Plugin now consists of several enhanced components:
 - [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 
 ## Architecture Overview
-The Performance Plugin adheres to the platform's enhanced plugin architecture with comprehensive monitoring capabilities:
+The Performance Plugin adheres to the platform's enhanced plugin architecture with comprehensive monitoring capabilities and centralized plugin integration:
 
 ```mermaid
 sequenceDiagram
@@ -130,6 +137,7 @@ participant Plugin as "Performance Plugin (plugin.py)"
 participant Router as "Endpoints Router (endpoints.py)"
 participant Metrics as "System Metrics Collector"
 participant Docker as "Docker Integration"
+participant Registry as "Plugin Registry Store"
 App->>Loader : "load_plugins(app)"
 Loader->>Loader : "Scan plugins directory"
 Loader->>Plugin : "Import plugin module"
@@ -139,6 +147,8 @@ App->>Router : "Route requests to /api/v1/plugins/performance/*"
 Router->>Metrics : "get_system_metrics()"
 Router->>Docker : "get_docker_containers()"
 Router->>Router : "get_alarms()"
+Router->>Registry : "Access pluginRegistry.enabledPlugins"
+Registry-->>Router : "System plugin statistics"
 ```
 
 **Diagram sources**
@@ -345,13 +355,14 @@ OperationalState --> SuccessMessage["Success Message"]
 ## Interactive Dashboard Implementation
 
 ### Frontend Architecture
-The Vue.js dashboard provides comprehensive real-time monitoring:
+The Vue.js dashboard provides comprehensive real-time monitoring with centralized plugin integration:
 
 - **Real-Time Updates**: Automatic refresh every 5 seconds with manual refresh option
 - **Progress Bars**: Visual indicators for CPU, Memory, and Disk utilization
 - **Alarm Notifications**: Color-coded alerts with severity levels (critical/warning)
 - **Container Status**: Running/stopped container visualization with health indicators
-- **Plugin Statistics**: System plugin monitoring and management
+- **Enhanced Plugin Statistics**: System plugin monitoring and management with real-time updates
+- **Centralized Plugin Monitoring**: Dedicated section for system-wide plugin status
 - **Error Handling**: Graceful error display with retry mechanisms
 
 ```mermaid
@@ -359,7 +370,7 @@ flowchart TD
 Dashboard["Performance Dashboard"] --> MetricsGrid["System Metrics Grid"]
 Dashboard --> AlarmsSection["Enhanced Alarm Card"]
 Dashboard --> Containers["Docker Containers"]
-Dashboard --> Plugins["Plugin Statistics"]
+Dashboard --> Plugins["Enhanced Plugin Statistics"]
 MetricsGrid --> CPUCard["CPU Usage Card"]
 MetricsGrid --> MemoryCard["Memory Usage Card"]
 MetricsGrid --> DiskCard["Disk Usage Card"]
@@ -379,13 +390,14 @@ Plugins --> PluginList["Plugin List"]
 - [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 
 ### Dashboard Components
-The dashboard includes several specialized components:
+The dashboard includes several specialized components with enhanced plugin integration:
 
 - **System Metrics Cards**: Real-time CPU, Memory, Disk, and Network monitoring with progress bars
 - **Enhanced Alarm Management**: Severity-based alert display with card-based layout and automatic color coding
 - **Container Monitoring**: Docker container status with running/stopped indicators
-- **Plugin Overview**: System plugin statistics and management
+- **Centralized Plugin Overview**: System plugin statistics and management with real-time updates
 - **Auto-Refresh**: Configurable refresh intervals with loading states
+- **Plugin Registry Integration**: Direct access to plugin registry for system-wide monitoring
 
 **Section sources**
 - [Performance.vue:20-131](file://frontend/src/plugins/performance/views/Performance.vue#L20-L131)
@@ -412,10 +424,13 @@ participant API as "Performance Endpoints"
 participant Metrics as "Metrics Collector"
 participant Docker as "Docker Service"
 participant DB as "Database"
+participant Registry as "Plugin Registry"
 Client->>API : "GET /api/v1/plugins/performance/system/overview"
 API->>Metrics : "get_system_metrics()"
 API->>Docker : "get_docker_containers()"
 API->>API : "get_alarms()"
+API->>Registry : "Access pluginRegistry.enabledPlugins"
+Registry-->>API : "Plugin statistics"
 Metrics-->>API : "System metrics data"
 Docker-->>API : "Container status data"
 API-->>Client : "Complete system overview"
@@ -432,15 +447,61 @@ API-->>Client : "200 OK JSON"
 **Section sources**
 - [endpoints.py:1-300](file://backend/app/plugins/performance/endpoints.py#L1-L300)
 
+## Plugin Registry Integration
+
+### Centralized Plugin Monitoring
+**Updated** The Performance Plugin now features centralized plugin monitoring that was previously displayed on the Dashboard:
+
+- **Real-Time Plugin Statistics**: Dynamic counting of loaded and active plugins
+- **System-Wide Plugin Status**: Comprehensive view of all enabled plugins with version information
+- **Enhanced User Experience**: Dedicated section for plugin monitoring within the Performance dashboard
+- **Integration with Plugin Registry Store**: Direct access to `pluginRegistry.enabledPlugins` for real-time updates
+- **Visual Plugin Indicators**: Color-coded badges and statistics for quick system status assessment
+
+```mermaid
+flowchart TD
+PluginRegistry["Plugin Registry Store"] --> EnabledPlugins["enabledPlugins Computed"]
+EnabledPlugins --> PluginStats["Plugin Statistics Cards"]
+EnabledPlugins --> PluginList["Plugin List"]
+PluginStats --> LoadedPlugins["Loaded Plugins Count"]
+PluginStats --> ActivePlugins["Active Plugins Count"]
+PluginList --> PluginItems["Individual Plugin Items"]
+PluginItems --> PluginName["Plugin Name & Version"]
+PluginItems --> PluginStatus["Active Status Badge"]
+```
+
+**Diagram sources**
+- [pluginRegistry.js:8-14](file://frontend/src/stores/pluginRegistry.js#L8-L14)
+- [pluginRegistry.js:42-51](file://frontend/src/stores/pluginRegistry.js#L42-L51)
+- [Performance.vue:32-47](file://frontend/src/plugins/performance/views/Performance.vue#L32-L47)
+- [Performance.vue:466-483](file://frontend/src/plugins/performance/views/Performance.vue#L466-L483)
+
+**Section sources**
+- [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
+- [Performance.vue:31-484](file://frontend/src/plugins/performance/views/Performance.vue#L31-L484)
+
+### User Navigation Enhancement
+**Updated** The plugin now provides improved user navigation with dedicated Performance monitoring route:
+
+- **Direct Route Access**: `/plugins/performance` for immediate access to monitoring dashboard
+- **Centralized Location**: Performance monitoring is now the primary destination for system status
+- **Reduced Navigation Steps**: Eliminates need to go through Dashboard for plugin monitoring
+- **Integrated Experience**: Combines system metrics, alarms, containers, and plugin status in single view
+
+**Section sources**
+- [README.md:41-48](file://README.md#L41-L48)
+- [Dashboard.vue:55-63](file://frontend/src/views/dashboard/Dashboard.vue#L55-L63)
+
 ## Dependency Analysis
-The Performance Plugin now has enhanced dependencies:
+The Performance Plugin now has enhanced dependencies with centralized plugin integration:
 
 - **Database engine and session management**: Maintained for monitoring target persistence
 - **Centralized plugin loader**: Enhanced with comprehensive plugin context including security providers
 - **Global application settings**: Configuration for plugin loading and monitoring
 - **Security middleware**: User and admin access checks for monitoring operations
 - **System libraries**: psutil for system metrics, subprocess for Docker integration
-- **Vue.js ecosystem**: Real-time dashboard with reactive components
+- **Vue.js ecosystem**: Real-time dashboard with reactive components and plugin registry integration
+- **Enhanced Plugin Registry**: Centralized plugin status monitoring and system-wide plugin statistics
 
 ```mermaid
 graph LR
@@ -452,7 +513,9 @@ PluginLoader["plugin_loader.py"] --> Plugin
 Main["main.py"] --> PluginLoader
 Main --> Endpoints
 Vue["Performance.vue"] --> AuthStore["Auth Store"]
-Vue --> PluginRegistry["Plugin Registry"]
+Vue --> PluginRegistry["Enhanced Plugin Registry"]
+PluginRegistry --> EnabledPlugins["enabledPlugins Computed"]
+EnabledPlugins --> PluginStats["Plugin Statistics"]
 ```
 
 **Diagram sources**
@@ -464,13 +527,14 @@ Vue --> PluginRegistry["Plugin Registry"]
 - [plugin_loader.py:1-100](file://backend/app/core/plugin_loader.py#L1-L100)
 - [main.py:1-87](file://backend/app/main.py#L1-L87)
 - [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
+- [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 
 **Section sources**
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
 - [main.py:17-48](file://backend/app/main.py#L17-L48)
 
 ## Performance Considerations
-Enhanced performance considerations for the comprehensive monitoring system:
+Enhanced performance considerations for the comprehensive monitoring system with centralized plugin integration:
 
 - **Database indexing**: Primary keys are indexed by SQLAlchemy, consider adding composite indexes for frequent queries (e.g., MetricSample.target_id + collected_at)
 - **Pagination and limits**: The metrics endpoint supports configurable limits to prevent large result sets
@@ -479,9 +543,11 @@ Enhanced performance considerations for the comprehensive monitoring system:
 - **System call optimization**: Metrics collection uses efficient psutil calls with minimal overhead
 - **Docker command timeouts**: Subprocess calls have 10-second timeouts to prevent hanging operations
 - **Real-time updates**: Dashboard refresh interval set to 5 seconds for optimal responsiveness
+- **Plugin Registry Optimization**: Computed properties in plugin registry reduce unnecessary re-computation
+- **Centralized Data Access**: Single source of truth for plugin status reduces redundant API calls
 
 ## Troubleshooting Guide
-Enhanced troubleshooting for the comprehensive monitoring system:
+Enhanced troubleshooting for the comprehensive monitoring system with centralized plugin integration:
 
 - **Plugin not loaded**: Verify plugin directory structure and presence of plugin.py with required metadata and register function
 - **Database errors**: Confirm database connectivity and that tables are created or migrated
@@ -490,6 +556,8 @@ Enhanced troubleshooting for the comprehensive monitoring system:
 - **Docker integration failures**: Verify Docker daemon is running and accessible to the application
 - **System metrics collection errors**: Check system permissions and psutil installation
 - **Dashboard refresh issues**: Verify WebSocket connections and network connectivity for real-time updates
+- **Plugin registry errors**: Check plugin manifest format and ensure proper plugin registration
+- **Centralized monitoring issues**: Verify plugin registry store initialization and enabledPlugins computed property
 
 **Section sources**
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
@@ -497,11 +565,13 @@ Enhanced troubleshooting for the comprehensive monitoring system:
 - [endpoints.py:22-32](file://backend/app/plugins/performance/endpoints.py#L22-L32)
 
 ## Conclusion
-The Performance Plugin has undergone a complete transformation from a simple placeholder to a comprehensive system monitoring solution. The enhanced plugin now provides real-time system metrics, Docker container monitoring, threshold-based alarm notifications, and an interactive dashboard. This transformation delivers a complete monitoring solution that integrates seamlessly with the NOC Vision platform's plugin architecture and shared infrastructure.
+The Performance Plugin has undergone a complete transformation from a simple placeholder to a comprehensive system monitoring solution. The enhanced plugin now provides real-time system metrics, Docker container monitoring, threshold-based alarm notifications, and an interactive dashboard with centralized plugin monitoring. This transformation delivers a complete monitoring solution that integrates seamlessly with the NOC Vision platform's plugin architecture and shared infrastructure.
 
-The plugin's evolution demonstrates the power of the plugin-based architecture, allowing for rapid feature expansion while maintaining clean separation of concerns. Recent improvements to the Alarms section with card-based layout and flicker elimination demonstrate attention to user experience and interface stability.
+**Updated** The most significant enhancement is the centralization of plugin monitoring and system status information in the Performance page, moving away from the previous Dashboard-only approach. This provides users with a more integrated and comprehensive monitoring experience, consolidating all system status information in a single, easily accessible location.
 
-Future enhancements could include customizable alert thresholds, historical trend analysis, and integration with external monitoring systems.
+The plugin's evolution demonstrates the power of the plugin-based architecture, allowing for rapid feature expansion while maintaining clean separation of concerns. Recent improvements to the Alarms section with card-based layout and flicker elimination, combined with the enhanced plugin registry integration, demonstrate attention to user experience and interface stability.
+
+Future enhancements could include customizable alert thresholds, historical trend analysis, advanced plugin management capabilities, and integration with external monitoring systems.
 
 ## Appendices
 
@@ -628,13 +698,16 @@ Future enhancements could include customizable alert thresholds, historical tren
 - [endpoints.py:123-199](file://backend/app/plugins/performance/endpoints.py#L123-L199)
 
 ### Frontend Integration Notes
-- **Enhanced Performance View**: Now includes comprehensive real-time monitoring dashboard with progress bars, card-based alarm system, and alarm notifications
-- **Plugin Registry Store**: Supports dynamic menu integration and plugin lifecycle management
+- **Enhanced Performance View**: Now includes comprehensive real-time monitoring dashboard with progress bars, card-based alarm system, alarm notifications, and centralized plugin monitoring
+- **Enhanced Plugin Registry Store**: Supports dynamic menu integration, plugin lifecycle management, and real-time plugin statistics
+- **Centralized Plugin Monitoring**: Dedicated section for system-wide plugin status with real-time updates
+- **Improved User Experience**: Direct access to Performance monitoring via `/plugins/performance` route
 - **Real-time Updates**: Dashboard automatically refreshes every 5 seconds with manual refresh option
 - **Error Handling**: Graceful error display with retry mechanisms and loading states
 - **Responsive Design**: Mobile-friendly dashboard layout with adaptive grid system
-- **Card-Based Layout**: Improved visual hierarchy with persistent alarm cards and consistent spacing
+- **Card-Based Layout**: Improved visual hierarchy with persistent alarm cards, consistent spacing, and plugin statistics cards
 
 **Section sources**
 - [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
+- [Dashboard.vue:1-66](file://frontend/src/views/dashboard/Dashboard.vue#L1-L66)
