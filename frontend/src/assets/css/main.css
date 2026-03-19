@@ -74,3 +74,14 @@ body {
 #app {
   min-height: 100vh;
 }
+
+/* When background image is active - make cards/panels semi-transparent */
+html.has-bg .bg-card,
+html.has-bg .bg-background {
+  background-color: transparent !important;
+}
+
+html.has-bg .border-b,
+html.has-bg .border-r {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}

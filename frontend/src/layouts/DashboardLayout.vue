@@ -27,10 +27,15 @@ async function handleLogout() {
 </script>
 
 <template>
-  <div id="app-background" class="flex h-screen overflow-hidden bg-background">
+  <div class="flex h-screen overflow-hidden" :class="themeStore.hasBackground ? 'bg-transparent' : 'bg-background'">
     <!-- Sidebar (desktop) -->
-    <aside class="hidden w-64 shrink-0 border-r bg-card lg:block">
-      <Sidebar />
+    <aside
+      class="hidden w-64 shrink-0 border-r lg:block"
+      :class="themeStore.hasBackground
+        ? 'bg-black/40 backdrop-blur-md border-white/10'
+        : 'bg-card'"
+    >
+      <Sidebar :has-background="themeStore.hasBackground" />
     </aside>
 
     <!-- Mobile sidebar overlay -->
@@ -60,19 +65,28 @@ async function handleLogout() {
     >
       <aside
         v-if="sidebarOpen"
-        class="fixed inset-y-0 left-0 z-50 w-64 border-r bg-card lg:hidden"
+        class="fixed inset-y-0 left-0 z-50 w-64 border-r lg:hidden"
+        :class="themeStore.hasBackground
+          ? 'bg-black/50 backdrop-blur-md border-white/10'
+          : 'bg-card'"
       >
-        <Sidebar @close="sidebarOpen = false" />
+        <Sidebar @close="sidebarOpen = false" :has-background="themeStore.hasBackground" />
       </aside>
     </Transition>
 
     <!-- Main content -->
     <div class="flex flex-1 flex-col overflow-hidden">
       <!-- Header -->
-      <header class="flex h-14 items-center gap-4 border-b bg-card px-4 lg:px-6">
+      <header
+        class="flex h-14 items-center gap-4 border-b px-4 lg:px-6"
+        :class="themeStore.hasBackground
+          ? 'bg-black/50 backdrop-blur-md border-white/10 text-white'
+          : 'bg-card'"
+      >
         <!-- Mobile menu button -->
         <button
-          class="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground lg:hidden"
+          class="inline-flex items-center justify-center rounded-md p-2 hover:bg-white/10 lg:hidden"
+          :class="themeStore.hasBackground ? 'text-white' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'"
           @click="sidebarOpen = !sidebarOpen"
         >
           <Menu v-if="!sidebarOpen" class="h-5 w-5" />
@@ -87,11 +101,14 @@ async function handleLogout() {
         <!-- User dropdown -->
         <DropdownMenu>
           <template #trigger>
-            <button class="flex items-center gap-2 rounded-md p-1 hover:bg-accent">
+            <button
+              class="flex items-center gap-2 rounded-md p-1"
+              :class="themeStore.hasBackground ? 'hover:bg-white/10' : 'hover:bg-accent'"
+            >
               <!-- Avatar with system or custom image -->
-              <div v-if="authStore.user?.avatar_url && authStore.user.avatar_url.startsWith('system:')" 
+              <div v-if="authStore.user?.avatar_url && authStore.user.avatar_url.startsWith('system:')"
                    class="h-8 w-8 overflow-hidden rounded-full">
-                <img :src="`/avatars/avatar-${authStore.user.avatar_url.split(':')[1]}.svg`" 
+                <img :src="`/avatars/avatar-${authStore.user.avatar_url.split(':')[1]}.svg`"
                      alt="Avatar" class="h-full w-full object-cover" />
               </div>
               <div v-else-if="authStore.user?.avatar_url" class="h-8 w-8 overflow-hidden rounded-full">

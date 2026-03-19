@@ -11,6 +11,7 @@
 - [main.py](file://backend/app/main.py)
 - [auth.py](file://backend/app/api/v1/endpoints/auth.py)
 - [user_service.py](file://backend/app/services/user_service.py)
+- [002_add_background_image_to_users.py](file://backend/alembic/versions/002_add_background_image_to_users.py)
 - [Avatar.vue](file://frontend/src/components/ui/Avatar.vue)
 - [Profile.vue](file://frontend/src/views/settings/Profile.vue)
 - [auth.js](file://frontend/src/stores/auth.js)
@@ -18,12 +19,12 @@
 
 ## Update Summary
 **Changes Made**
-- Added new avatar management endpoint: PUT /api/v1/users/me/avatar
-- Enhanced UserResponse schema with avatar_url field
-- Updated UserUpdate schema with avatar_url field
-- Added avatar_url field to User model with system avatar support
-- Integrated frontend avatar selection and upload functionality
-- Enhanced user profile management with avatar customization options
+- Added new user background management endpoints: PUT /api/v1/users/me/background and GET /api/v1/users/me/backgrounds-list
+- Enhanced UserResponse schema with background_image field
+- Updated UserUpdate schema with background_image field
+- Added background_image field to User model with database migration support
+- Integrated background image retrieval from both nginx static directory and local development paths
+- Enhanced user profile management with background customization options
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -37,16 +38,17 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document provides comprehensive API documentation for user management endpoints within the NOC Vision platform. It covers HTTP methods, URL patterns, request/response schemas, authorization requirements, role-based access control, and practical usage examples for user CRUD operations, bulk operations, user search/filtering, and avatar management functionality. The documentation focuses on the `/api/v1/users/` endpoint group and related authentication endpoints that support user lifecycle management, including new avatar management capabilities for enhanced user profile customization.
+This document provides comprehensive API documentation for user management endpoints within the NOC Vision platform. It covers HTTP methods, URL patterns, request/response schemas, authorization requirements, role-based access control, and practical usage examples for user CRUD operations, bulk operations, user search/filtering, avatar management, and background management functionality. The documentation focuses on the `/api/v1/users/` endpoint group and related authentication endpoints that support user lifecycle management, including new avatar management capabilities and background customization for enhanced user profile personalization.
 
 ## Project Structure
 The user management functionality is organized under the FastAPI application with modular routing and schema-driven validation. The key components include:
-- Endpoint definitions for user operations, permission management, and avatar management
-- Pydantic models for request/response schemas with avatar support
-- SQLAlchemy models for persistence with avatar URL storage
+- Endpoint definitions for user operations, permission management, avatar management, and background management
+- Pydantic models for request/response schemas with avatar and background support
+- SQLAlchemy models for persistence with avatar URL and background image storage
 - Security utilities for authentication, authorization, and plugin access control
 - Router configuration for API versioning
-- Frontend integration for avatar selection and upload
+- Frontend integration for avatar selection, upload, and background customization
+- Database migration support for background image field
 
 ```mermaid
 graph TB
@@ -64,7 +66,12 @@ K["Security Utilities<br/>core/security.py"] --> C
 K --> D
 L["Frontend Avatar Component<br/>Avatar.vue"] --> M["Profile View<br/>Profile.vue"]
 N["Auth Store<br/>auth.js"] --> O["Avatar Management<br/>users/me/avatar"]
+P["Background Image Migration<br/>002_add_background_image_to_users.py"] --> G
+Q["Background Management<br/>users/me/background"] --> C
+R["Background List<br/>users/me/backgrounds-list"] --> C
 M --> O
+M --> Q
+M --> R
 ```
 
 **Diagram sources**
@@ -75,6 +82,7 @@ M --> O
 - [Avatar.vue:1-58](file://frontend/src/components/ui/Avatar.vue#L1-L58)
 - [Profile.vue:1-199](file://frontend/src/views/settings/Profile.vue#L1-L199)
 - [auth.js:1-198](file://frontend/src/stores/auth.js#L1-L198)
+- [002_add_background_image_to_users.py:21-22](file://backend/alembic/versions/002_add_background_image_to_users.py#L21-L22)
 
 **Section sources**
 - [main.py:66-67](file://backend/app/main.py#L66-L67)
@@ -96,14 +104,15 @@ This section outlines the essential building blocks for user management operatio
 - Active/inactive user status management
 - Timestamp tracking for created/updated records
 - **Updated**: Avatar URL field with system avatar support (system:1, system:2, system:3)
+- **Updated**: Background image field for user desktop customization
 
 ### Request/Response Schemas
-- User creation with username, email, password, full name, role, and optional avatar URL
-- User updates with selective field updates including avatar URL
-- User response with comprehensive profile information including avatar URL
+- User creation with username, email, password, full name, role, optional avatar URL, and optional background image
+- User updates with selective field updates including avatar URL and background image
+- User response with comprehensive profile information including avatar URL and background image
 - Status responses for deletion operations
 - Permission response with role-based access information
-- **Updated**: Avatar URL field in all schemas for profile customization
+- **Updated**: Avatar URL and background image fields in all schemas for profile customization
 
 **Section sources**
 - [security.py:13](file://backend/app/core/security.py#L13)
@@ -125,7 +134,7 @@ Client->>API : HTTP Request
 API->>Endpoint : Route to Users Endpoint
 Endpoint->>Security : Validate JWT Token & Check Permissions
 Security-->>Endpoint : Authorized User Context
-Endpoint->>Service : Business Logic Call (including avatar update)
+Endpoint->>Service : Business Logic Call (including avatar/background update)
 Service->>DB : Database Operation
 DB-->>Service : Data Result
 Service-->>Endpoint : Processed Data
@@ -143,12 +152,12 @@ The architecture enforces:
 - Plugin access control for different system sections
 - Schema validation at the endpoint level
 - Database abstraction through SQLAlchemy ORM
-- **Updated**: Avatar URL validation and storage capabilities
+- **Updated**: Avatar URL and background image validation and storage capabilities
 
 ## Detailed Component Analysis
 
 ### Endpoint Definitions and URL Patterns
-The user management endpoints follow RESTful conventions with the base path `/api/v1/users` and include new permission endpoints and avatar management functionality:
+The user management endpoints follow RESTful conventions with the base path `/api/v1/users` and include new permission endpoints, avatar management functionality, and background management endpoints:
 
 #### PUT /api/v1/users/me/avatar
 - **Purpose**: Update the current user's avatar
@@ -159,6 +168,28 @@ The user management endpoints follow RESTful conventions with the base path `/ap
 - **Validation**: Avatar URL must be a valid URL or system avatar format (system:1, system:2, system:3)
 - **Response Fields**:
   - `avatar_url`: Updated avatar URL or system avatar identifier
+
+#### PUT /api/v1/users/me/background
+- **Purpose**: Update the current user's background image preference
+- **Method**: PUT
+- **Request Body**: `{ background_image: string }`
+- **Response**: UserResponse object with updated background image
+- **Authorization**: Requires valid JWT token (any authenticated user)
+- **Validation**: Background image must be a valid filename from the available backgrounds list
+- **Response Fields**:
+  - `background_image`: Updated background image filename
+
+#### GET /api/v1/users/me/backgrounds-list
+- **Purpose**: Retrieve list of available background images
+- **Method**: GET
+- **Response**: Backgrounds list with available image filenames
+- **Authorization**: Requires valid JWT token (any authenticated user)
+- **Response Fields**:
+  - `backgrounds`: Array of available background image filenames
+- **Implementation Details**:
+  - Searches in `/usr/share/nginx/html/backgrounds` (production nginx static directory)
+  - Falls back to `frontend/public/backgrounds` (development directory)
+  - Supports file extensions: jpg, jpeg, png, webp, gif, avif
 
 #### GET /api/v1/users/me/permissions
 - **Purpose**: Retrieve current user's permission information
@@ -226,13 +257,15 @@ The user management endpoints follow RESTful conventions with the base path `/ap
 
 **Section sources**
 - [users.py:27-35](file://backend/app/api/v1/endpoints/users.py#L27-L35)
-- [users.py:15-22](file://backend/app/api/v1/endpoints/users.py#L15-L22)
 - [users.py:38-49](file://backend/app/api/v1/endpoints/users.py#L38-L49)
-- [users.py:52-65](file://backend/app/api/v1/endpoints/users.py#L52-L65)
-- [users.py:63-76](file://backend/app/api/v1/endpoints/users.py#L63-L76)
-- [users.py:79-102](file://backend/app/api/v1/endpoints/users.py#L79-L102)
-- [users.py:105-127](file://backend/app/api/v1/endpoints/users.py#L105-L127)
-- [users.py:130-150](file://backend/app/api/v1/endpoints/users.py#L130-L150)
+- [users.py:49-72](file://backend/app/api/v1/endpoints/users.py#L49-L72)
+- [users.py:15-22](file://backend/app/api/v1/endpoints/users.py#L15-L22)
+- [users.py:74-86](file://backend/app/api/v1/endpoints/users.py#L74-L86)
+- [users.py:88-97](file://backend/app/api/v1/endpoints/users.py#L88-L97)
+- [users.py:99-113](file://backend/app/api/v1/endpoints/users.py#L99-L113)
+- [users.py:115-140](file://backend/app/api/v1/endpoints/users.py#L115-L140)
+- [users.py:141-164](file://backend/app/api/v1/endpoints/users.py#L141-L164)
+- [users.py:166-187](file://backend/app/api/v1/endpoints/users.py#L166-L187)
 
 ### Request/Response Schemas
 
@@ -244,6 +277,7 @@ Fields for user registration and creation:
 - `full_name`: String (optional)
 - `role`: String (default: "user")
 - `avatar_url`: String (optional)
+- `background_image`: String (optional)
 
 Validation rules:
 - Username must be unique
@@ -252,6 +286,7 @@ Validation rules:
 - Role must be either "superuser", "admin", or "user"
 - Superusers can only be created by other superusers
 - **Updated**: Avatar URL validation for custom URLs or system avatar formats
+- **Updated**: Background image validation for valid filenames
 
 #### UserUpdate Schema
 Fields for partial user updates:
@@ -261,6 +296,7 @@ Fields for partial user updates:
 - `is_active`: Boolean (optional)
 - `password`: String (optional)
 - `avatar_url`: String (optional)
+- `background_image`: String (optional)
 
 Behavior:
 - Only provided fields are updated
@@ -268,6 +304,7 @@ Behavior:
 - Role changes require superuser privileges
 - Cannot assign superuser role without superuser privileges
 - **Updated**: Avatar URL updates for profile customization
+- **Updated**: Background image updates for desktop customization
 
 #### UserResponse Schema
 Complete user profile representation:
@@ -277,6 +314,7 @@ Complete user profile representation:
 - `full_name`: String (nullable)
 - `role`: String ("superuser", "admin", or "user")
 - `avatar_url`: String (nullable)
+- `background_image`: String (nullable)
 - `is_active`: Boolean
 - `created_at`: DateTime (nullable)
 - `updated_at`: DateTime (nullable)
@@ -292,11 +330,58 @@ Permission information for current user:
 - `can_access_admin`: Boolean (indicates admin access capability)
 - `sections`: Array of strings (accessible plugin sections)
 
+#### BackgroundsListResponse Schema
+Available background images list:
+- `backgrounds`: Array of strings (available background image filenames)
+
 **Section sources**
 - [user.py:6-11](file://backend/app/schemas/user.py#L6-L11)
 - [user.py:14-19](file://backend/app/schemas/user.py#L14-L19)
 - [user.py:22-32](file://backend/app/schemas/user.py#L22-L32)
 - [common.py:5-7](file://backend/app/schemas/common.py#L5-L7)
+
+### Background Management Functionality
+
+#### Background Image Management
+The system provides comprehensive background image management for user desktop customization:
+
+##### Background Image Storage
+- Database field: `background_image` (String, max 255 characters)
+- Nullable field allowing empty/null values for default backgrounds
+- Stored as filename strings (e.g., "bg1.jpg", "nature.png")
+
+##### Background Image Retrieval
+The system searches for available background images in the following order:
+1. **Production Environment**: `/usr/share/nginx/html/backgrounds` (nginx static directory)
+2. **Development Environment**: `frontend/public/backgrounds` (local development directory)
+3. **Fallback**: Returns empty array if neither directory exists
+
+Supported file formats:
+- JPEG/JPG
+- PNG
+- WebP
+- GIF
+- AVIF
+
+##### Background Image Validation
+- Background images must be valid filenames from the available backgrounds list
+- Empty/null values indicate default background behavior
+- Filename length limited to 255 characters
+
+#### Frontend Integration
+The frontend provides comprehensive background management:
+- Dynamic background image loading from static asset directories
+- Background selection interface with thumbnail previews
+- Real-time background preview before saving
+- Responsive background management component
+
+**Section sources**
+- [user.py:15-16](file://backend/app/models/user.py#L15-L16)
+- [user.py:29-32](file://backend/app/models/user.py#L29-L32)
+- [user.py:19-20](file://backend/app/schemas/user.py#L19-L20)
+- [user.py:28-29](file://backend/app/schemas/user.py#L28-L29)
+- [users.py:49-72](file://backend/app/api/v1/endpoints/users.py#L49-L72)
+- [002_add_background_image_to_users.py:21-22](file://backend/alembic/versions/002_add_background_image_to_users.py#L21-L22)
 
 ### Avatar Management Functionality
 
@@ -339,6 +424,8 @@ All user management endpoints require valid JWT authentication:
 | Endpoint | Required Role | Additional Restrictions |
 |----------|---------------|------------------------|
 | PUT /users/me/avatar | Any authenticated user | N/A |
+| PUT /users/me/background | Any authenticated user | N/A |
+| GET /users/me/backgrounds-list | Any authenticated user | N/A |
 | GET /users/me/permissions | Any authenticated user | N/A |
 | GET /users/plugins/access/{section} | Any authenticated user | N/A |
 | GET /users | Superuser | N/A |
@@ -358,11 +445,15 @@ CheckRole --> |Superuser| CheckLastSuperuser{"Last Superuser?"}
 CheckRole --> |Admin| CheckAdmin["Admin Access"]
 CheckRole --> |User| CheckSelf{"Accessing Self?"}
 CheckLastSuperuser --> |Yes| CheckSelf
-CheckLastSuperuser --> |No| CheckAvatar{"Avatar Update?"}
+CheckLastSuperuser --> |No| CheckAvatar{"Avatar/Background Update?"}
 CheckSelf --> |Yes| CheckAvatar
 CheckSelf --> |No| Forbidden
-CheckAvatar --> |Yes| Proceed["Proceed to Avatar Update"]
-CheckAvatar --> |No| Proceed
+CheckAvatar --> |Yes| Proceed["Proceed to Avatar/Background Update"]
+CheckAvatar --> |No| CheckUserOp{"User Operation?"}
+CheckUserOp --> |Yes| CheckPrivileges["Check Privileges"]
+CheckUserOp --> |No| Proceed
+CheckPrivileges --> |Sufficient| Proceed
+CheckPrivileges --> |Insufficient| Forbidden
 CheckAdmin --> |Yes| Proceed
 CheckAdmin --> |No| Forbidden
 Proceed --> End([Response Sent])
@@ -424,6 +515,7 @@ Deny --> End
 - Type validation through Pydantic models
 - Superuser privilege validation for role assignments
 - **Updated**: Avatar URL validation for custom URLs and system avatar formats
+- **Updated**: Background image validation for valid filenames and supported formats
 
 #### Enhanced Security Measures
 - JWT token expiration (configurable)
@@ -434,6 +526,7 @@ Deny --> End
 - Prevention of last superuser removal
 - Plugin access control enforcement
 - **Updated**: Avatar URL validation and sanitization
+- **Updated**: Background image filename validation and path safety
 
 **Section sources**
 - [security.py:16-28](file://backend/app/core/security.py#L16-L28)
@@ -472,6 +565,37 @@ const createUser = {
 };
 ```
 
+#### Background Management Examples
+
+##### Update User Background
+```javascript
+// PUT /api/v1/users/me/background
+const updateBackground = {
+  background_image: "nature_001.jpg"
+};
+```
+
+##### Get Available Backgrounds
+```javascript
+// GET /api/v1/users/me/backgrounds-list
+{
+  "backgrounds": ["nature_001.jpg", "abstract_002.png", "cityscape_003.webp"]
+}
+```
+
+##### User Creation with Background
+```javascript
+// POST /api/v1/users/
+const createUser = {
+  username: "john_doe",
+  email: "john@example.com",
+  password: "SecurePass123!",
+  full_name: "John Doe",
+  role: "user",
+  background_image: "default_bg.jpg"
+};
+```
+
 #### Permission Check Example
 ```javascript
 // GET /api/v1/users/me/permissions
@@ -494,8 +618,9 @@ const createUser = {
 // PUT /api/v1/users/123
 const updateUser = {
   email: "newemail@example.com",
-  full_name: "John Smith"
-  // role and password fields omitted for partial update
+  full_name: "John Smith",
+  background_image: "modern_001.png"
+  // avatar_url field omitted for partial update
 };
 ```
 
@@ -512,13 +637,17 @@ Current implementation supports:
 - No built-in filtering capabilities
 
 Future enhancements could include:
-- Query parameters for filtering by role, status, avatar type
+- Query parameters for filtering by role, status, avatar type, background type
 - Sorting options (created_at, username)
 - Advanced search operators
 
 **Section sources**
 - [users.py:27-35](file://backend/app/api/v1/endpoints/users.py#L27-L35)
+- [users.py:38-49](file://backend/app/api/v1/endpoints/users.py#L38-L49)
+- [users.py:49-72](file://backend/app/api/v1/endpoints/users.py#L49-L72)
 - [users.py:17-18](file://backend/app/api/v1/endpoints/users.py#L17-L18)
+- [users.py:40-47](file://backend/app/api/v1/endpoints/users.py#L40-L47)
+- [users.py:50-71](file://backend/app/api/v1/endpoints/users.py#L50-L71)
 - [users.py:40-57](file://backend/app/api/v1/endpoints/users.py#L40-L57)
 
 ## Dependency Analysis
@@ -546,6 +675,7 @@ subgraph "Frontend Layer"
 AvatarComponent["Avatar Component"]
 ProfileView["Profile View"]
 AuthStore["Auth Store"]
+BackgroundComponent["Background Component"]
 end
 UsersEndpoint --> UserService
 AuthEndpoint --> AuthService
@@ -557,6 +687,7 @@ SecurityUtils --> JWT
 SecurityUtils --> PluginAccess
 UserModel --> DB
 AvatarComponent --> ProfileView
+BackgroundComponent --> ProfileView
 ProfileView --> AuthStore
 ```
 
@@ -577,6 +708,7 @@ Key dependencies:
 - FastAPI for routing and dependency injection
 - Enhanced security utilities for role-based access control
 - **Updated**: Frontend avatar component integration
+- **Updated**: Background image management integration
 
 **Section sources**
 - [users.py:1-10](file://backend/app/api/v1/endpoints/users.py#L1-L10)
@@ -590,6 +722,8 @@ Key dependencies:
 - Connection pooling: SQLAlchemy session management handles connection reuse
 - Superuser count checks: Efficient database queries prevent orphan superuser scenarios
 - **Updated**: Avatar URL storage optimization for minimal database overhead
+- **Updated**: Background image filename storage optimization for minimal database overhead
+- **Updated**: Background directory scanning optimized with early termination on first found directory
 
 ## Troubleshooting Guide
 
@@ -597,7 +731,7 @@ Key dependencies:
 - **401 Unauthorized**: Invalid or missing JWT token
 - **403 Forbidden**: Insufficient permissions, inactive user, or superuser-only access
 - **404 Not Found**: User does not exist
-- **400 Bad Request**: Duplicate username/email, self-deletion attempt, last superuser removal, or invalid avatar URL format
+- **400 Bad Request**: Duplicate username/email, self-deletion attempt, last superuser removal, invalid avatar URL format, or invalid background image filename
 
 ### Authentication Issues
 - Verify token format: Must be Bearer token
@@ -612,12 +746,14 @@ Key dependencies:
 - Role validation: Only "superuser", "admin", or "user" roles allowed
 - Superuser validation: Ensure proper privilege escalation
 - **Updated**: Avatar URL validation: Ensure valid URL format or system avatar format
+- **Updated**: Background image validation: Ensure filename exists in available backgrounds list
 
 ### Permission Issues
 - Check user role: Verify current user has appropriate permissions
 - Plugin access: Ensure requested section is accessible
 - Superuser restrictions: Some operations are restricted to superusers only
 - **Updated**: Avatar updates: Any authenticated user can update their own avatar
+- **Updated**: Background updates: Any authenticated user can update their own background preferences
 
 ### Avatar Management Issues
 - **Invalid Avatar URL**: Ensure URL is valid HTTP/HTTPS or follows system avatar format
@@ -625,10 +761,24 @@ Key dependencies:
 - **File Upload Issues**: Frontend handles local file uploads, server expects URL string
 - **Avatar Preview**: System avatars use predefined SVG files, custom avatars use uploaded URLs
 
+### Background Management Issues
+- **Background Directory Missing**: Production environment may not have nginx static directory mounted
+- **Invalid Background Filename**: Ensure filename exists in the backgrounds-list response
+- **File Format Not Supported**: Only jpg, jpeg, png, webp, gif, avif formats supported
+- **Background Preview Issues**: Check that background files are accessible from static directory
+- **Development vs Production**: Backgrounds-list searches different paths in development vs production environments
+
 **Section sources**
 - [users.py:32-36](file://backend/app/api/v1/endpoints/users.py#L32-L36)
 - [users.py:46-49](file://backend/app/api/v1/endpoints/users.py#L46-L49)
 - [users.py:79-80](file://backend/app/api/v1/endpoints/users.py#L79-L80)
+- [users.py:49-72](file://backend/app/api/v1/endpoints/users.py#L49-L72)
 
 ## Conclusion
-The user management endpoints provide a robust foundation for user lifecycle operations within the NOC Vision platform. The implementation emphasizes security through JWT authentication, enhanced role-based access control with superuser privileges, and comprehensive data validation. The addition of new permission endpoints, plugin access control, and avatar management functionality provides comprehensive user profile customization capabilities. The PUT /api/v1/users/me/avatar endpoint enables users to update their profile pictures with either custom URLs or predefined system avatars, while the frontend integration provides intuitive avatar selection and upload functionality. The current implementation focuses on individual user operations with enhanced security measures, including prevention of last superuser removal, proper privilege escalation, and avatar URL validation. The modular design ensures maintainability and extensibility for evolving user management requirements, with clear separation between user management, authentication, permission control, and avatar management functionality.
+The user management endpoints provide a robust foundation for user lifecycle operations within the NOC Vision platform. The implementation emphasizes security through JWT authentication, enhanced role-based access control with superuser privileges, and comprehensive data validation. The addition of new permission endpoints, plugin access control, avatar management functionality, and background management functionality provides comprehensive user profile customization capabilities. 
+
+The new background management endpoints (PUT /api/v1/users/me/background and GET /api/v1/users/me/backgrounds-list) enable users to customize their desktop experience with personalized background images, while the existing avatar management endpoints (PUT /api/v1/users/me/avatar) continue to support profile picture customization. The system intelligently manages background images by searching for available files in both production nginx static directories and development directories, supporting multiple image formats (jpg, jpeg, png, webp, gif, avif).
+
+The PUT /api/v1/users/me/background endpoint allows users to set their preferred background image by filename, while the GET /api/v1/users/me/backgrounds-list endpoint provides a dynamic list of available background images based on the current environment. The frontend integration provides intuitive background selection and preview functionality, complementing the existing avatar management capabilities.
+
+The current implementation focuses on individual user operations with enhanced security measures, including prevention of last superuser removal, proper privilege escalation, avatar URL validation, background image filename validation, and comprehensive input sanitization. The modular design ensures maintainability and extensibility for evolving user management requirements, with clear separation between user management, authentication, permission control, avatar management, and background management functionality.

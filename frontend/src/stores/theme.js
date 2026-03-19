@@ -14,11 +14,7 @@ export const useThemeStore = defineStore('theme', () => {
   })
 
   const isDark = computed(() => effectiveTheme.value === 'dark')
-
-  // List of available background filenames (served from /backgrounds/)
-  const availableBackgrounds = [
-    // Will be populated dynamically or as filenames are added
-  ]
+  const hasBackground = computed(() => !!background.value)
 
   function setTheme(newTheme) {
     theme.value = newTheme
@@ -46,15 +42,21 @@ export const useThemeStore = defineStore('theme', () => {
   }
 
   function applyBackground() {
-    const el = document.getElementById('app-background')
-    if (!el) return
+    const body = document.body
     if (background.value) {
-      el.style.backgroundImage = `url('/backgrounds/${background.value}')`
-      el.style.backgroundSize = 'cover'
-      el.style.backgroundPosition = 'center'
-      el.style.backgroundAttachment = 'fixed'
+      body.style.backgroundImage = `url('/backgrounds/${background.value}')`
+      body.style.backgroundSize = 'cover'
+      body.style.backgroundPosition = 'center'
+      body.style.backgroundAttachment = 'fixed'
+      body.style.backgroundRepeat = 'no-repeat'
+      document.documentElement.classList.add('has-bg')
     } else {
-      el.style.backgroundImage = ''
+      body.style.backgroundImage = ''
+      body.style.backgroundSize = ''
+      body.style.backgroundPosition = ''
+      body.style.backgroundAttachment = ''
+      body.style.backgroundRepeat = ''
+      document.documentElement.classList.remove('has-bg')
     }
   }
 
@@ -69,8 +71,7 @@ export const useThemeStore = defineStore('theme', () => {
       if (theme.value === 'system') applyTheme()
     })
     applyTheme()
-    // Apply background after DOM is ready
-    setTimeout(applyBackground, 100)
+    setTimeout(applyBackground, 50)
   }
 
   watch(theme, applyTheme)
@@ -81,7 +82,7 @@ export const useThemeStore = defineStore('theme', () => {
     systemTheme,
     effectiveTheme,
     isDark,
-    availableBackgrounds,
+    hasBackground,
     setTheme,
     setBackground,
     initTheme,
