@@ -8,12 +8,15 @@
 - [NetworkTools.vue](file://frontend/src/plugins/network_tools/views/NetworkTools.vue)
 - [main.py](file://backend/app/main.py)
 - [plugin_loader.py](file://backend/app/core/plugin_loader.py)
-- [config.py](file://backend/app/core/config.py)
 - [auth.js](file://frontend/src/stores/auth.js)
-- [index.js](file://frontend/src/router/index.js)
-- [Sidebar.vue](file://frontend/src/components/layout/Sidebar.vue)
-- [pluginRegistry.js](file://frontend/src/stores/pluginRegistry.js)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated internal tools configuration to include EvaTeam as a new project Kanban board management tool
+- Enhanced internal tools with comprehensive tool definitions including name, URL, and description fields
+- Updated frontend icon mapping to support the new EvaTeam tool with Kanban icon
+- Maintained backward compatibility with existing tool configurations
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -32,6 +35,8 @@ The Network Tools Plugin provides quick access to internal and external network 
 The plugin offers two categories of tools:
 - **Internal Tools**: Resources hosted within the organization's network infrastructure
 - **External Tools**: Publicly accessible resources for network diagnostics and research
+
+**Updated**: Added EvaTeam as a new internal tool for project Kanban board management, expanding the internal tool ecosystem with comprehensive project management capabilities.
 
 ## Project Structure
 The Network Tools Plugin follows the standard NOC Vision plugin architecture pattern with clear separation between backend API endpoints and frontend presentation components.
@@ -59,14 +64,14 @@ E --> G
 
 **Diagram sources**
 - [plugin.py:1-18](file://backend/app/plugins/network_tools/plugin.py#L1-L18)
-- [endpoints.py:1-42](file://backend/app/plugins/network_tools/endpoints.py#L1-L42)
+- [endpoints.py:1-43](file://backend/app/plugins/network_tools/endpoints.py#L1-L43)
 - [main.py:1-87](file://backend/app/main.py#L1-L87)
 - [plugin_loader.py:1-100](file://backend/app/core/plugin_loader.py#L1-L100)
 
 **Section sources**
 - [plugin.py:1-18](file://backend/app/plugins/network_tools/plugin.py#L1-L18)
-- [endpoints.py:1-42](file://backend/app/plugins/network_tools/endpoints.py#L1-L42)
-- [NetworkTools.vue:1-180](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L1-L180)
+- [endpoints.py:1-43](file://backend/app/plugins/network_tools/endpoints.py#L1-L43)
+- [NetworkTools.vue:1-182](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L1-L182)
 
 ## Core Components
 The Network Tools Plugin consists of three primary components working together to deliver seamless access to network resources.
@@ -78,6 +83,8 @@ The backend provides two REST endpoints that return configured tool lists:
 
 Both endpoints require authentication and return structured JSON data containing tool metadata including name, URL, and description.
 
+**Updated**: Enhanced internal tools configuration with comprehensive tool definitions including the new EvaTeam project Kanban board management tool.
+
 ### Frontend Presentation Layer
 The Vue.js component provides an intuitive card-based interface with:
 - Tabbed navigation between internal and external tools
@@ -85,12 +92,14 @@ The Vue.js component provides an intuitive card-based interface with:
 - Icon mapping for visual tool identification
 - One-click opening of tools in new browser tabs
 
+**Updated**: Added icon mapping for the new EvaTeam tool using the Kanban icon component.
+
 ### Plugin Registration System
 The plugin integrates seamlessly with the NOC Vision plugin architecture through automatic discovery and registration mechanisms.
 
 **Section sources**
-- [endpoints.py:28-41](file://backend/app/plugins/network_tools/endpoints.py#L28-L41)
-- [NetworkTools.vue:47-78](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L47-L78)
+- [endpoints.py:29-42](file://backend/app/plugins/network_tools/endpoints.py#L29-L42)
+- [NetworkTools.vue:44-77](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L44-L77)
 - [plugin.py:9-18](file://backend/app/plugins/network_tools/plugin.py#L9-L18)
 
 ## Architecture Overview
@@ -122,9 +131,9 @@ Frontend->>Browser : Display interactive interface
 ```
 
 **Diagram sources**
-- [NetworkTools.vue:47-78](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L47-L78)
+- [NetworkTools.vue:49-80](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L49-L80)
 - [auth.js:160-177](file://frontend/src/stores/auth.js#L160-L177)
-- [endpoints.py:28-41](file://backend/app/plugins/network_tools/endpoints.py#L28-L41)
+- [endpoints.py:29-42](file://backend/app/plugins/network_tools/endpoints.py#L29-L42)
 
 ## Detailed Component Analysis
 
@@ -183,13 +192,15 @@ G --> L[Error Response]
 ```
 
 **Diagram sources**
-- [endpoints.py:28-41](file://backend/app/plugins/network_tools/endpoints.py#L28-L41)
+- [endpoints.py:29-42](file://backend/app/plugins/network_tools/endpoints.py#L29-L42)
 
 Both endpoints implement identical authentication patterns using the `get_current_active_user` dependency, ensuring secure access to tool configurations.
 
+**Updated**: Enhanced internal tools configuration with comprehensive tool definitions including the new EvaTeam entry with name, URL, and description fields.
+
 **Section sources**
 - [endpoints.py:9-25](file://backend/app/plugins/network_tools/endpoints.py#L9-L25)
-- [endpoints.py:28-41](file://backend/app/plugins/network_tools/endpoints.py#L28-L41)
+- [endpoints.py:29-42](file://backend/app/plugins/network_tools/endpoints.py#L29-L42)
 
 ### Frontend Component Architecture
 The Vue.js component provides a responsive, user-friendly interface for accessing network tools.
@@ -221,14 +232,16 @@ NetworkToolsComponent --> AuthStore : "uses"
 ```
 
 **Diagram sources**
-- [NetworkTools.vue:1-180](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L1-L180)
+- [NetworkTools.vue:1-182](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L1-L182)
 - [auth.js:160-177](file://frontend/src/stores/auth.js#L160-L177)
 
 The component implements concurrent data fetching for both internal and external tools, reducing overall loading time through parallel requests.
 
+**Updated**: Added icon mapping for the new EvaTeam tool using the Kanban icon component.
+
 **Section sources**
-- [NetworkTools.vue:22-78](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L22-L78)
-- [NetworkTools.vue:125-177](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L125-L177)
+- [NetworkTools.vue:23-80](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L23-L80)
+- [NetworkTools.vue:128-179](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L128-L179)
 
 ### Authentication and Security Integration
 The plugin leverages the NOC Vision platform's established authentication system, ensuring consistent security practices across all plugin components.
@@ -308,6 +321,8 @@ All tool URLs are static configurations, eliminating the need for dynamic resour
 ### Browser Optimization
 The component utilizes Vue.js reactive properties and efficient DOM updates, ensuring smooth user interactions without unnecessary re-renders.
 
+**Updated**: Enhanced tool configuration efficiency with comprehensive tool definitions that include all necessary metadata for improved user experience.
+
 ## Troubleshooting Guide
 
 ### Common Issues and Solutions
@@ -332,6 +347,8 @@ The component utilizes Vue.js reactive properties and efficient DOM updates, ens
 - **Causes**: Plugin disabled via configuration, missing plugin registration, or routing issues
 - **Solutions**: Enable plugin in configuration settings, verify plugin installation, and check router configuration
 
+**Updated**: Added troubleshooting guidance for the new EvaTeam tool, including potential access issues and configuration requirements.
+
 ### Debugging Steps
 1. **Verify Plugin Status**: Check backend logs for plugin loading messages
 2. **Test API Endpoints**: Directly access `/api/v1/plugins/network_tools/internal-tools` and `/api/v1/plugins/network_tools/external-tools`
@@ -346,11 +363,14 @@ The component utilizes Vue.js reactive properties and efficient DOM updates, ens
 ## Conclusion
 The Network Tools Plugin exemplifies effective plugin architecture within the NOC Vision platform. Its clean separation of concerns, minimal complexity, and robust integration with the existing authentication and routing systems make it both maintainable and scalable.
 
+**Updated**: The recent enhancement with EvaTeam as a new internal tool significantly expands the plugin's utility for project management and Kanban board operations, demonstrating the plugin's flexibility for accommodating diverse organizational needs.
+
 Key strengths include:
 - **Simplicity**: Minimal codebase with clear functionality boundaries
 - **Security**: Leverages established authentication and authorization patterns
 - **Performance**: Optimized for fast loading and responsive user interactions
 - **Maintainability**: Easy to update tool configurations without code changes
 - **Integration**: Seamless incorporation into the broader platform ecosystem
+- **Extensibility**: Flexible architecture supporting new tool additions like EvaTeam
 
-The plugin successfully addresses the core requirement of providing quick access to network management resources while maintaining alignment with NOC Vision's architectural principles and security standards.
+The plugin successfully addresses the core requirement of providing quick access to network management resources while maintaining alignment with NOC Vision's architectural principles and security standards. The addition of EvaTeam enhances the plugin's value proposition by integrating modern project management capabilities directly into the network operations workflow.
