@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from app.plugins.network_status.endpoints import router
 
 
-def register():
+def register(app, context):
     """Register network status plugin"""
     return {
         "name": "network_status",

@@ -143,7 +143,7 @@ function getMenuItemsForPlugin(pluginName) {
         section: 'analytics',
         order: 35
       }
-    ]
+    ],
   }
   
   return menuConfig[pluginName] || []
