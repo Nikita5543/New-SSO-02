@@ -12,19 +12,21 @@ const authStore = useAuthStore()
 const saving = ref(false)
 const saveMsg = ref('')
 
-// List of available backgrounds - add filenames here when you put images in /public/backgrounds/
-const backgrounds = ref([])
+// List of available backgrounds - served from /backgrounds/ by nginx
+// Add filenames here when you put new images in frontend/public/backgrounds/
+const backgrounds = ref([
+  'bg1.avif',
+  'bg2.avif',
+  'bg3.avif',
+  'bg4.avif',
+  'bg5.avif',
+  'bg6.avif',
+])
 
 onMounted(async () => {
-  // Load list of available backgrounds from backend
-  try {
-    const resp = await authStore.authFetch('/api/v1/users/me/backgrounds-list')
-    if (resp.ok) {
-      const data = await resp.json()
-      backgrounds.value = data.backgrounds || []
-    }
-  } catch (e) {
-    // fallback: empty list
+  // Sync background from user profile if not in localStorage
+  if (authStore.user?.background_image && !themeStore.background) {
+    themeStore.setBackground(authStore.user.background_image)
   }
 })
 

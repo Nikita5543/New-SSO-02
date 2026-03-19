@@ -52,16 +52,23 @@ async def get_backgrounds_list(
     current_user: User = Depends(get_current_active_user),
 ):
     """Получить список доступных фонов"""
-    ALLOWED_EXT = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
-    # Path to frontend public/backgrounds served as static
-    backgrounds_dir = Path(__file__).resolve().parents[4] / "frontend" / "public" / "backgrounds"
-    if not backgrounds_dir.exists():
-        return {"backgrounds": []}
-    files = [
-        f.name for f in sorted(backgrounds_dir.iterdir())
-        if f.is_file() and f.suffix.lower() in ALLOWED_EXT
-    ]
-    return {"backgrounds": files}
+    ALLOWED_EXT = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif'}
+    # In Docker, frontend static files are served by nginx.
+    # We look in /usr/share/nginx/html/backgrounds (nginx static dir)
+    # or fallback to a hardcoded list based on known filenames.
+    import os
+    nginx_path = Path('/usr/share/nginx/html/backgrounds')
+    local_path = Path(__file__).resolve().parents[4] / 'frontend' / 'public' / 'backgrounds'
+    
+    for search_dir in [nginx_path, local_path]:
+        if search_dir.exists():
+            files = [
+                f.name for f in sorted(search_dir.iterdir())
+                if f.is_file() and f.suffix.lower() in ALLOWED_EXT
+            ]
+            return {"backgrounds": files}
+    
+    return {"backgrounds": []}
 
 
 @router.get("/plugins/access/{section}")
