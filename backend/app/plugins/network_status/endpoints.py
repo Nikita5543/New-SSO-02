@@ -36,7 +36,7 @@ async def get_netbox_routers() -> List[dict]:
             }
             # Get devices with role=router
             response = await client.get(
-                f"{NETBOX_URL}/api/dcim/devices/",
+                f"{NETBOX_URL}/dcim/devices/",
                 headers=headers,
                 params={"role": "router", "status": "active"},
                 timeout=30.0,
