@@ -1,14 +1,16 @@
-from fastapi import APIRouter
-from app.plugins.network_status.endpoints import router
+PLUGIN_META = {
+    "name": "network_status",
+    "version": "1.0.0",
+    "description": "Network device monitoring - router status checks",
+    "author": "NOC Vision Team",
+}
 
 
 def register(app, context):
-    """Register network status plugin"""
-    return {
-        "name": "network_status",
-        "label": "Network Status",
-        "section": "analytics",
-        "version": "1.0.0",
-        "router": router,
-        "models": ["NetworkDevice", "DeviceCheckResult"],
-    }
+    from app.plugins.network_status.endpoints import router
+
+    app.include_router(
+        router,
+        prefix=context.api_prefix,
+        tags=["Network Status"],
+    )
