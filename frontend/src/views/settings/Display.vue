@@ -21,6 +21,8 @@ const backgrounds = ref([
   'bg4.avif',
   'bg5.avif',
   'bg6.avif',
+  'bg7.webp',
+  'bg8.jpg',
 ])
 
 onMounted(async () => {
