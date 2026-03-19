@@ -15,12 +15,10 @@
 
 ## Update Summary
 **Changes Made**
-- Complete architectural overhaul from local database-driven system to NetBox-integrated platform
-- Backend endpoints now connect to external NetBox DCIM system with authentication and error handling
-- Added pagination support with configurable page sizes (1-100 items)
-- Enhanced frontend with comprehensive device management interface featuring real-time data fetching, search, sorting, and responsive design
-- Integrated authentication system with token-based access control
-- Added comprehensive error handling and status management
+- Added SSH connectivity enhancement with SSH column in device table
+- Implemented terminal icon button that opens SSH connections using ssh://admin@ protocol
+- Enhanced device table with SSH connection capability for devices with IP addresses
+- Updated frontend component with SSH functionality and improved user experience
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -28,14 +26,17 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+6. [SSH Connectivity Enhancement](#ssh-connectivity-enhancement)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
+11. [Appendices](#appendices)
 
 ## Introduction
 The Inventory Plugin provides network equipment and asset management capabilities within the NOC Vision platform, now integrated with NetBox DCIM (Data Center Infrastructure Management) system. The plugin enables tracking of network devices, their physical locations, and device categories by connecting to an external NetBox instance. This represents a complete architectural shift from a local database-driven system to a cloud-native, external system integration approach.
+
+**Updated** Added SSH connectivity enhancement that allows direct SSH connections to network devices from the inventory interface.
 
 Key capabilities:
 - **External System Integration**: Direct connection to NetBox DCIM for real-time device data
@@ -44,11 +45,12 @@ Key capabilities:
 - **Multi-field Search**: Search across device names and properties
 - **Flexible Sorting**: Sort by various device attributes (name, status, etc.)
 - **Responsive Frontend**: Modern Vue.js interface with real-time data updates
+- **SSH Connectivity**: Direct SSH connections to devices via terminal icon button
 - **Authentication Integration**: Seamless integration with platform authentication system
 - **Error Handling**: Comprehensive error handling for network connectivity and API failures
 
 ## Project Structure
-The Inventory Plugin has been transformed into a NetBox-integrated system with clear separation between external API communication and frontend presentation:
+The Inventory Plugin has been transformed into a NetBox-integrated system with clear separation between external API communication and frontend presentation, enhanced with SSH connectivity features:
 
 ```mermaid
 graph TB
@@ -64,10 +66,14 @@ H[router/index.js] --> I[Inventory.vue]
 I --> J[auth.js]
 J --> K[authFetch]
 K --> L[Backend API]
+I --> M[SSH Functionality]
+M --> N[Terminal Icon Button]
+N --> O[ssh:// Protocol Handler]
 end
-M[Inventory.vue] --> N[Real-time Data Fetching]
-N --> O[Search & Filter]
-O --> P[Sorting & Pagination]
+P[Inventory.vue] --> Q[Real-time Data Fetching]
+Q --> R[Search & Filter]
+R --> S[Sorting & Pagination]
+S --> T[SSH Connection Feature]
 ```
 
 **Diagram sources**
@@ -77,17 +83,19 @@ O --> P[Sorting & Pagination]
 - [requirements.txt:11](file://backend/requirements.txt#L11)
 - [router/index.js:29](file://frontend/src/router/index.js#L29)
 - [auth.js:160-177](file://frontend/src/stores/auth.js#L160-L177)
+- [Inventory.vue:82-89](file://frontend/src/plugins/inventory/views/Inventory.vue#L82-L89)
+- [Inventory.vue:250-257](file://frontend/src/plugins/inventory/views/Inventory.vue#L250-L257)
 
 **Section sources**
 - [plugin.py:1-17](file://backend/app/plugins/inventory/plugin.py#L1-L17)
 - [endpoints.py:1-95](file://backend/app/plugins/inventory/endpoints.py#L1-L95)
-- [config.py:1-51](file://backend/app/core/config.py#L1-L51)
-- [requirements.txt:1-12](file://backend/requirements.txt#L1-L12)
+- [config.py:1-53](file://backend/app/core/config.py#L1-L53)
+- [requirements.txt:1-13](file://backend/requirements.txt#L1-L13)
 - [router/index.js:29](file://frontend/src/router/index.js#L29)
 - [auth.js:160-177](file://frontend/src/stores/auth.js#L160-L177)
 
 ## Core Components
-The Inventory Plugin now consists of four fundamental components working together to provide comprehensive equipment management through NetBox integration:
+The Inventory Plugin now consists of four fundamental components working together to provide comprehensive equipment management through NetBox integration, enhanced with SSH connectivity:
 
 ### NetBox API Integration
 The plugin implements a robust API gateway to communicate with external NetBox DCIM system:
@@ -109,46 +117,50 @@ Pydantic models ensure data validation and serialization for local operations:
 - DeviceTypeCreate/DeviceTypeResponse for equipment categorization
 
 ### Frontend Integration
-Vue.js components provide a comprehensive user interface with real-time capabilities:
+Vue.js components provide a comprehensive user interface with real-time capabilities and SSH connectivity:
 - **Real-time Data Fetching**: Automatic device data retrieval from backend API
 - **Search Interface**: Multi-field search with instant filtering
 - **Sorting Controls**: Clickable column headers for dynamic sorting
 - **Pagination System**: Previous/Next navigation with item count display
 - **Status Visualization**: Color-coded status indicators with NetBox status values
+- **SSH Connection Feature**: Terminal icon button for direct SSH connections
 - **Responsive Design**: Mobile-friendly table layout with horizontal scrolling
 
 **Section sources**
 - [endpoints.py:9-32](file://backend/app/plugins/inventory/endpoints.py#L9-L32)
-- [endpoints.py:35-94](file://backend/app/plugins/inventory/endpoints.py#L35-L94)
+- [endpoints.py:35-95](file://backend/app/plugins/inventory/endpoints.py#L35-L95)
 - [schemas.py:6-74](file://backend/app/plugins/inventory/schemas.py#L6-L74)
-- [Inventory.vue:1-272](file://frontend/src/plugins/inventory/views/Inventory.vue#L1-L272)
+- [Inventory.vue:1-294](file://frontend/src/plugins/inventory/views/Inventory.vue#L1-L294)
 
 ## Architecture Overview
-The Inventory Plugin follows a modern microservices architecture pattern with external system integration:
+The Inventory Plugin follows a modern microservices architecture pattern with external system integration and enhanced SSH connectivity:
 
 ```mermaid
 graph TB
 subgraph "External System Layer"
 A[NetBox DCIM] --> B[HTTP API]
 C[Authentication Service] --> B
+D[SSH Protocol Handler] --> E[Local SSH Client]
 end
 subgraph "Platform Layer"
-D[FastAPI Backend] --> E[API Gateway]
-E --> F[Authentication Middleware]
-F --> G[Error Handler]
+F[FastAPI Backend] --> G[API Gateway]
+G --> H[Authentication Middleware]
+H --> I[Error Handler]
 end
 subgraph "Presentation Layer"
-H[Vue.js Frontend] --> I[Component Layer]
-I --> J[State Management]
-J --> K[Real-time Updates]
+J[Vue.js Frontend] --> K[Component Layer]
+K --> L[State Management]
+L --> M[Real-time Updates]
+M --> N[SSH Connection Handler]
 end
 subgraph "Integration Layer"
-L[Configuration] --> M[Environment Variables]
-M --> N[API Endpoints]
-N --> O[Data Transformation]
+O[Configuration] --> P[Environment Variables]
+P --> Q[API Endpoints]
+Q --> R[Data Transformation]
+R --> S[SSH Protocol Mapping]
 end
-P[Platform Auth] --> Q[Token Management]
-Q --> R[Session Handling]
+T[Platform Auth] --> U[Token Management]
+U --> V[Session Handling]
 ```
 
 **Diagram sources**
@@ -156,6 +168,7 @@ Q --> R[Session Handling]
 - [config.py:33-36](file://backend/app/core/config.py#L33-L36)
 - [auth.js:160-177](file://frontend/src/stores/auth.js#L160-L177)
 - [Inventory.vue:35-58](file://frontend/src/plugins/inventory/views/Inventory.vue#L35-L58)
+- [Inventory.vue:82-89](file://frontend/src/plugins/inventory/views/Inventory.vue#L82-L89)
 
 The architecture ensures:
 - **External Integration**: Clean separation between platform and external NetBox system
@@ -164,6 +177,7 @@ The architecture ensures:
 - **Maintainability**: Modular components with clear responsibilities
 - **Security**: Token-based authentication with automatic refresh
 - **Performance**: Asynchronous HTTP requests with efficient data processing
+- **Enhanced Connectivity**: Direct SSH protocol integration for device management
 
 ## Detailed Component Analysis
 
@@ -208,7 +222,8 @@ H --> I[Handle User Interactions]
 I --> J[Sort Events]
 J --> K[Search Events]
 K --> L[Pagination Events]
-L --> M[Automatic Refresh]
+L --> M[SSH Connection Events]
+M --> N[Automatic Refresh]
 ```
 
 **Diagram sources**
@@ -248,8 +263,65 @@ end
 - [config.py:33-36](file://backend/app/core/config.py#L33-L36)
 - [auth.js:160-177](file://frontend/src/stores/auth.js#L160-L177)
 
+## SSH Connectivity Enhancement
+
+### SSH Connection Implementation
+The Inventory Plugin now includes a powerful SSH connectivity feature that enhances device management capabilities:
+
+```mermaid
+sequenceDiagram
+participant User as User Interface
+participant Component as Inventory Component
+participant SSHHandler as SSH Handler
+participant Browser as Web Browser
+participant SSHClient as SSH Client
+User->>Component : Click Terminal Icon
+Component->>SSHHandler : openSSH Function
+SSHHandler->>SSHHandler : Extract IP Address
+SSHHandler->>Browser : window.open(ssh : //admin@ip)
+Browser->>SSHClient : Launch SSH Client
+SSHClient-->>User : SSH Connection Established
+```
+
+**Diagram sources**
+- [Inventory.vue:82-89](file://frontend/src/plugins/inventory/views/Inventory.vue#L82-L89)
+- [Inventory.vue:250-257](file://frontend/src/plugins/inventory/views/Inventory.vue#L250-L257)
+
+### SSH Table Column Integration
+The device table now includes a dedicated SSH column with intelligent IP address handling:
+
+```mermaid
+flowchart TD
+A[Device Row Render] --> B[Check IP Address Availability]
+B --> C{Has Primary IP?}
+C --> |Yes| D[Display SSH Button]
+C --> |No| E[Display Dash Symbol]
+D --> F[Extract IP Address]
+F --> G[Remove CIDR Suffix]
+G --> H[Generate SSH URL]
+H --> I[Open in New Tab]
+E --> J[Show Disabled State]
+```
+
+**Diagram sources**
+- [Inventory.vue:249-259](file://frontend/src/plugins/inventory/views/Inventory.vue#L249-L259)
+
+### SSH Functionality Features
+The SSH connectivity enhancement provides several key features:
+
+- **Automatic IP Detection**: Automatically detects device IP addresses from NetBox data
+- **Protocol Support**: Uses ssh://admin@ protocol for seamless SSH client integration
+- **CIDR Handling**: Automatically removes subnet masks from IP addresses
+- **Conditional Display**: SSH button only appears when device has valid IP address
+- **Accessibility**: Clear visual indication with terminal icon and tooltip
+- **Security**: Opens in new browser tab for secure connection handling
+
+**Section sources**
+- [Inventory.vue:82-89](file://frontend/src/plugins/inventory/views/Inventory.vue#L82-L89)
+- [Inventory.vue:249-259](file://frontend/src/plugins/inventory/views/Inventory.vue#L249-L259)
+
 ## Dependency Analysis
-The Inventory Plugin maintains clean dependencies while integrating with external systems:
+The Inventory Plugin maintains clean dependencies while integrating with external systems and adding SSH connectivity:
 
 ```mermaid
 graph LR
@@ -257,28 +329,32 @@ subgraph "External Dependencies"
 A[httpx] --> B[Async HTTP Client]
 C[NetBox API] --> D[DCIM Services]
 E[NetBox Token] --> F[Authentication]
+G[SSH Protocol Handler] --> H[Local SSH Client]
 end
 subgraph "Internal Dependencies"
-G[FastAPI] --> H[API Framework]
-I[Pydantic] --> J[Data Validation]
-K[SQLAlchemy Models] --> L[Local Storage]
-M[Vue.js] --> N[Frontend Framework]
-O[Pinia] --> P[State Management]
+I[FastAPI] --> J[API Framework]
+K[Pydantic] --> L[Data Validation]
+M[SQLAlchemy Models] --> N[Local Storage]
+O[Vue.js] --> P[Frontend Framework]
+Q[Pinia] --> R[State Management]
 end
 subgraph "Platform Integration"
-Q[Authentication Store] --> R[Token Management]
-S[Router] --> T[Navigation]
-U[Plugin System] --> V[Dynamic Loading]
+S[Authentication Store] --> T[Token Management]
+U[Router] --> V[Navigation]
+W[Plugin System] --> X[Dynamic Loading]
+Y[Lucide Icons] --> Z[Terminal Icon]
 end
-B --> G
-N --> O
-R --> Q
+B --> I
+P --> Q
+T --> S
+Z --> Y
 ```
 
 **Diagram sources**
 - [requirements.txt:11](file://backend/requirements.txt#L11)
 - [auth.js:160-177](file://frontend/src/stores/auth.js#L160-L177)
 - [router/index.js:29](file://frontend/src/router/index.js#L29)
+- [Inventory.vue:12-19](file://frontend/src/plugins/inventory/views/Inventory.vue#L12-L19)
 
 Key dependency characteristics:
 - **External**: NetBox API integration with configurable endpoints and authentication
@@ -286,14 +362,15 @@ Key dependency characteristics:
 - **Frontend**: Vue.js ecosystem with Pinia state management and Lucide icons
 - **Security**: Platform-wide authentication system with token-based access control
 - **Networking**: Async HTTP client with timeout management and error handling
+- **SSH Integration**: Native browser SSH protocol handler for seamless device connections
 
 **Section sources**
-- [requirements.txt:1-12](file://backend/requirements.txt#L1-L12)
+- [requirements.txt:1-13](file://backend/requirements.txt#L1-L13)
 - [auth.js:160-177](file://frontend/src/stores/auth.js#L160-L177)
 - [router/index.js:29](file://frontend/src/router/index.js#L29)
 
 ## Performance Considerations
-The Inventory Plugin is designed for optimal performance through strategic architectural decisions:
+The Inventory Plugin is designed for optimal performance through strategic architectural decisions, enhanced with SSH connectivity optimization:
 
 ### External System Optimization
 - **Connection Management**: Async HTTP client with automatic connection pooling
@@ -313,6 +390,13 @@ The Inventory Plugin is designed for optimal performance through strategic archi
 - **State Management**: Efficient Pinia store for plugin registry
 - **Icon System**: Optimized Lucide icon library reduces bundle weight
 - **Responsive Design**: CSS Grid and Flexbox for optimal mobile performance
+- **SSH Connection Optimization**: Minimal overhead for SSH button rendering
+
+### SSH Connectivity Performance
+- **Conditional Rendering**: SSH buttons only render when IP addresses are available
+- **Efficient URL Generation**: Simple string manipulation for SSH URL creation
+- **Browser Integration**: Leverages native browser SSH protocol handler
+- **Memory Management**: No persistent SSH connection state maintained
 
 ## Troubleshooting Guide
 
@@ -352,25 +436,39 @@ The Inventory Plugin is designed for optimal performance through strategic archi
 - Check plugin manifest includes menu items
 - Ensure plugin is properly registered in registry
 
+#### SSH Connection Issues
+**Symptoms**: SSH button doesn't work, browser doesn't open SSH client
+**Causes**: Missing IP addresses, SSH client not installed, browser security restrictions
+**Solutions**:
+- Verify device has valid IP address in NetBox
+- Ensure SSH client is installed and configured on local system
+- Check browser supports ssh:// protocol handler
+- Verify device SSH service is running and accessible
+- Test SSH connection manually using command line
+
 **Section sources**
 - [endpoints.py:22-30](file://backend/app/plugins/inventory/endpoints.py#L22-L30)
-- [endpoints.py:90-94](file://backend/app/plugins/inventory/endpoints.py#L90-L94)
+- [endpoints.py:90-95](file://backend/app/plugins/inventory/endpoints.py#L90-L95)
 - [auth.js:160-177](file://frontend/src/stores/auth.js#L160-L177)
 - [router/index.js:127-130](file://frontend/src/router/index.js#L127-L130)
+- [Inventory.vue:82-89](file://frontend/src/plugins/inventory/views/Inventory.vue#L82-L89)
 
 ## Conclusion
 The Inventory Plugin demonstrates a modern, cloud-native approach to network equipment and asset management within the NOC Vision platform. The complete architectural overhaul from a local database-driven system to a NetBox-integrated platform provides significant advantages in scalability, maintainability, and operational efficiency.
+
+**Updated** The recent SSH connectivity enhancement significantly improves the plugin's practical utility by enabling direct device management from the inventory interface.
 
 Key strengths include:
 - **External System Integration**: Seamless integration with proven NetBox DCIM infrastructure
 - **Modern Architecture**: Clean separation of concerns with external API communication
 - **Comprehensive Features**: Advanced pagination, search, sorting, and responsive design
+- **Enhanced Connectivity**: Direct SSH connections to network devices for efficient management
 - **Robust Error Handling**: Comprehensive error management for external system failures
 - **Security Integration**: Proper authentication and authorization controls
 - **Performance Optimization**: Efficient asynchronous communication and reactive frontend
 - **User Experience**: Modern Vue.js interface with real-time updates and intuitive controls
 
-The plugin serves as an excellent example of how to architect domain-specific functionality that integrates with external systems while maintaining platform standards and operational excellence.
+The plugin serves as an excellent example of how to architect domain-specific functionality that integrates with external systems while maintaining platform standards and operational excellence. The addition of SSH connectivity makes it a complete solution for network equipment management within the NOC platform.
 
 ## Appendices
 
@@ -406,12 +504,23 @@ The plugin serves as an excellent example of how to architect domain-specific fu
 ### Frontend Integration Points
 - **Route**: `/plugins/inventory`
 - **Component**: `Inventory.vue`
-- **Features**: Real-time data fetching, search, sorting, pagination
+- **Features**: Real-time data fetching, search, sorting, pagination, SSH connectivity
 - **Authentication**: Integrated with platform auth store
 - **Responsive Design**: Mobile-first approach with horizontal scrolling tables
+- **SSH Integration**: Terminal icon button for direct device connections
+
+### SSH Connectivity Features
+- **SSH Column**: Dedicated column in device table for SSH access
+- **Terminal Icon**: Lucide terminal icon for visual SSH indicator
+- **Protocol Support**: Uses ssh://admin@ protocol for seamless integration
+- **IP Address Handling**: Automatic CIDR removal and validation
+- **Conditional Display**: SSH button only appears when device has IP address
+- **Accessibility**: Clear tooltips and visual feedback
 
 ### Configuration Requirements
 - **Environment Variables**: NETBOX_URL, NETBOX_TOKEN, NETBOX_API_VERSION
 - **Network Access**: Outbound access to NetBox server
 - **Authentication**: Valid NetBox API token with appropriate permissions
 - **Frontend**: Access to backend API endpoints with proper CORS configuration
+- **SSH Client**: Local SSH client installation for device connections
+- **Browser Support**: Browser with ssh:// protocol handler support

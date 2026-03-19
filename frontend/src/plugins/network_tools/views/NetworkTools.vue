@@ -16,7 +16,8 @@ import {
   FileText,
   LayoutDashboard,
   Search,
-  BookOpen
+  BookOpen,
+  Kanban
 } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
@@ -35,6 +36,7 @@ const toolIcons = {
   'Jira-SPD': LayoutDashboard,
   'Grafana': LayoutDashboard,
   'LG': Search,
+  'EvaTeam': Kanban,
   'RIPE Database': Globe,
   'Whois': Search,
 }

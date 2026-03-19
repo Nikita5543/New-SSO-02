@@ -16,16 +16,24 @@
 - [README.md](file://README.md)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Enhanced Occupied VLANs search functionality with new query parameter 'q'
+- Updated API endpoint documentation to reflect improved search capabilities
+- Added documentation for case-insensitive search by VLAN ID and client names
+- Updated frontend implementation details for Occupied VLANs tab search
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
+6. [Enhanced Search Capabilities](#enhanced-search-capabilities)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
 
 ## Introduction
 
@@ -34,6 +42,8 @@ The VLAN Plugin is a specialized component within the NOC Vision Network Operati
 The plugin operates within a modern, plugin-based architecture that separates concerns between backend API services and frontend user interfaces. It integrates seamlessly with the existing customer services management system, leveraging shared database models and authentication mechanisms to provide a unified network management experience.
 
 Key features include real-time VLAN availability tracking, occupancy statistics, historical service data, and intuitive user interfaces for both free and occupied VLAN management. The system supports advanced search capabilities, pagination for large datasets, and comprehensive filtering based on service status and client information.
+
+**Updated** Enhanced search functionality now supports case-insensitive matching for both VLAN ID numbers and client names in the Occupied VLANs tab.
 
 ## Project Structure
 
@@ -72,7 +82,7 @@ I --> F
 
 **Diagram sources**
 - [plugin.py:1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
-- [endpoints.py:1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
+- [endpoints.py:1-232](file://backend/app/plugins/vlan/endpoints.py#L1-L232)
 - [plugin_loader.py:1-100](file://backend/app/core/plugin_loader.py#L1-L100)
 
 **Section sources**
@@ -89,8 +99,8 @@ The plugin uses a standardized registration mechanism that integrates with the N
 
 **API Endpoint Layer**
 The endpoint layer provides three primary RESTful APIs:
-- `/free-vlans` - Retrieves available VLANs with detailed service history
-- `/occupied-vlans` - Provides information about VLANs currently in use
+- `/free-vlans` - Retrieves available VLANs with detailed service history and search capability
+- `/occupied-vlans` - Provides information about VLANs currently in use with enhanced search functionality
 - `/vlan-stats` - Delivers statistical summaries of VLAN utilization
 
 **Data Processing Engine**
@@ -106,8 +116,8 @@ The plugin integrates with the global plugin registry system, enabling dynamic m
 
 **Section sources**
 - [plugin.py:1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
-- [endpoints.py:42-221](file://backend/app/plugins/vlan/endpoints.py#L42-L221)
-- [Vlan.vue:1-429](file://frontend/src/plugins/vlan/views/Vlan.vue#L1-L429)
+- [endpoints.py:42-232](file://backend/app/plugins/vlan/endpoints.py#L42-L232)
+- [Vlan.vue:1-431](file://frontend/src/plugins/vlan/views/Vlan.vue#L1-L431)
 
 ## Architecture Overview
 
@@ -282,12 +292,12 @@ VlanComponent --> VlanComponent : computed properties
 
 **Diagram sources**
 - [Vlan.vue:1-120](file://frontend/src/plugins/vlan/views/Vlan.vue#L1-L120)
-- [Vlan.vue:200-429](file://frontend/src/plugins/vlan/views/Vlan.vue#L200-L429)
+- [Vlan.vue:200-431](file://frontend/src/plugins/vlan/views/Vlan.vue#L200-L431)
 
 The interface implements reactive data binding, real-time updates, and comprehensive error handling. It provides tabbed navigation between free and occupied VLAN views, advanced search capabilities, and pagination controls.
 
 **Section sources**
-- [Vlan.vue:1-429](file://frontend/src/plugins/vlan/views/Vlan.vue#L1-L429)
+- [Vlan.vue:1-431](file://frontend/src/plugins/vlan/views/Vlan.vue#L1-L431)
 
 ### Database Integration and Models
 
@@ -342,6 +352,46 @@ The shared model architecture ensures data consistency and eliminates redundancy
 
 **Section sources**
 - [models.py:1-74](file://backend/app/plugins/customer_services/models.py#L1-L74)
+
+## Enhanced Search Capabilities
+
+**Updated** The VLAN Plugin now features enhanced search capabilities specifically designed for the Occupied VLANs tab, providing powerful filtering options for network administrators.
+
+### Search Parameter Implementation
+
+The Occupied VLANs endpoint (`/occupied-vlans`) now supports a new query parameter `q` that enables comprehensive searching:
+
+**API Endpoint Enhancement**
+- **Endpoint**: `GET /api/v1/plugins/vlan/occupied-vlans`
+- **New Parameter**: `q` (string) - Search query for VLAN ID or client name
+- **Case Sensitivity**: Case-insensitive matching for both VLAN IDs and client names
+- **Search Scope**: Searches both VLAN ID numbers and associated client names
+
+**Search Algorithm Details**
+The search functionality implements a dual-criteria matching system:
+
+1. **VLAN ID Matching**: Searches for exact numeric matches within VLAN ID values
+2. **Client Name Matching**: Searches within client service records for partial matches
+3. **Case-Insensitive Processing**: Converts both search terms and data to lowercase for comparison
+4. **Partial Matching**: Supports substring matching for flexible search queries
+
+**Frontend Integration**
+The Vue.js interface automatically applies the search parameter when users input queries in the Occupied VLANs tab:
+
+```javascript
+// Frontend search parameter handling
+if (searchQuery.value) params.append('q', searchQuery.value)
+```
+
+**Search Behavior Examples**
+- Searching "100" returns VLAN 100 regardless of client association
+- Searching "company" returns all VLANs associated with clients containing "company"
+- Combined searches match either VLAN ID OR client name criteria
+- Results are sorted by VLAN ID for consistent presentation
+
+**Section sources**
+- [endpoints.py:163-232](file://backend/app/plugins/vlan/endpoints.py#L163-L232)
+- [Vlan.vue:63-85](file://frontend/src/plugins/vlan/views/Vlan.vue#L63-L85)
 
 ## Dependency Analysis
 
@@ -415,6 +465,9 @@ The plugin inherits connection pooling from the core NOC Vision application, ens
 **Memory Management**
 The Vue.js frontend implements reactive data binding with careful memory management to handle large datasets without performance degradation.
 
+**Enhanced Search Performance**
+The new search functionality includes optimized string processing and case-insensitive comparisons to maintain performance even with large datasets.
+
 ## Troubleshooting Guide
 
 ### Common Issues and Solutions
@@ -449,9 +502,15 @@ The Vue.js frontend implements reactive data binding with careful memory managem
 - Monitor memory usage and garbage collection
 - Consider caching strategies for frequently accessed data
 
+**Enhanced Search Issues**
+- Verify case-insensitive search implementation
+- Check parameter naming consistency ('q' vs 'search')
+- Ensure proper URL encoding for special characters
+- Validate search term length and format restrictions
+
 **Section sources**
 - [plugin_loader.py:89-97](file://backend/app/core/plugin_loader.py#L89-L97)
-- [endpoints.py:42-221](file://backend/app/plugins/vlan/endpoints.py#L42-L221)
+- [endpoints.py:42-232](file://backend/app/plugins/vlan/endpoints.py#L42-L232)
 - [Vlan.vue:39-119](file://frontend/src/plugins/vlan/views/Vlan.vue#L39-L119)
 
 ## Conclusion
@@ -477,6 +536,12 @@ Key strengths of the implementation include:
 - Proper authentication and authorization integration
 - Scalable pagination and performance optimization
 - Modular design enabling easy maintenance and extension
+
+**Enhanced Search Capabilities**
+- **New** Case-insensitive search functionality for Occupied VLANs
+- **New** Dual-criteria matching (VLAN ID and client names)
+- **New** Seamless integration with existing pagination system
+- **New** Optimized search algorithms for large datasets
 
 The plugin serves as an excellent example of how to implement specialized functionality within a larger platform while maintaining architectural integrity and operational excellence. Its design provides a solid foundation for future enhancements and extensions to meet evolving network management requirements.
 

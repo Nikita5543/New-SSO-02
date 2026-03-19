@@ -16,6 +16,7 @@ INTERNAL_TOOLS = [
     {"name": "Jira-SPD", "url": "https://jira-dev.cirex.ru/secure/Dashboard.jspa", "description": "Project management"},
     {"name": "Grafana", "url": "http://zabbix.svcp.io:3000/d/Z5k7NFdMk/cirex-upstreams?orgId=1&from=now-6h&to=now&timezone=browser&refresh=10s", "description": "Dashboards and metrics"},
     {"name": "LG", "url": "https://lg.cirex.ru/", "description": "Looking Glass"},
+    {"name": "EvaTeam", "url": "https://evateam.cirex.ru/project/Kanban/KBB-000011#doska-kanban", "description": "Project Kanban board"},
 ]
 
 # External tools configuration

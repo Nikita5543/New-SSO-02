@@ -14,6 +14,8 @@
 - [plugin.py (inventory)](file://backend/app/plugins/inventory/plugin.py)
 - [plugin.py (ipam)](file://backend/app/plugins/ipam/plugin.py)
 - [plugin.py (security_module)](file://backend/app/plugins/security_module/plugin.py)
+- [plugin.py (network_tools)](file://backend/app/plugins/network_tools/plugin.py)
+- [endpoints.py (network_tools)](file://backend/app/plugins/network_tools/endpoints.py)
 - [pluginRegistry.js](file://frontend/src/stores/pluginRegistry.js)
 - [main.js](file://frontend/src/main.js)
 - [index.js (router)](file://frontend/src/router/index.js)
@@ -25,17 +27,17 @@
 - [Accounting.vue](file://frontend/src/plugins/accounting/views/Accounting.vue)
 - [Ipam.vue](file://frontend/src/plugins/ipam/views/Ipam.vue)
 - [Vlan.vue](file://frontend/src/plugins/vlan/views/Vlan.vue)
+- [NetworkTools.vue](file://frontend/src/plugins/network_tools/views/NetworkTools.vue)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Updated documentation to reflect centralized plugin registry management in Performance page
-- Added comprehensive coverage of Performance plugin's centralized monitoring dashboard
-- Enhanced plugin registry integration with centralized analytics section
-- Updated sidebar integration documentation for Performance plugin with Activity icon
-- Added Performance plugin view implementation details with system monitoring capabilities
-- Updated router configuration to include Performance plugin routes with lazy loading
-- Added Performance API endpoints documentation covering system metrics, containers, and alarms
+- Added comprehensive documentation for Network Tools plugin integration including routing, menu configuration, and Wrench icon implementation
+- Updated frontend plugin registry configuration to include Network Tools plugin with proper Analytics section placement
+- Enhanced router configuration documentation to cover Network Tools plugin lazy loading
+- Added Network Tools plugin view implementation details with internal/external tool management
+- Updated sidebar integration documentation to reflect Network Tools plugin menu item with Wrench icon
+- Expanded plugin metadata consumption and UI component registration process documentation
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -51,7 +53,7 @@
 ## Introduction
 This document explains how backend-loaded plugins are integrated into the frontend plugin registry, how dynamic components are loaded, and how routes are integrated. It documents the plugin registry store, plugin metadata consumption, and the UI component registration process. It also covers plugin-specific routing, lazy loading strategies, component composition patterns, and the communication between the frontend plugin registry and the backend plugin loader.
 
-**Updated** The document now focuses on centralized plugin registry management in the Performance page, which serves as the central hub for system monitoring and analytics rather than distributing plugin displays across multiple dashboard cards. The Performance plugin provides comprehensive system monitoring capabilities including real-time metrics, container status, alarms, and plugin statistics.
+**Updated** The document now includes comprehensive coverage of the Network Tools plugin, which provides quick access to internal and external network resources with dedicated routing, menu configuration, and specialized tool management capabilities. The Network Tools plugin integrates seamlessly with the plugin registry system and follows the established patterns for plugin integration.
 
 ## Project Structure
 The plugin integration spans two layers:
@@ -68,14 +70,17 @@ D["Performance Plugin<br/>plugins/performance/plugin.py"]
 E["Performance Endpoints<br/>plugins/performance/endpoints.py"]
 F["VLAN Plugin<br/>plugins/vlan/plugin.py"]
 G["VLAN Endpoints<br/>plugins/vlan/endpoints.py"]
+H["Network Tools Plugin<br/>plugins/network_tools/plugin.py"]
+I["Network Tools Endpoints<br/>plugins/network_tools/endpoints.py"]
 end
 subgraph "Frontend"
-H["Plugin Registry Store<br/>pluginRegistry.js"]
-I["App Initialization<br/>main.js"]
-J["Router & Lazy Routes<br/>router/index.js"]
-K["UI Layout & Menus<br/>Sidebar.vue"]
-L["Plugin Views<br/>Performance.vue, IncidentsList.vue, Accounting.vue, Ipam.vue, Vlan.vue"]
-M["Performance View<br/>Performance.vue"]
+J["Plugin Registry Store<br/>pluginRegistry.js"]
+K["App Initialization<br/>main.js"]
+L["Router & Lazy Routes<br/>router/index.js"]
+M["UI Layout & Menus<br/>Sidebar.vue"]
+N["Plugin Views<br/>Performance.vue, IncidentsList.vue, Accounting.vue, Ipam.vue, Vlan.vue, NetworkTools.vue"]
+O["Performance View<br/>Performance.vue"]
+P["Network Tools View<br/>NetworkTools.vue"]
 end
 A --> B
 B --> C
@@ -83,12 +88,15 @@ B --> D
 D --> E
 B --> F
 F --> G
-A --> |"GET /api/v1/plugins"| H
+B --> H
 H --> I
-I --> J
+A --> |"GET /api/v1/plugins"| J
 J --> K
 K --> L
 L --> M
+M --> N
+N --> O
+N --> P
 ```
 
 **Diagram sources**
@@ -98,11 +106,14 @@ L --> M
 - [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
+- [plugin.py (network_tools):1-18](file://backend/app/plugins/network_tools/plugin.py#L1-L18)
+- [endpoints.py (network_tools):1-42](file://backend/app/plugins/network_tools/endpoints.py#L1-L42)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [main.js:18-164](file://frontend/src/main.js#L18-L164)
 - [index.js (router):1-192](file://frontend/src/router/index.js#L1-L192)
 - [Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
 - [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
+- [NetworkTools.vue:1-180](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L1-L180)
 
 **Section sources**
 - [main.py:17-87](file://backend/app/main.py#L17-L87)
@@ -120,7 +131,7 @@ L --> M
 - Frontend router: Defines lazy-loaded routes for plugin views and integrates them into the application layout.
 - Frontend UI layout: Renders plugin menu items grouped by sections and orders, integrating with the router.
 
-**Updated** The system now includes comprehensive support for the Performance plugin, which serves as the centralized monitoring dashboard providing real-time system metrics, container status, alarms, and plugin statistics. The Performance plugin integrates with the plugin registry to provide centralized analytics and monitoring capabilities.
+**Updated** The system now includes comprehensive support for the Network Tools plugin, which provides quick access to internal and external network resources with dedicated routing, menu configuration, and specialized tool management capabilities. The Network Tools plugin integrates seamlessly with the plugin registry system and follows established patterns for plugin integration.
 
 **Section sources**
 - [plugin_loader.py:25-99](file://backend/app/core/plugin_loader.py#L25-L99)
@@ -128,6 +139,8 @@ L --> M
 - [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
+- [plugin.py (network_tools):1-18](file://backend/app/plugins/network_tools/plugin.py#L1-L18)
+- [endpoints.py (network_tools):1-42](file://backend/app/plugins/network_tools/endpoints.py#L1-L42)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [main.js:18-164](file://frontend/src/main.js#L18-L164)
 - [index.js (router):1-192](file://frontend/src/router/index.js#L1-L192)
@@ -147,6 +160,8 @@ participant PL as "Plugin Loader<br/>plugin_loader.py"
 participant PM as "Plugin Modules<br/>plugins/*/plugin.py"
 participant PERF as "Performance Plugin<br/>plugins/performance/plugin.py"
 participant EP as "Performance Endpoints<br/>plugins/performance/endpoints.py"
+participant NT as "Network Tools Plugin<br/>plugins/network_tools/plugin.py"
+participant NTE as "Network Tools Endpoints<br/>plugins/network_tools/endpoints.py"
 participant FE as "Frontend App<br/>main.js"
 participant PR as "Plugin Registry<br/>pluginRegistry.js"
 participant RT as "Router<br/>router/index.js"
@@ -156,6 +171,9 @@ PL->>PM : "Import plugin modules"
 PL->>PERF : "Import Performance plugin"
 PERF->>EP : "Include router with API prefix"
 EP-->>PERF : "Registered endpoints"
+PL->>NT : "Import Network Tools plugin"
+NT->>NTE : "Include router with API prefix"
+NTE-->>NT : "Registered endpoints"
 PM-->>PL : "PLUGIN_META, register()"
 PL->>BE : "include_router(prefix=/api/v1/plugins/{name})"
 BE-->>FE : "GET /api/v1/plugins"
@@ -172,6 +190,8 @@ UI-->>RT : "Render plugin menu items"
 - [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
+- [plugin.py (network_tools):1-18](file://backend/app/plugins/network_tools/plugin.py#L1-L18)
+- [endpoints.py (network_tools):1-42](file://backend/app/plugins/network_tools/endpoints.py#L1-L42)
 - [main.js:18-164](file://frontend/src/main.js#L18-L164)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [index.js (router):1-192](file://frontend/src/router/index.js#L1-L192)
@@ -211,40 +231,37 @@ Skip --> Done
 - [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
+- [plugin.py (network_tools):1-18](file://backend/app/plugins/network_tools/plugin.py#L1-L18)
+- [endpoints.py (network_tools):1-42](file://backend/app/plugins/network_tools/endpoints.py#L1-L42)
 
-### Performance Plugin Backend Implementation
-The Performance plugin provides comprehensive system monitoring functionality with four main API endpoints:
+### Network Tools Plugin Backend Implementation
+The Network Tools plugin provides quick access to internal and external network resources with two main API endpoints:
 
-- **System Metrics**: Real-time CPU, memory, disk, and network usage metrics
-- **Container Status**: Docker container monitoring with health checks and status tracking
-- **Alarms**: System alerts for critical conditions like high CPU usage, memory pressure, and stopped containers
-- **System Overview**: Complete system dashboard with metrics, containers, and alarms combined
+- **Internal Tools**: Access to internal network management systems including NetBox (IPAM and DCIM), LibreNMS (network monitoring), ServiceBase (service management), Zabbix (infrastructure monitoring), Wiki-NOC (documentation), Jira-SPD (project management), Grafana (dashboards), and Looking Glass (LG)
+- **External Tools**: Access to external network resources including RIPE Database (WHOIS) and ICANN Whois lookup
 
 ```mermaid
 classDiagram
-class PerformancePlugin {
+class NetworkToolsPlugin {
 +PLUGIN_META : Object
 +register(app, context) : Function
 }
-class PerformanceEndpoints {
-+system_metrics() : Endpoint
-+container_status() : Endpoint
-+system_alarms() : Endpoint
-+system_overview() : Endpoint
-+get_system_metrics() : Function
-+get_docker_containers() : Function
-+get_alarms() : Function
+class NetworkToolsEndpoints {
++internal_tools : Array
++external_tools : Array
++get_internal_tools() : Endpoint
++get_external_tools() : Endpoint
 }
-PerformancePlugin --> PerformanceEndpoints : "includes router"
+NetworkToolsPlugin --> NetworkToolsEndpoints : "includes router"
 ```
 
 **Diagram sources**
-- [plugin.py (performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
-- [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
+- [plugin.py (network_tools):1-18](file://backend/app/plugins/network_tools/plugin.py#L1-L18)
+- [endpoints.py (network_tools):1-42](file://backend/app/plugins/network_tools/endpoints.py#L1-L42)
 
 **Section sources**
-- [plugin.py (performance):1-17](file://backend/app/plugins/performance/plugin.py#L1-L17)
-- [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
+- [plugin.py (network_tools):1-18](file://backend/app/plugins/network_tools/plugin.py#L1-L18)
+- [endpoints.py (network_tools):1-42](file://backend/app/plugins/network_tools/endpoints.py#L1-L42)
 
 ### Frontend Plugin Registry Store
 - Responsibilities: Stores plugin manifests, computes enabled plugins, aggregates menu items, filters by section, and exposes getters.
@@ -277,7 +294,7 @@ class PluginRegistryStore {
 - Menu item mapping: Provides icons, paths, sections, and ordering for each plugin.
 - Initialization flag: Marks registry as ready after successful population.
 
-**Updated** The Performance plugin is now included in the menu configuration with proper section assignment and ordering in the Analytics section, positioned alongside other monitoring tools.
+**Updated** The Network Tools plugin is now included in the menu configuration with proper section assignment and ordering in the Analytics section, positioned alongside other monitoring tools with the Wrench icon.
 
 ```mermaid
 sequenceDiagram
@@ -286,11 +303,11 @@ participant Fetch as "fetch('/api/v1/plugins')"
 participant Reg as "usePluginRegistryStore()"
 participant Menu as "getMenuItemsForPlugin()"
 Init->>Fetch : "GET /api/v1/plugins"
-Fetch-->>Init : "Array of plugin info (including Performance)"
+Fetch-->>Init : "Array of plugin info (including Network Tools)"
 Init->>Reg : "registerPlugin(manifest)"
 Reg-->>Init : "Store populated"
-Init->>Menu : "Map plugin names to menu items (Performance)"
-Menu-->>Init : "Activity icon, path, section, order"
+Init->>Menu : "Map plugin names to menu items (Network Tools)"
+Menu-->>Init : "Wrench icon, path, section, order"
 Init->>Reg : "setInitialized()"
 ```
 
@@ -306,14 +323,14 @@ Init->>Reg : "setInitialized()"
 - Route hierarchy: Nested under the dashboard layout with plugin-specific paths.
 - Composition: Integrates with the layout and auth guards.
 
-**Updated** The router now includes the Performance plugin route with proper lazy loading configuration alongside other monitoring and analytics plugins.
+**Updated** The router now includes the Network Tools plugin route with proper lazy loading configuration alongside other monitoring and analytics plugins, using the path `/plugins/network-tools`.
 
 ```mermaid
 flowchart TD
 Entry(["App Entry"]) --> LoadRouter["Load router/index.js"]
 LoadRouter --> DefineRoutes["Define routes with lazy components"]
-DefineRoutes --> AddPerformance["Add Performance route: /plugins/performance"]
-AddPerformance --> Guard["Apply beforeEach guards"]
+DefineRoutes --> AddNetworkTools["Add Network Tools route: /plugins/network-tools"]
+AddNetworkTools --> Guard["Apply beforeEach guards"]
 Guard --> Render["Render DashboardLayout with RouterView"]
 Render --> Lazy["On navigation, load plugin view via dynamic import"]
 ```
@@ -332,7 +349,7 @@ Render --> Lazy["On navigation, load plugin view via dynamic import"]
 - Visibility: Respects role-based visibility checks.
 - Icons and links: Uses Lucide icons and router links for navigation.
 
-**Updated** The Performance plugin is now integrated into the Analytics section with proper ordering and Activity icon selection, positioned alongside other monitoring and analytics tools.
+**Updated** The Network Tools plugin is now integrated into the Analytics section with proper ordering and Wrench icon selection, positioned alongside other monitoring and analytics tools.
 
 ```mermaid
 classDiagram
@@ -372,34 +389,30 @@ Sidebar --> SidebarItem : "renders"
 - Accounting view: Minimal example showcasing a card-based layout and placeholder content.
 - **IPAM view**: Comprehensive IP address management interface with validation, change application, and database querying capabilities.
 - **VLAN view**: Advanced network management interface with VLAN discovery, statistics visualization, and database interaction capabilities.
+- **Network Tools view**: Comprehensive tool management interface with tabbed navigation for internal and external tools, dynamic icon mapping, and external link handling.
 
-**Updated** Added detailed documentation for the Performance plugin view implementation, which serves as the centralized monitoring dashboard. The Performance view includes real-time system metrics, container status monitoring, alarm notifications, and plugin statistics, providing comprehensive system oversight.
+**Updated** Added detailed documentation for the Network Tools plugin view implementation, which provides quick access to internal and external network resources. The Network Tools view includes tabbed navigation for internal and external tools, dynamic icon mapping based on tool names, and external link handling with proper security attributes.
 
 ```mermaid
 sequenceDiagram
-participant View as "Performance.vue"
+participant View as "NetworkTools.vue"
 participant Auth as "useAuthStore()"
 participant API as "Backend API"
 participant UI as "Vue Components"
-View->>Auth : "authFetch('/api/v1/plugins/performance/system/overview')"
-Auth->>API : "HTTP GET /system/overview"
-API-->>Auth : "Complete system data"
-Auth-->>View : "Response with metrics, containers, alarms"
-View->>UI : "Render system metrics dashboard"
-View->>Auth : "authFetch('/api/v1/plugins/performance/system/alarms')"
-Auth->>API : "HTTP GET /system/alarms"
-API-->>Auth : "Alarm notifications"
+View->>Auth : "authFetch('/api/v1/plugins/network_tools/internal-tools')"
+Auth->>API : "HTTP GET /internal-tools"
+API-->>Auth : "Internal tools list"
+Auth-->>View : "Response with tools array"
+View->>Auth : "authFetch('/api/v1/plugins/network_tools/external-tools')"
+Auth->>API : "HTTP GET /external-tools"
+API-->>Auth : "External tools list"
 Auth-->>View : "Response"
-View->>UI : "Render alarm notifications"
-View->>Auth : "authFetch('/api/v1/plugins/performance/system/containers')"
-Auth->>API : "HTTP GET /system/containers"
-API-->>Auth : "Container status"
-Auth-->>View : "Response"
-View->>UI : "Render container status"
+View->>UI : "Render tool cards with icons"
+View->>UI : "Handle external link clicks"
 ```
 
 **Diagram sources**
-- [Performance.vue:67-126](file://frontend/src/plugins/performance/views/Performance.vue#L67-L126)
+- [NetworkTools.vue:67-126](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L67-L126)
 
 **Section sources**
 - [Performance.vue:1-488](file://frontend/src/plugins/performance/views/Performance.vue#L1-L488)
@@ -407,13 +420,14 @@ View->>UI : "Render container status"
 - [Accounting.vue:1-34](file://frontend/src/plugins/accounting/views/Accounting.vue#L1-L34)
 - [Ipam.vue:1-489](file://frontend/src/plugins/ipam/views/Ipam.vue#L1-L489)
 - [Vlan.vue:1-200](file://frontend/src/plugins/vlan/views/Vlan.vue#L1-L200)
+- [NetworkTools.vue:1-180](file://frontend/src/plugins/network_tools/views/NetworkTools.vue#L1-L180)
 
 ### Communication Between Frontend Plugin Registry and Backend Plugin Loader
 - Backend exposes a list endpoint returning loaded plugin metadata with status.
 - Frontend initializes by fetching this endpoint, constructing manifests, and registering them in the store.
 - Menu items are mapped based on plugin names and grouped into sections.
 
-**Updated** The communication now includes the Performance plugin metadata and menu item configuration, providing seamless integration with the centralized monitoring ecosystem.
+**Updated** The communication now includes the Network Tools plugin metadata and menu item configuration, providing seamless integration with the centralized monitoring ecosystem alongside other plugins.
 
 ```mermaid
 sequenceDiagram
@@ -422,10 +436,10 @@ participant BE as "Backend main.py"
 participant PL as "plugin_loader.py"
 FE->>BE : "GET /api/v1/plugins"
 BE->>PL : "Access app.state.loaded_plugins"
-PL-->>BE : "List of plugin info (including Performance)"
-BE-->>FE : "JSON array (with Performance plugin)"
-FE->>FE : "Construct manifests and menu items (Performance)"
-FE->>FE : "registerPlugin(manifest) for Performance"
+PL-->>BE : "List of plugin info (including Network Tools)"
+BE-->>FE : "JSON array (with Network Tools plugin)"
+FE->>FE : "Construct manifests and menu items (Network Tools)"
+FE->>FE : "registerPlugin(manifest) for Network Tools"
 ```
 
 **Diagram sources**
@@ -443,7 +457,7 @@ FE->>FE : "registerPlugin(manifest) for Performance"
 - Frontend depends on backend for plugin metadata and on the router for navigation.
 - UI layout depends on the plugin registry store for menu composition.
 
-**Updated** Dependencies now include the Performance plugin integration across all layers, providing comprehensive system monitoring capabilities as the centralized hub for plugin registry management.
+**Updated** Dependencies now include the Network Tools plugin integration across all layers, providing comprehensive tool management capabilities alongside the existing Performance, VLAN, and other plugin integrations.
 
 ```mermaid
 graph LR
@@ -451,12 +465,15 @@ BE_Main["backend/main.py"] --> BE_Loader["backend/core/plugin_loader.py"]
 BE_Loader --> BE_Plugin["backend/plugins/*/plugin.py"]
 BE_Loader --> BE_Perf["backend/plugins/performance/plugin.py"]
 BE_Loader --> BE_VLAN["backend/plugins/vlan/plugin.py"]
+BE_Loader --> BE_NT["backend/plugins/network_tools/plugin.py"]
 BE_Perf --> BE_Endpoints["backend/plugins/performance/endpoints.py"]
 BE_VLAN --> BE_VLAN_Endpoints["backend/plugins/vlan/endpoints.py"]
+BE_NT --> BE_NT_Endpoints["backend/plugins/network_tools/endpoints.py"]
 FE_Init["frontend/src/main.js"] --> FE_Registry["frontend/src/stores/pluginRegistry.js"]
 FE_Registry --> FE_Sidebar["frontend/src/components/layout/Sidebar.vue"]
 FE_Router["frontend/src/router/index.js"] --> FE_VIEWS["frontend/src/plugins/*/views/*.vue"]
 FE_Router --> FE_PERF_View["frontend/src/plugins/performance/views/Performance.vue"]
+FE_Router --> FE_NT_View["frontend/src/plugins/network_tools/views/NetworkTools.vue"]
 FE_Sidebar --> FE_Router
 ```
 
@@ -467,6 +484,8 @@ FE_Sidebar --> FE_Router
 - [endpoints.py (performance):265-300](file://backend/app/plugins/performance/endpoints.py#L265-L300)
 - [plugin.py (vlan):1-17](file://backend/app/plugins/vlan/plugin.py#L1-L17)
 - [endpoints.py (vlan):1-221](file://backend/app/plugins/vlan/endpoints.py#L1-L221)
+- [plugin.py (network_tools):1-18](file://backend/app/plugins/network_tools/plugin.py#L1-L18)
+- [endpoints.py (network_tools):1-42](file://backend/app/plugins/network_tools/endpoints.py#L1-L42)
 - [main.js:18-164](file://frontend/src/main.js#L18-L164)
 - [pluginRegistry.js:1-53](file://frontend/src/stores/pluginRegistry.js#L1-L53)
 - [Sidebar.vue:1-291](file://frontend/src/components/layout/Sidebar.vue#L1-L291)
@@ -484,9 +503,9 @@ FE_Sidebar --> FE_Router
 - Conditional rendering: Sidebar sections are only rendered when plugin items exist.
 - Computed properties: Aggregations minimize recomputation and keep UI reactive efficiently.
 - Backend filtering: Enabling only required plugins reduces startup overhead.
-- **Performance optimization**: The Performance plugin uses auto-refresh intervals and efficient data fetching to minimize API calls while maintaining real-time updates.
+- **Performance optimization**: The Network Tools plugin uses efficient data fetching with concurrent API calls and proper loading state management.
 
-**Updated** Performance considerations now include the Performance plugin's auto-refresh mechanisms and efficient data fetching strategies for real-time system monitoring.
+**Updated** Performance considerations now include the Network Tools plugin's efficient data fetching strategies and concurrent API calls for internal and external tools.
 
 ## Troubleshooting Guide
 - Plugin not appearing in UI:
@@ -498,15 +517,15 @@ FE_Sidebar --> FE_Router
   - Ensure lazy route path matches the plugin view path and component resolves.
 - Authentication gating:
   - Confirm router guards align with required roles and auth store state.
-- **Performance plugin specific issues**:
-  - Verify `/api/v1/plugins/performance` endpoint is accessible and returns expected system data.
-  - Check that the Performance view component properly handles loading states and error conditions.
-  - Ensure proper authentication for Performance API endpoints.
-  - Verify system metrics collection works correctly with Docker integration.
-  - Check that alarm thresholds are properly configured and alarms are generated.
-  - Validate that auto-refresh intervals are functioning correctly.
+- **Network Tools plugin specific issues**:
+  - Verify `/api/v1/plugins/network_tools` endpoint is accessible and returns expected tool lists.
+  - Check that the Network Tools view component properly handles loading states and error conditions.
+  - Ensure proper authentication for Network Tools API endpoints.
+  - Validate that internal and external tool configurations are correctly formatted.
+  - Check that external tool URLs are accessible and properly handled with security attributes.
+  - Verify that tool icon mapping works correctly for all configured tools.
 
-**Updated** Added troubleshooting guidance specifically for Performance plugin integration issues, including system monitoring specific problems.
+**Updated** Added troubleshooting guidance specifically for Network Tools plugin integration issues, including tool management specific problems.
 
 **Section sources**
 - [main.js:18-164](file://frontend/src/main.js#L18-L164)
@@ -516,4 +535,4 @@ FE_Sidebar --> FE_Router
 ## Conclusion
 The frontend plugin integration leverages a clean separation of concerns: backend plugins expose metadata and API routes, while the frontend consumes this information to build a dynamic registry, lazy-load views, and compose a responsive UI. This approach supports scalable plugin development, maintainable navigation, and efficient runtime performance.
 
-**Updated** The system now focuses on centralized plugin registry management in the Performance page, which serves as the central hub for system monitoring and analytics. The Performance plugin demonstrates advanced plugin integration capabilities with sophisticated state management, real-time data processing, and comprehensive system monitoring functionality. This centralized approach enhances the platform's monitoring capabilities while maintaining the flexibility of the plugin architecture across all operational and administrative domains.
+**Updated** The system now includes comprehensive plugin integration capabilities with the addition of the Network Tools plugin, which provides quick access to internal and external network resources. The Network Tools plugin demonstrates advanced plugin integration patterns with sophisticated state management, real-time tool access, and comprehensive resource management functionality. This expanded plugin ecosystem enhances the platform's operational capabilities while maintaining the flexibility of the plugin architecture across all operational and administrative domains.
