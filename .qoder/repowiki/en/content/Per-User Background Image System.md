@@ -18,14 +18,17 @@
 - [nginx.conf](file://frontend/nginx.conf)
 - [docker-compose.yml](file://docker-compose.yml)
 - [main.css](file://frontend/src/assets/css/main.css)
+- [Card.vue](file://frontend/src/components/ui/Card.vue)
+- [CardContent.vue](file://frontend/src/components/ui/CardContent.vue)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Updated background image availability with new images bg7.webp and bg8.jpg
-- Enhanced visual styling with improved glassmorphism effects and transparency handling
-- Optimized theme management with better CSS variable support
-- Improved background application logic with enhanced visual effects
+- Enhanced glassmorphism styling system with dynamic background image selection
+- Implemented backdrop blur effects and translucent elements for modern UI
+- Added eight new background image options (bg7.webp, bg8.jpg) with advanced CSS techniques
+- Improved theme management with enhanced CSS variable support and visual effects
+- Optimized visual styling with semi-transparent elements and blurred backgrounds
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -47,7 +50,7 @@ The Per-User Background Image System is a feature that allows individual users t
 
 The system consists of three main components: a PostgreSQL database storing user preferences, a FastAPI backend serving user management APIs, and a Vue.js frontend enabling user interaction with background selection capabilities. The implementation follows modern web development practices with proper authentication, authorization, and responsive design principles.
 
-**Updated** Enhanced with new background images (bg7.webp, bg8.jpg) and improved visual styling with glassmorphism effects.
+**Updated** Enhanced with new background images (bg7.webp, bg8.jpg) and sophisticated glassmorphism effects featuring backdrop blur, translucent elements, and advanced CSS techniques for modern visual styling.
 
 ## System Architecture
 
@@ -60,6 +63,8 @@ FE[Vite Application]
 Store[Pinia Stores]
 UI[Vue Components]
 CSS[Enhanced CSS Styling]
+Card[Card Components]
+CardContent[Card Content Components]
 end
 subgraph "Backend Layer"
 API[FastAPI Server]
@@ -84,12 +89,16 @@ Docker --> API
 Docker --> DB
 CSS --> FE
 CSS --> Store
+Card --> UI
+CardContent --> UI
 ```
 
 **Diagram sources**
 - [main.py:50-87](file://backend/app/main.py#L50-L87)
 - [Display.vue:1-185](file://frontend/src/views/settings/Display.vue#L1-185)
 - [nginx.conf:1-20](file://frontend/nginx.conf#L1-20)
+- [Card.vue:1-14](file://frontend/src/components/ui/Card.vue#L1-14)
+- [CardContent.vue:1-14](file://frontend/src/components/ui/CardContent.vue#L1-14)
 
 The architecture ensures scalability, maintainability, and security through proper separation of concerns and standardized communication protocols.
 
@@ -264,6 +273,7 @@ class ThemeStore {
 +string systemTheme
 +computed effectiveTheme
 +computed isDark
++computed hasBackground
 +array availableBackgrounds
 +setTheme(newTheme) void
 +setBackground(filename) void
@@ -426,11 +436,11 @@ The workflow ensures smooth user interaction with immediate feedback and error h
 
 ## Visual Styling Enhancements
 
-**Updated** The system now features enhanced visual styling with improved glassmorphism effects and optimized theme management.
+**Updated** The system now features sophisticated glassmorphism styling with dynamic background image integration, backdrop blur effects, and translucent UI elements.
 
-### Enhanced Background Application
+### Enhanced Background Application System
 
-The theme management system now applies sophisticated visual effects when background images are active, creating a modern glass-like appearance.
+The theme management system now applies advanced visual effects when background images are active, creating a modern glass-like appearance with backdrop blur and translucency.
 
 ```mermaid
 flowchart TD
@@ -439,10 +449,12 @@ CheckBG --> |Yes| SetStyles["Set Background Styles"]
 SetStyles --> AddClass["Add 'has-bg' Class"]
 AddClass --> TransparentCards["Make Cards Semi-Transparent"]
 TransparentCards --> GlassBorders["Apply Glass-like Borders"]
-GlassBorders --> EffectComplete["Visual Effects Complete"]
+GlassBorders --> BackdropBlur["Enable Backdrop Blur Effects"]
+BackdropBlur --> TranslucentElements["Activate Translucent UI Elements"]
+TranslucentElements --> EffectComplete["Advanced Visual Effects Complete"]
 CheckBG --> |No| RemoveStyles["Remove Background Styles"]
 RemoveStyles --> RemoveClass["Remove 'has-bg' Class"]
-RemoveClass --> ResetStyles["Reset Visual Effects"]
+RemoveClass --> ResetStyles["Reset Advanced Visual Effects"]
 ResetStyles --> EffectComplete
 ```
 
@@ -450,9 +462,9 @@ ResetStyles --> EffectComplete
 - [theme.js:44-61](file://frontend/src/stores/theme.js#L44-L61)
 - [main.css:78-87](file://frontend/src/assets/css/main.css#L78-L87)
 
-### CSS Variable Integration
+### CSS Variable Integration with Glassmorphism
 
-The system utilizes CSS custom properties for dynamic theming, enabling seamless transitions between light, dark, and system themes.
+The system utilizes CSS custom properties for dynamic theming, enabling seamless transitions between light, dark, and system themes with advanced backdrop filter effects.
 
 ```mermaid
 classDiagram
@@ -482,15 +494,54 @@ class DarkTheme {
 +extends CSSVariables
 +overrides for dark mode
 }
+class GlassmorphismEffects {
++backdrop-filter : blur(12px)
++background : rgba(255, 255, 255, 0.18)
++border : 1px solid rgba(255, 255, 255, 0.2)
+}
 CSSVariables <|-- DarkTheme
+CSSVariables <|-- GlassmorphismEffects
 ```
 
 **Diagram sources**
 - [main.css:8-51](file://frontend/src/assets/css/main.css#L8-L51)
 
-### New Background Image Support
+### Advanced Glassmorphism Styling System
 
-The system now supports additional image formats and enhanced visual quality with the addition of new background images.
+The system implements sophisticated visual effects that transform the user interface when background images are applied, creating a modern glass-like appearance.
+
+```mermaid
+classDiagram
+class GlassmorphismCard {
++background : rgba(255, 255, 255, 0.18) !important
++backdrop-filter : blur(12px)
++border : 1px solid rgba(255, 255, 255, 0.2)
++box-shadow : 0 8px 32px rgba(31, 38, 135, 0.1)
+}
+class TranslucentElements {
++html.has-bg .bg-card
++html.has-bg .bg-background
++html.has-bg .border-b
++html.has-bg .border-r
+}
+class ModernUIComponents {
++Card Component with glass effect
++Card Content with transparency
++Button with subtle opacity
++Navigation with backdrop blur
+}
+GlassmorphismCard --> TranslucentElements
+TranslucentElements --> ModernUIComponents
+```
+
+**Diagram sources**
+- [main.css:78-87](file://frontend/src/assets/css/main.css#L78-L87)
+- [Card.vue:1-14](file://frontend/src/components/ui/Card.vue#L1-14)
+- [CardContent.vue:1-14](file://frontend/src/components/ui/CardContent.vue#L1-14)
+
+### New Background Image Support with Advanced Formats
+
+The system now supports additional image formats and enhanced visual quality with the addition of new background images, including modern formats optimized for glassmorphism effects.
 
 **Section sources**
 - [Display.vue:17-26](file://frontend/src/views/settings/Display.vue#L17-L26)
@@ -526,7 +577,7 @@ frontend/public/backgrounds/
 **Problem**: Images load but don't appear in UI
 **Solution**: Check browser console for CORS errors and verify nginx configuration
 
-**Updated** New background images (bg7.webp, bg8.jpg) may require verification of file extensions and format support.
+**Updated** New background images (bg7.webp, bg8.jpg) may require verification of file extensions and format support. Glassmorphism effects require proper CSS variable definitions and backdrop filter support.
 
 ### Authentication Problems
 
@@ -542,22 +593,26 @@ frontend/public/backgrounds/
 **Solution**: Verify CSS classes are being applied and check for console errors
 
 **Problem**: Glassmorphism effects not appearing
-**Solution**: Ensure the `has-bg` class is properly toggled and CSS variables are correctly defined
+**Solution**: Ensure the `has-bg` class is properly toggled, CSS variables are correctly defined, and browser supports backdrop-filter property
+
+**Problem**: Translucent elements not visible
+**Solution**: Check that CSS selectors `.bg-card`, `.bg-background`, `.border-b`, `.border-r` are properly targeting elements under `html.has-bg` context
 
 ## Conclusion
 
-The Per-User Background Image System successfully integrates customizable visual preferences into the existing SSO infrastructure. The implementation demonstrates excellent separation of concerns, robust security practices, and user-friendly design principles.
+The Per-User Background Image System successfully integrates customizable visual preferences into the existing SSO infrastructure with sophisticated glassmorphism styling. The implementation demonstrates excellent separation of concerns, robust security practices, and cutting-edge user experience design principles.
 
 Key achievements include:
 
 - **Scalable Architecture**: Clean separation between frontend, backend, and database layers
 - **Security-First Design**: Comprehensive authentication and authorization mechanisms
-- **Enhanced Visual Experience**: Improved glassmorphism effects and optimized theme management
-- **Modern Image Support**: Expanded background image formats including webp and jpg
+- **Advanced Visual Experience**: Sophisticated glassmorphism effects with backdrop blur and translucent elements
+- **Modern Image Support**: Expanded background image formats including webp and jpg with optimized quality
+- **Enhanced Theme Management**: Dynamic CSS variable support with advanced visual effects
 - **User Experience**: Intuitive interface with real-time feedback and validation
 - **Deployment Flexibility**: Support for various deployment scenarios through Docker containers
 - **Performance Optimization**: Efficient static asset serving through Nginx proxy
 
 The system provides a solid foundation for future enhancements while maintaining backward compatibility and system stability. The modular design allows for easy extension of background management features and integration with additional customization options.
 
-**Updated** Recent enhancements include expanded background image support with high-quality formats (bg7.webp, bg8.jpg) and sophisticated visual styling that creates a modern, glass-like appearance when background images are applied.
+**Updated** Recent enhancements include expanded background image support with high-quality formats (bg7.webp, bg8.jpg), sophisticated glassmorphism styling with backdrop blur effects, translucent UI elements, and advanced CSS techniques for modern visual experiences when background images are applied.

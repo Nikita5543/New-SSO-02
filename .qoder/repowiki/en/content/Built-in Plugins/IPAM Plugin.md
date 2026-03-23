@@ -16,7 +16,8 @@
 
 ## Update Summary
 **Changes Made**
-- Updated to reflect Applied Changes: Enhanced keyboard interaction capabilities added to IPAM filtering system. Users can now press Enter key to trigger data fetching after applying filters, improving workflow efficiency and accessibility. Added @keyup.enter event handlers to VRF and Status filter inputs that automatically call fetchDatabaseData function.
+- Updated to reflect Applied Changes: IPAM validation service integration completely rewritten to connect to external validation service at 10.100.22.10:8001 with robust error handling, timeout management, and comprehensive response processing. Previous TODO-based stub implementation replaced with production-ready integration.
+- Enhanced keyboard interaction capabilities added to IPAM filtering system. Users can now press Enter key to trigger data fetching after applying filters, improving workflow efficiency and accessibility. Added @keyup.enter event handlers to VRF and Status filter inputs that automatically call fetchDatabaseData function.
 - Enhanced status filtering with comprehensive status mapping (active, reserved, deprecated, dhcp) and improved validation logic
 - Added loading state management for search operations to prevent concurrent requests and improve user experience
 - Enhanced database filtering capabilities with comprehensive status mapping and improved error handling
@@ -37,7 +38,7 @@
 The IPAM (IP Address Management) plugin integrates with NetBox to validate and manage IP addresses within the NOC Vision platform. This production-ready implementation provides comprehensive IP address management capabilities with real-time data synchronization, enhanced status filtering, robust error handling, and improved keyboard interaction capabilities. The plugin follows the platform's modular plugin architecture, enabling dynamic loading and seamless integration with the broader NOC Vision ecosystem.
 
 The plugin exposes three primary endpoints:
-- **Validation endpoint** to compare NetBox data with real network state
+- **Validation endpoint** to compare NetBox data with real network state through external validation service integration
 - **Apply endpoint** to synchronize changes in NetBox  
 - **Database endpoint** to retrieve IP address records with comprehensive filtering including enhanced status mapping
 
@@ -98,6 +99,7 @@ The IPAM plugin consists of several key components that work together to provide
 - **Plugin Registration**: Defines plugin metadata and registers API routes with proper context handling
 - **API Endpoints**: Provides validation, apply, and database retrieval functionality with comprehensive error handling and enhanced status filtering
 - **HTTP Client Integration**: Real-time data fetching from NetBox API with authentication and timeout management
+- **External Validation Service Integration**: Production-ready integration with external validation service at 10.100.22.10:8001 with robust error handling and comprehensive response processing
 - **Data Models**: Pydantic models for request/response validation with type safety
 - **Async Processing**: Asynchronous operations for improved performance and scalability
 - **Status Mapping System**: Comprehensive status mapping for NetBox integration (active, reserved, deprecated, dhcp)
@@ -151,12 +153,14 @@ N[Apply Logic]
 O[Database Logic]
 P[NetBox Data Fetcher]
 Q[Status Mapping System]
+R[External Validation Service]
 end
 subgraph "External Systems"
-R[NetBox API]
-S[Network Equipment]
-T[Database Storage]
-U[Authentication Service]
+S[NetBox API]
+T[Network Equipment]
+U[Database Storage]
+V[Authentication Service]
+W[Validation Service 10.100.22.10:8001]
 end
 A --> B
 B --> C
@@ -173,14 +177,16 @@ L --> M
 L --> N
 L --> O
 L --> Q
-M --> P
+M --> R
 N --> P
 O --> P
 Q --> O
-P --> R
-R --> S
-R --> T
-R --> U
+R --> W
+P --> S
+S --> T
+S --> U
+S --> V
+W --> X[Validation Results Processing]
 ```
 
 **Diagram sources**
@@ -243,6 +249,11 @@ class ValidationChange {
 class ApplyRequest {
 +ValidationChange[] changes
 }
+class ExternalValidationService {
++string service_url
++async validate() dict
++async handle_validation_errors() void
+}
 class NetBoxDataFetcher {
 +async get_netbox_data(endpoint, params) dict
 +async handle_http_errors(response) void
@@ -259,17 +270,47 @@ class StatusMappingSystem {
 }
 IPAMRouter --> ValidationChange : "uses"
 IPAMRouter --> ApplyRequest : "accepts"
+IPAMRouter --> ExternalValidationService : "uses"
 IPAMRouter --> NetBoxDataFetcher : "uses"
 IPAMRouter --> StatusMappingSystem : "uses"
 ApplyRequest --> ValidationChange : "contains"
 StatusMappingSystem --> ValidationChange : "transforms"
 NetBoxDataFetcher --> ValidationChange : "transforms"
+ExternalValidationService --> ValidationChange : "processes"
 ```
 
 **Diagram sources**
 - [endpoints.py](file://backend/app/plugins/ipam/endpoints.py)
 
-The validation endpoint provides a placeholder implementation with comprehensive error handling for future remote VM integration. The apply endpoint includes a stub implementation ready for NetBox API synchronization. The database endpoint implements comprehensive filtering with enhanced status mapping (active, reserved, deprecated, dhcp), pagination, and real-time data fetching from NetBox API with comprehensive error handling.
+The validation endpoint now provides a production-ready implementation that connects to the external validation service at 10.100.22.10:8001 with comprehensive error handling for service unavailability, timeouts, and response processing. The apply endpoint includes a stub implementation ready for NetBox API synchronization. The database endpoint implements comprehensive filtering with enhanced status mapping (active, reserved, deprecated, dhcp), pagination, and real-time data fetching from NetBox API with comprehensive error handling.
+
+**Section sources**
+- [endpoints.py](file://backend/app/plugins/ipam/endpoints.py)
+
+### External Validation Service Integration
+The IPAM plugin now includes a comprehensive external validation service integration that replaces the previous TODO-based stub implementation. This production-ready integration connects to the validation service at 10.100.22.10:8001 with robust error handling, timeout management, and comprehensive response processing.
+
+```mermaid
+flowchart TD
+A[Validation Request] --> B{Connect to Validation Service}
+B --> |Success| C[Send Validation Request]
+B --> |Connection Error| D[HTTP 503 Error]
+C --> E{Response Status}
+E --> |200 OK| F[Parse JSON Response]
+E --> |Other Error| G[HTTP 502 Error]
+F --> H{Process Validation Results}
+H --> I[Transform to Added/Removed Format]
+I --> J[Classify Records]
+J --> K[Return Validation Results]
+G --> L[Raise HTTPException]
+D --> L
+L --> M[Error Propagation]
+```
+
+**Diagram sources**
+- [endpoints.py](file://backend/app/plugins/ipam/endpoints.py)
+
+The external validation service integration includes comprehensive error handling for service unavailability, connection errors, and HTTP status code processing. The system implements timeout management with 60-second timeout for validation requests and robust response processing that transforms validation service responses into the format expected by the frontend. The validation logic includes sophisticated classification of records into 'added' and 'removed' categories based on status indicators and device presence.
 
 **Section sources**
 - [endpoints.py](file://backend/app/plugins/ipam/endpoints.py)
@@ -406,12 +447,13 @@ sequenceDiagram
 participant UI as User Interface
 participant Auth as Auth Store
 participant API as IPAM API
+participant ValidationService as Validation Service
 participant NetBox as NetBox System
 UI->>Auth : Request validation
 Auth->>API : POST /api/v1/plugins/ipam/validate
-API->>NetBox : Query current state
-NetBox-->>API : Return network data
-API->>API : Compare with NetBox records
+API->>ValidationService : Connect to 10.100.22.10 : 8001
+ValidationService-->>API : Return validation results
+API->>API : Transform validation results
 API-->>Auth : Return validation results
 Auth-->>UI : Display differences
 UI->>Auth : Request apply changes
@@ -453,40 +495,42 @@ C[SQLAlchemy 2.0.27]
 D[PostgreSQL Driver]
 E[httpx Async Client]
 F[NetBox API]
+G[Validation Service 10.100.22.10:8001]
 end
 subgraph "Internal Dependencies"
-G[Plugin Loader]
-H[Core Config]
-I[Database Models]
-J[Security Services]
-K[Auth Store]
+H[Plugin Loader]
+I[Core Config]
+J[Database Models]
+K[Security Services]
+L[Auth Store]
 end
 subgraph "Frontend Dependencies"
-L[Vue 3]
-M[Pinia State Management]
-N[Lucide Icons]
-O[Tailwind CSS]
-P[Status Mapping System]
-Q[Keyboard Event Handlers]
+M[Vue 3]
+N[Pinia State Management]
+O[Lucide Icons]
+P[Tailwind CSS]
+Q[Status Mapping System]
+R[Keyboard Event Handlers]
 end
-R[IPAM Plugin] --> A
-R --> B
-R --> G
-R --> H
-R --> J
-S[IPAM View] --> K
-S --> L
-S --> M
-S --> N
-S --> O
-S --> P
-S --> Q
+S[IPAM Plugin] --> A
+S --> B
+S --> H
+S --> I
+S --> J
+T[IPAM View] --> L
+T --> M
+T --> N
+T --> O
+T --> P
+T --> Q
+T --> R
 A --> C
 C --> D
 E --> A
-F --> R
-P --> R
+F --> S
+G --> S
 Q --> S
+R --> T
 ```
 
 **Diagram sources**
@@ -511,6 +555,9 @@ All API endpoints utilize asynchronous processing to prevent blocking operations
 
 ### HTTP Client Optimization
 The plugin leverages httpx AsyncClient for efficient network operations with connection pooling, timeout configuration, and proper resource management. The client supports concurrent requests and efficient resource utilization with enhanced status mapping processing and keyboard interaction event handling.
+
+### External Validation Service Optimization
+The external validation service integration includes comprehensive timeout management with 60-second timeout for validation requests and robust error handling for service unavailability. The system caches validation results where appropriate and implements efficient response processing to minimize performance impact.
 
 ### Caching Strategies
 The plugin implements intelligent caching mechanisms for frequently accessed data, reducing database load and improving response times for common operations. The system includes proper cache invalidation and refresh strategies with enhanced status filtering considerations and keyboard interaction event optimization.
@@ -545,6 +592,11 @@ Common issues and their solutions when working with the IPAM plugin:
 - **Problem**: Validation or apply endpoints return errors
 - **Solution**: Check network connectivity to NetBox and verify API credentials in environment variables
 - **Debug**: Review backend logs for detailed error messages and HTTP status codes
+
+### External Validation Service Issues
+- **Problem**: Validation service returns 503 error or connection refused
+- **Solution**: Verify validation service is running at 10.100.22.10:8001 and accessible from the application server
+- **Check**: Review validation service logs, network connectivity, and firewall rules
 
 ### Frontend Integration Problems
 - **Problem**: IPAM view not displaying data
@@ -592,6 +644,7 @@ The IPAM plugin represents a production-ready solution for network IP address ma
 
 Key strengths of the implementation include:
 - **Production-ready architecture** with comprehensive HTTP client integration, error handling, and enhanced status filtering
+- **External validation service integration** connecting to 10.100.22.10:8001 with robust error handling, timeout management, and comprehensive response processing
 - **Real-time data fetching** from NetBox API with proper authentication, timeout management, and status mapping
 - **Enhanced status filtering capabilities** for database queries with comprehensive status mapping (active, reserved, deprecated, dhcp)
 - **Comprehensive loading state management** to prevent concurrent requests and improve user experience
@@ -606,4 +659,4 @@ Key strengths of the implementation include:
 
 The plugin serves as an excellent foundation for network operations teams, providing essential tools for maintaining accurate IP address records and ensuring network infrastructure reliability. Its robust architecture, comprehensive feature set, enhanced status filtering capabilities, and improved keyboard interaction make it suitable for production environments with demanding performance and reliability requirements.
 
-**Updated** Enhanced keyboard interaction capabilities added to IPAM filtering system. Users can now press Enter key to trigger data fetching after applying filters, improving workflow efficiency and accessibility. Added @keyup.enter event handlers to VRF and Status filter inputs that automatically call fetchDatabaseData function. Enhanced status filtering with comprehensive status mapping (active, reserved, deprecated, dhcp) and improved validation logic. Added loading state management for search operations to prevent concurrent requests and improve user experience.
+**Updated** Enhanced keyboard interaction capabilities added to IPAM filtering system. Users can now press Enter key to trigger data fetching after applying filters, improving workflow efficiency and accessibility. Added @keyup.enter event handlers to VRF and Status filter inputs that automatically call fetchDatabaseData function. Enhanced status filtering with comprehensive status mapping (active, reserved, deprecated, dhcp) and improved validation logic. Added loading state management for search operations to prevent concurrent requests and improve user experience. **Updated** External validation service integration completely rewritten to connect to external validation service at 10.100.22.10:8001 with robust error handling, timeout management, and comprehensive response processing. Previous TODO-based stub implementation replaced with production-ready integration.

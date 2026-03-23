@@ -76,10 +76,25 @@ async def validate_ipam():
             data = response.json()
             
             # Transform to added/removed format expected by frontend
+            # Structure: { "missing_in_netbox": [...], "missing_on_device": [...] }
             added = []
             removed = []
             
-            for item in data:
+            # missing_in_netbox = exists on equipment but not in NetBox -> need to ADD to NetBox
+            for item in data.get("missing_in_netbox", []):
+                record = item.get("equipment_record", {})
+                host_ip = item.get("key", {}).get("host_ip", "")
+                
+                entry = {
+                    "interface": record.get("interface") or "N/A",
+                    "device": record.get("device_name") or "N/A", 
+                    "ip": record.get("ip_address") or host_ip,
+                    "description": record.get("description") or ""
+                }
+                added.append(entry)
+            
+            # missing_on_device = exists in NetBox but not on equipment -> need to REMOVE from NetBox
+            for item in data.get("missing_on_device", []):
                 record = item.get("netbox_record", {})
                 host_ip = item.get("key", {}).get("host_ip", "")
                 
@@ -89,14 +104,7 @@ async def validate_ipam():
                     "ip": record.get("ip_address") or host_ip,
                     "description": record.get("description") or ""
                 }
-                
-                # Logic: if status suggests it should be removed or missing from device
-                # For now, categorize based on available data
-                # Items with specific markers go to 'removed', others to 'added'
-                if record.get("status") == "deprecated" or not record.get("device_name"):
-                    removed.append(entry)
-                else:
-                    added.append(entry)
+                removed.append(entry)
             
             return {"added": added, "removed": removed}
             
