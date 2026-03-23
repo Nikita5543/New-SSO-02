@@ -59,28 +59,51 @@ async def validate_ipam():
     """
     Запускает скрипт валидации на удаленной ВМ.
     Возвращает разницу между NetBox и реальным оборудованием.
-    
-    TODO: Реализовать вызов скрипта на удаленной ВМ
     """
-    # Заглушка - в реальности здесь будет вызов скрипта
-    return {
-        "added": [
-            {
-                "interface": "ge-0/0/1",
-                "device": "juniper-sw1",
-                "ip": "192.168.1.10/24",
-                "description": "New device"
-            }
-        ],
-        "removed": [
-            {
-                "interface": "ge-0/0/2",
-                "device": "juniper-sw1",
-                "ip": "192.168.1.20/24",
-                "description": "Old device"
-            }
-        ]
-    }
+    VALIDATION_SERVICE_URL = "http://10.100.22.10:8001/validate"
+    
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(VALIDATION_SERVICE_URL)
+            
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Validation service error: {response.status_code} - {response.text[:200]}"
+                )
+            
+            # Parse validation service response
+            data = response.json()
+            
+            # Transform to added/removed format expected by frontend
+            added = []
+            removed = []
+            
+            for item in data:
+                record = item.get("netbox_record", {})
+                host_ip = item.get("key", {}).get("host_ip", "")
+                
+                entry = {
+                    "interface": record.get("interface") or "N/A",
+                    "device": record.get("device_name") or "N/A", 
+                    "ip": record.get("ip_address") or host_ip,
+                    "description": record.get("description") or ""
+                }
+                
+                # Logic: if status suggests it should be removed or missing from device
+                # For now, categorize based on available data
+                # Items with specific markers go to 'removed', others to 'added'
+                if record.get("status") == "deprecated" or not record.get("device_name"):
+                    removed.append(entry)
+                else:
+                    added.append(entry)
+            
+            return {"added": added, "removed": removed}
+            
+    except httpx.ConnectError:
+        raise HTTPException(status_code=503, detail="Validation service unavailable")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Validation error: {str(e)}")
 
 
 @router.post("/apply")
