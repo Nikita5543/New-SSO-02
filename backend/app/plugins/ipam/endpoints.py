@@ -101,7 +101,10 @@ async def validate_ipam():
             return {"added": added, "removed": removed}
             
     except httpx.ConnectError:
-        raise HTTPException(status_code=503, detail="Validation service unavailable")
+        raise HTTPException(
+            status_code=503, 
+            detail="Validation service unavailable at 10.100.22.10:8001. Please check if the service is running and accessible."
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Validation error: {str(e)}")
 
