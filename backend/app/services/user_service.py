@@ -50,8 +50,8 @@ def update_user(db: Session, user: User, **kwargs) -> User:
         kwargs.pop("password", None)
 
     for key, value in kwargs.items():
-        if value is not None and hasattr(user, key):
-            setattr(user, key, value)
+        if hasattr(user, key):
+            setattr(user, key, value)  # Allow None to clear fields
 
     db.commit()
     db.refresh(user)

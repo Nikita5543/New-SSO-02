@@ -47,6 +47,21 @@ async def update_my_background(
     return user_service.update_user(db, current_user, background_image=background_image)
 
 
+@router.put("/me", response_model=UserResponse)
+async def update_my_profile(
+    user_data: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Обновить профиль текущего пользователя (тема, фон и т.д.)"""
+    allowed_fields = {'theme', 'background_image', 'full_name', 'email', 'avatar_url', 'password'}
+    update_data = {
+        k: v for k, v in user_data.model_dump(exclude_unset=True).items()
+        if k in allowed_fields
+    }
+    return user_service.update_user(db, current_user, **update_data)
+
+
 @router.get("/me/backgrounds-list")
 async def get_backgrounds_list(
     current_user: User = Depends(get_current_active_user),
