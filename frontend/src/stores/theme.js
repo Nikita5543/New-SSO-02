@@ -2,8 +2,10 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 
 export const useThemeStore = defineStore('theme', () => {
-  const theme = ref(localStorage.getItem('theme') || 'light')
-  const background = ref(localStorage.getItem('background') || null)
+  // Always start with 'light' theme - no localStorage read on init
+  // Theme will be updated from user profile after login
+  const theme = ref('light')
+  const background = ref(null)
   const systemTheme = ref(
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   )
@@ -18,17 +20,11 @@ export const useThemeStore = defineStore('theme', () => {
 
   function setTheme(newTheme) {
     theme.value = newTheme
-    localStorage.setItem('theme', newTheme)
     applyTheme()
   }
 
   function setBackground(filename) {
     background.value = filename
-    if (filename) {
-      localStorage.setItem('background', filename)
-    } else {
-      localStorage.removeItem('background')
-    }
     applyBackground()
   }
 
@@ -61,17 +57,32 @@ export const useThemeStore = defineStore('theme', () => {
   }
 
   function initTheme() {
-    if (!localStorage.getItem('theme')) {
-      localStorage.setItem('theme', 'light')
-      theme.value = 'light'
-    }
+    // Always apply light theme on startup - will be overridden from user profile
+    theme.value = 'light'
+    background.value = null
+    
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     mediaQuery.addEventListener('change', (e) => {
       systemTheme.value = e.matches ? 'dark' : 'light'
       if (theme.value === 'system') applyTheme()
     })
     applyTheme()
-    setTimeout(applyBackground, 50)
+    applyBackground()
+  }
+
+  // Apply user preferences from their profile
+  function applyUserPreferences(user) {
+    if (!user) return
+    // Apply theme from user profile if saved
+    if (user.theme) {
+      theme.value = user.theme
+      applyTheme()
+    }
+    // Apply background from user profile if saved
+    if (user.background_image) {
+      background.value = user.background_image
+      applyBackground()
+    }
   }
 
   watch(theme, applyTheme)
@@ -87,5 +98,7 @@ export const useThemeStore = defineStore('theme', () => {
     setBackground,
     initTheme,
     applyBackground,
+    applyUserPreferences,
   }
 })
+

@@ -26,11 +26,29 @@ const backgrounds = ref([
 ])
 
 onMounted(async () => {
-  // Sync background from user profile if not in localStorage
-  if (authStore.user?.background_image && !themeStore.background) {
-    themeStore.setBackground(authStore.user.background_image)
+  // Sync from user profile
+  if (authStore.user) {
+    themeStore.applyUserPreferences(authStore.user)
   }
 })
+
+async function selectTheme(newTheme) {
+  themeStore.setTheme(newTheme)
+  // Save theme to user profile
+  try {
+    const resp = await authStore.authFetch('/api/v1/users/me', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ theme: newTheme })
+    })
+    if (resp.ok) {
+      const userData = await resp.json()
+      authStore.user = userData
+    }
+  } catch (e) {
+    console.error('Failed to save theme:', e)
+  }
+}
 
 async function selectBackground(filename) {
   saving.value = true
@@ -82,7 +100,7 @@ async function clearBackground() {
         <h3 class="text-lg font-semibold mb-4">Color Theme</h3>
         <div class="flex gap-3 flex-wrap">
           <button
-            @click="themeStore.setTheme('light')"
+            @click="selectTheme('light')"
             :class="[
               'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all',
               themeStore.theme === 'light'
@@ -96,7 +114,7 @@ async function clearBackground() {
           </button>
 
           <button
-            @click="themeStore.setTheme('dark')"
+            @click="selectTheme('dark')"
             :class="[
               'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all',
               themeStore.theme === 'dark'
@@ -110,7 +128,7 @@ async function clearBackground() {
           </button>
 
           <button
-            @click="themeStore.setTheme('system')"
+            @click="selectTheme('system')"
             :class="[
               'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all',
               themeStore.theme === 'system'

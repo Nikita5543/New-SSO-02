@@ -51,10 +51,8 @@ export const useAuthStore = defineStore('auth', () => {
       refreshToken.value = data.refresh_token
       user.value = data.user
       
-      // Apply user's background preference
-      if (data.user?.background_image) {
-        useThemeStore().setBackground(data.user.background_image)
-      }
+      // Apply user's theme and background preferences from profile
+      useThemeStore().applyUserPreferences(data.user)
       
       // Сохраняем токены на 3 часа (10800 секунд)
       const expiryTime = new Date().getTime() + (3 * 60 * 60 * 1000)

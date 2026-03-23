@@ -15,6 +15,7 @@ class User(Base):
     role = Column(String(20), default="user")  # superuser, user
     avatar_url = Column(String(500), nullable=True)  # URL or 'system:1', 'system:2', 'system:3'
     background_image = Column(String(255), nullable=True)  # background filename e.g. 'bg1.jpg'
+    theme = Column(String(20), nullable=True, default='light')  # light, dark, system
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -32,6 +33,7 @@ class User(Base):
             "role": self.role,
             "avatar_url": self.avatar_url,
             "background_image": self.background_image,
+            "theme": self.theme or 'light',
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

@@ -19,6 +19,7 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     avatar_url: Optional[str] = None
     background_image: Optional[str] = None
+    theme: Optional[str] = 'light'
 
 
 class UserResponse(BaseModel):
@@ -29,6 +30,7 @@ class UserResponse(BaseModel):
     role: str
     avatar_url: Optional[str] = None
     background_image: Optional[str] = None
+    theme: Optional[str] = 'light'
     is_active: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

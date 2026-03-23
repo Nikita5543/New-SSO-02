@@ -16,7 +16,7 @@
 
 ## Update Summary
 **Changes Made**
-- Updated to reflect Applied Changes: IPAM validation service integration completely rewritten to connect to external validation service at 10.100.22.10:8001 with robust error handling, timeout management, and comprehensive response processing. Previous TODO-based stub implementation replaced with production-ready integration.
+- Updated to reflect Applied Changes: Bug fix for IPAM validation response parsing logic. Corrected JSON response structure handling in validate_ipam() function, improving data transformation for 'missing_in_netbox' and 'missing_on_device' categories. Enhanced error handling with proper .get() methods and fallback values.
 - Enhanced keyboard interaction capabilities added to IPAM filtering system. Users can now press Enter key to trigger data fetching after applying filters, improving workflow efficiency and accessibility. Added @keyup.enter event handlers to VRF and Status filter inputs that automatically call fetchDatabaseData function.
 - Enhanced status filtering with comprehensive status mapping (active, reserved, deprecated, dhcp) and improved validation logic
 - Added loading state management for search operations to prevent concurrent requests and improve user experience
@@ -312,6 +312,8 @@ L --> M[Error Propagation]
 
 The external validation service integration includes comprehensive error handling for service unavailability, connection errors, and HTTP status code processing. The system implements timeout management with 60-second timeout for validation requests and robust response processing that transforms validation service responses into the format expected by the frontend. The validation logic includes sophisticated classification of records into 'added' and 'removed' categories based on status indicators and device presence.
 
+**Updated** Bug fix for IPAM validation response parsing logic. The validate_ipam() function now properly handles JSON response structure with enhanced error handling using .get() methods and fallback values for 'missing_in_netbox' and 'missing_on_device' categories. This ensures robust data transformation even when response structure varies.
+
 **Section sources**
 - [endpoints.py](file://backend/app/plugins/ipam/endpoints.py)
 
@@ -453,7 +455,7 @@ UI->>Auth : Request validation
 Auth->>API : POST /api/v1/plugins/ipam/validate
 API->>ValidationService : Connect to 10.100.22.10 : 8001
 ValidationService-->>API : Return validation results
-API->>API : Transform validation results
+API->>API : Transform validation results with .get() methods and fallback values
 API-->>Auth : Return validation results
 Auth-->>UI : Display differences
 UI->>Auth : Request apply changes
@@ -633,6 +635,11 @@ Common issues and their solutions when working with the IPAM plugin:
 - **Solution**: Adjust timeout values, implement proper pagination, optimize filtering queries, and ensure proper loading state management
 - **Check**: Monitor HTTP client performance, database query execution times, status mapping processing efficiency, and keyboard event handler performance
 
+### Validation Response Parsing Issues
+- **Problem**: Validation results not displaying correctly or empty results
+- **Solution**: Verify that the external validation service is returning the expected JSON structure with 'missing_in_netbox' and 'missing_on_device' keys
+- **Check**: Ensure that the validate_ipam() function is using proper .get() methods with fallback values for safe dictionary access
+
 **Section sources**
 - [plugin_loader.py](file://backend/app/core/plugin_loader.py)
 - [config.py](file://backend/app/core/config.py)
@@ -659,4 +666,4 @@ Key strengths of the implementation include:
 
 The plugin serves as an excellent foundation for network operations teams, providing essential tools for maintaining accurate IP address records and ensuring network infrastructure reliability. Its robust architecture, comprehensive feature set, enhanced status filtering capabilities, and improved keyboard interaction make it suitable for production environments with demanding performance and reliability requirements.
 
-**Updated** Enhanced keyboard interaction capabilities added to IPAM filtering system. Users can now press Enter key to trigger data fetching after applying filters, improving workflow efficiency and accessibility. Added @keyup.enter event handlers to VRF and Status filter inputs that automatically call fetchDatabaseData function. Enhanced status filtering with comprehensive status mapping (active, reserved, deprecated, dhcp) and improved validation logic. Added loading state management for search operations to prevent concurrent requests and improve user experience. **Updated** External validation service integration completely rewritten to connect to external validation service at 10.100.22.10:8001 with robust error handling, timeout management, and comprehensive response processing. Previous TODO-based stub implementation replaced with production-ready integration.
+**Updated** Enhanced keyboard interaction capabilities added to IPAM filtering system. Users can now press Enter key to trigger data fetching after applying filters, improving workflow efficiency and accessibility. Added @keyup.enter event handlers to VRF and Status filter inputs that automatically call fetchDatabaseData function. Enhanced status filtering with comprehensive status mapping (active, reserved, deprecated, dhcp) and improved validation logic. Added loading state management for search operations to prevent concurrent requests and improve user experience. **Updated** External validation service integration completely rewritten to connect to external validation service at 10.100.22.10:8001 with robust error handling, timeout management, and comprehensive response processing. Previous TODO-based stub implementation replaced with production-ready integration. **Updated** Bug fix for IPAM validation response parsing logic. Corrected JSON response structure handling in validate_ipam() function, improving data transformation for 'missing_in_netbox' and 'missing_on_device' categories. Enhanced error handling with proper .get() methods and fallback values for robust response processing.
