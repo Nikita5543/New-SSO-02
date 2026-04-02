@@ -17,17 +17,19 @@
 - [package.json](file://frontend/package.json)
 - [auth.js](file://frontend/src/stores/auth.js)
 - [user.py](file://backend/app/models/user.py)
+- [users.py](file://backend/app/api/v1/endpoints/users.py)
 - [002_add_background_image_to_users.py](file://backend/alembic/versions/002_add_background_image_to_users.py)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive documentation for background image management system
-- Updated theme store architecture to include background state management
-- Enhanced initialization sequence to support background persistence
-- Added background selection interface documentation
-- Updated database schema documentation for background image field
-- Expanded troubleshooting section with background-related guidance
+- Updated theme store architecture to use database-backed persistence instead of localStorage
+- Enhanced initialization sequence to prioritize user profile preferences over defaults
+- Added support for three theme modes (light, dark, system) with automatic switching
+- Implemented real-time persistence through new PUT /api/v1/users/me endpoint
+- Updated authentication flow to apply user preferences immediately after login
+- Enhanced background management with database synchronization
+- Improved theme persistence mechanism with backend integration
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -35,7 +37,7 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Background Image Management System](#background-image-management-system)
+6. [Database-Backed Theme Persistence](#database-backed-theme-persistence)
 7. [Dependency Analysis](#dependency-analysis)
 8. [Performance Considerations](#performance-considerations)
 9. [Accessibility Considerations](#accessibility-considerations)
@@ -44,35 +46,38 @@
 12. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the comprehensive theming and customization system used in the frontend application. It covers the theme toggle component, theme store management, Tailwind CSS configuration, and how light and dark themes are implemented. The system now features enhanced automatic initialization that ensures users see the correct theme immediately upon application startup, along with advanced background image management capabilities. The background system supports dynamic background application, localStorage persistence, user profile synchronization, and responsive styling integration. It also documents color scheme customization, responsive design patterns, theme-aware components, CSS variable usage, dynamic styling, persistence mechanisms, user preference handling, and system theme detection. Accessibility considerations and guidelines for extending the theme system are included.
+This document explains the comprehensive theming and customization system used in the frontend application. The system has been enhanced with database-backed persistence, replacing the previous localStorage-based approach. It covers the theme toggle component, theme store management, Tailwind CSS configuration, and how light, dark, and system themes are implemented. The system now features real-time persistence through backend APIs, immediate theme application based on user preferences, and seamless integration with the authentication flow. The theme system supports three distinct modes with automatic switching, responsive design patterns, theme-aware components, CSS variable usage, dynamic styling, and robust persistence mechanisms. Accessibility considerations and guidelines for extending the theme system are included.
 
 ## Project Structure
-The theming system spans four main areas:
-- Theme store: reactive state management for theme and background selection with automatic initialization
-- UI components: theme-aware components, theme toggle, and background selection interface
-- Layout system: dashboard layout with background container integration
-- Database layer: user model with background image persistence
+The enhanced theming system spans five main areas:
+- Theme store: reactive state management for theme and background selection with database-backed persistence
+- UI components: theme-aware components, theme toggle, and display settings interface
+- Authentication integration: user preference application during login and session restoration
+- Backend API: REST endpoints for theme and background persistence
+- Database layer: user model with theme and background image fields
 
 ```mermaid
 graph TB
-subgraph "Theme Store"
+subgraph "Enhanced Theme Store"
 TS["theme.js<br/>useThemeStore()"]
-INIT["initTheme()<br/>Automatic Default Setting"]
-BG["setBackground()<br/>Background Persistence"]
+INIT["initTheme()<br/>Immediate Light Mode"]
+APPLY["applyUserPreferences()<br/>Database-Backed Persistence"]
 end
 subgraph "UI Components"
 TT["ThemeToggle.vue"]
-DISP["Display.vue<br/>Background Selection"]
+DISP["Display.vue<br/>Real-time Persistence"]
 BTN["Button.vue"]
 CARD["Card.vue"]
 DD["DropdownMenu.vue"]
 end
-subgraph "Layout System"
-DL["DashboardLayout.vue<br/>#app-background Container"]
+subgraph "Authentication Flow"
+AUTH["auth.js<br/>applyUserPreferences()"]
+LOGIN["Login Process<br/>Immediate Theme Application"]
 end
-subgraph "Database Layer"
-UM["user.py<br/>background_image Field"]
-ALEMBIC["002_add_background_image_to_users.py<br/>Migration"]
+subgraph "Backend API"
+API["users.py<br/>/api/v1/users/me<br/>/api/v1/users/me/background"]
+MODEL["user.py<br/>theme & background_image Fields"]
+ALEMBIC["002_add_background_image_to_users.py<br/>Database Migration"]
 end
 subgraph "Styling"
 CSS["main.css<br/>CSS Variables"]
@@ -80,179 +85,197 @@ TW["tailwind.config.js<br/>Tailwind Config"]
 PC["postcss.config.js<br/>PostCSS Plugins"]
 end
 TS --> INIT
-TS --> BG
+TS --> APPLY
 INIT --> TT
-BG --> DL
-DISP --> BG
-DISP --> UM
-DL --> CSS
+APPLY --> AUTH
+AUTH --> LOGIN
+DISP --> API
+API --> MODEL
 CSS --> TW
 PC --> TW
 ```
 
 **Diagram sources**
-- [theme.js:4-90](file://frontend/src/stores/theme.js#L4-L90)
+- [theme.js:59-86](file://frontend/src/stores/theme.js#L59-L86)
 - [ThemeToggle.vue:1-36](file://frontend/src/components/ui/ThemeToggle.vue#L1-L36)
-- [Display.vue:1-183](file://frontend/src/views/settings/Display.vue#L1-L183)
-- [DashboardLayout.vue:29-30](file://frontend/src/layouts/DashboardLayout.vue#L29-L30)
-- [user.py:17](file://backend/app/models/user.py#L17)
-- [002_add_background_image_to_users.py:22](file://backend/alembic/versions/002_add_background_image_to_users.py#L22)
+- [Display.vue:35-90](file://frontend/src/views/settings/Display.vue#L35-L90)
+- [auth.js:54-55](file://frontend/src/stores/auth.js#L54-L55)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
+- [user.py:17-18](file://backend/app/models/user.py#L17-L18)
 
 **Section sources**
-- [theme.js:1-91](file://frontend/src/stores/theme.js#L1-L91)
+- [theme.js:1-105](file://frontend/src/stores/theme.js#L1-L105)
 - [ThemeToggle.vue:1-36](file://frontend/src/components/ui/ThemeToggle.vue#L1-L36)
-- [Display.vue:1-183](file://frontend/src/views/settings/Display.vue#L1-L183)
-- [DashboardLayout.vue:1-140](file://frontend/src/layouts/DashboardLayout.vue#L1-L140)
-- [user.py:1-39](file://backend/app/models/user.py#L1-L39)
-- [002_add_background_image_to_users.py:1-27](file://backend/alembic/versions/002_add_background_image_to_users.py#L1-L27)
+- [Display.vue:1-203](file://frontend/src/views/settings/Display.vue#L1-L203)
+- [auth.js:1-202](file://frontend/src/stores/auth.js#L1-L202)
+- [users.py:1-202](file://backend/app/api/v1/endpoints/users.py#L1-L202)
+- [user.py:1-41](file://backend/app/models/user.py#L1-L41)
 
 ## Core Components
-- Theme store: manages current theme, background image, system theme, effective theme, and applies CSS classes to the document root with automatic initialization
-- Theme toggle: a dropdown-triggered UI element allowing users to switch between light, dark, and system modes
-- Background management: comprehensive system for selecting, persisting, and synchronizing background images with user profiles
-- Display settings: dedicated interface for theme and background customization
-- Dashboard layout: container element that applies background images with cover, center, and fixed positioning
-- Tailwind configuration: defines dark mode behavior, CSS variable-based color tokens, and typography
-- CSS variables: define semantic color tokens for light and dark modes
-- Theme-aware components: buttons, cards, and dropdown menus that consume Tailwind color tokens
+- **Enhanced Theme store**: manages current theme, background image, system theme, effective theme, and applies CSS classes to the document root with immediate database persistence
+- **Theme toggle**: a dropdown-triggered UI element allowing users to switch between light, dark, and system modes with real-time backend synchronization
+- **Display settings**: dedicated interface for theme and background customization with immediate persistence to user profiles
+- **Authentication integration**: applies user preferences immediately upon login and during session restoration
+- **Backend API endpoints**: provide REST endpoints for theme and background persistence (/api/v1/users/me, /api/v1/users/me/background)
+- **Database integration**: user model includes theme and background_image fields with Alembic migration support
+- **Tailwind configuration**: defines dark mode behavior, CSS variable-based color tokens, and typography
+- **CSS variables**: define semantic color tokens for light and dark modes with responsive design integration
+- **Theme-aware components**: buttons, cards, and dropdown menus that consume Tailwind color tokens
 
 Key responsibilities:
-- Persist theme and background preferences in local storage with automatic default setting
-- React to system theme changes via media queries
-- Apply a "dark" class to the document root to enable dark mode styling
-- Manage background image state with localStorage and user profile synchronization
-- Provide computed properties for theme state and toggling logic
-- Initialize theme system before authentication state restoration
-- Apply background images to the #app-background container with responsive styling
+- **Enhanced**: Immediate theme application with database-backed persistence through backend APIs
+- **New**: Real-time synchronization of theme preferences with user profiles
+- **Enhanced**: Automatic user preference application during authentication flow
+- **New**: System theme detection via media queries with automatic switching capability
+- **Enhanced**: Immediate theme application before authentication state restoration for better user experience
+- **New**: Database-backed background image persistence with user profile synchronization
+- **Enhanced**: Tailwind CSS integration with CSS variable-based color tokens for seamless theme switching
 
 **Section sources**
-- [theme.js:4-90](file://frontend/src/stores/theme.js#L4-L90)
-- [ThemeToggle.vue:1-36](file://frontend/src/components/ui/ThemeToggle.vue#L1-L36)
-- [Display.vue:15-70](file://frontend/src/views/settings/Display.vue#L15-L70)
-- [DashboardLayout.vue:29-30](file://frontend/src/layouts/DashboardLayout.vue#L29-L30)
-- [tailwind.config.js:10-56](file://frontend/tailwind.config.js#L10-L56)
-- [main.css:7-52](file://frontend/src/assets/css/main.css#L7-L52)
+- [theme.js:59-86](file://frontend/src/stores/theme.js#L59-L86)
+- [ThemeToggle.vue:20-32](file://frontend/src/components/ui/ThemeToggle.vue#L20-L32)
+- [Display.vue:35-90](file://frontend/src/views/settings/Display.vue#L35-L90)
+- [auth.js:54-55](file://frontend/src/stores/auth.js#L54-L55)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
+- [user.py:17-18](file://backend/app/models/user.py#L17-L18)
 
 ## Architecture Overview
-The theme system follows a unidirectional data flow with enhanced initialization and background management:
-- The theme store holds the selected theme, background image, and system theme
+The enhanced theme system follows a unidirectional data flow with database-backed persistence and immediate user preference application:
+- The theme store holds the selected theme, background image, and system theme with immediate database synchronization
 - The effective theme is derived and used to toggle the "dark" class on the document root
-- Background images are managed separately but synchronized with user preferences
+- User preferences are applied immediately upon authentication, overriding default theme settings
+- Backend APIs provide real-time persistence of theme and background preferences
 - Tailwind CSS reads the "dark" class to switch between light and dark color tokens
 - Components use Tailwind utility classes that resolve to CSS variables
-- **Enhanced**: Theme initialization occurs before authentication state restoration to ensure immediate visual feedback
-- **New**: Background initialization occurs after DOM readiness with timeout delay for proper element availability
+- **Enhanced**: Theme initialization occurs with immediate light mode application, then user preferences are applied from database
+- **New**: Real-time persistence through PUT /api/v1/users/me endpoint for immediate backend synchronization
+- **New**: System theme detection with automatic switching when theme is set to "system"
 
 ```mermaid
 sequenceDiagram
 participant APP as "Application Startup"
 participant TS as "useThemeStore"
 participant AUTH as "useAuthStore"
-participant DOM as "documentElement"
-participant BG as "#app-background"
-participant TW as "Tailwind CSS"
-APP->>TS : initTheme()
-TS->>TS : Check localStorage for theme
-TS->>TS : Set default to 'light' if none found
-TS->>DOM : add/remove "dark" class
-DOM-->>TW : dark mode activated
-TS->>TS : setTimeout(applyBackground, 100)
-TS->>BG : Apply background image if available
-APP->>AUTH : fetchUser() (if token exists)
-AUTH-->>APP : Authentication restored
-BG-->>APP : Background applied to container
-TW-->>APP : apply dark/light styles
+participant API as "Backend API"
+participant DB as "Database"
+APP->>TS : initTheme() - Apply Light Mode
+AUTH->>AUTH : fetchUser() (if token exists)
+AUTH->>TS : applyUserPreferences(user)
+TS->>TS : Apply user theme & background
+TS->>API : PUT /api/v1/users/me (real-time persistence)
+API->>DB : Update user preferences
+DB-->>API : Confirmation
+API-->>TS : Updated user data
+TS-->>APP : Theme applied with user preferences
 ```
 
 **Diagram sources**
-- [main.js:162-183](file://frontend/src/main.js#L162-L183)
-- [theme.js:61-74](file://frontend/src/stores/theme.js#L61-L74)
-- [theme.js:48-59](file://frontend/src/stores/theme.js#L48-L59)
+- [main.js:162-176](file://frontend/src/main.js#L162-L176)
+- [theme.js:74-86](file://frontend/src/stores/theme.js#L74-L86)
+- [auth.js:54-55](file://frontend/src/stores/auth.js#L54-L55)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
 
 ## Detailed Component Analysis
 
 ### Enhanced Theme Store Management
-The theme store now includes automatic initialization with default theme setting and background management:
-- Reactive theme state with persistence in local storage
-- Background image state with localStorage and user profile synchronization
-- System theme detection via media queries
-- Computed effective theme and dark-mode flag
-- **Enhanced**: Automatic initialization routine that sets default to light mode when no user preference is detected
-- **New**: Background management functions for setting, persisting, and applying background images
-- Utility to apply the "dark" class to the document root
-- **New**: Background application function that targets the #app-background container
+The theme store now includes database-backed persistence with immediate user preference application:
+- Reactive theme state with immediate database synchronization through backend APIs
+- Background image state with database persistence and user profile synchronization
+- System theme detection via media queries with automatic switching capability
+- Computed effective theme and dark-mode flag with system mode support
+- **Enhanced**: Immediate theme initialization with light mode application, then user preferences override
+- **New**: Database-backed user preference application through applyUserPreferences() method
+- **New**: Real-time persistence through backend API calls for immediate synchronization
+- Utility to apply the "dark" class to the document root with immediate visual feedback
 
-**Updated** Enhanced initialization process ensures immediate theme application before authentication
+**Updated** Enhanced initialization process ensures immediate theme application with database-backed persistence
 
 Implementation highlights:
-- Persistence: theme and background values saved to and loaded from local storage
-- **Enhanced**: Default theme setting: automatically sets to 'light' if no preference exists
-- Background persistence: background image filename stored in localStorage
-- System theme: listens for media query change events and updates accordingly
+- **Enhanced**: Immediate theme application: theme initialized to 'light' on startup, then overridden by user preferences
+- **New**: Database synchronization: theme and background preferences persisted through PUT /api/v1/users/me endpoint
+- **Enhanced**: User preference application: applyUserPreferences() method synchronizes with user profile data
+- **New**: Real-time persistence: immediate backend synchronization when theme or background changes
+- System theme: listens for media query change events and updates automatically when theme is set to "system"
 - Effective theme: resolves to system theme when set to "system", otherwise uses the selected theme
-- Root class application: toggles the "dark" class on the document element
-- **New**: Background application: sets CSS background properties on the #app-background element
+- Root class application: toggles the "dark" class on the document element for Tailwind integration
 
 ```mermaid
 flowchart TD
-Start(["initTheme()"]) --> Check{"localStorage has theme?"}
-Check --> |No| SetDefault["Set localStorage to 'light'<br/>Set theme.value to 'light'"]
-Check --> |Yes| LoadTheme["Load theme from localStorage"]
-SetDefault --> MQ["Add media query listener"]
-LoadTheme --> MQ
+Start(["initTheme()"]) --> ApplyLight["Apply Light Mode Immediately"]
+ApplyLight --> MQ["Add media query listener"]
 MQ --> Apply["applyTheme()"]
-Apply --> BGTimeout["setTimeout(applyBackground, 100)"]
-BGTimeout --> End(["Ready"])
+Apply --> End(["Ready - Waiting for User Preferences"])
+subgraph "User Preference Application"
+UserPref["applyUserPreferences(user)"] --> CheckUser{"User has theme?"}
+CheckUser --> |Yes| SetTheme["Set theme from user profile"]
+CheckUser --> |No| SkipTheme["Skip theme application"]
+SetTheme --> ApplyTheme["applyTheme()"]
+ApplyTheme --> CheckBg{"User has background?"}
+CheckBg --> |Yes| SetBg["Set background from user profile"]
+CheckBg --> |No| SkipBg["Skip background application"]
+SetBg --> ApplyBg["applyBackground()"]
+SkipBg --> End2(["User preferences applied"])
+SkipTheme --> CheckBg
+End2 --> End3(["Complete"])
+end
 ```
 
 **Diagram sources**
-- [theme.js:61-74](file://frontend/src/stores/theme.js#L61-L74)
-- [theme.js:39-46](file://frontend/src/stores/theme.js#L39-L46)
+- [theme.js:59-86](file://frontend/src/stores/theme.js#L59-L86)
+- [theme.js:74-86](file://frontend/src/stores/theme.js#L74-L86)
 
 **Section sources**
-- [theme.js:4-90](file://frontend/src/stores/theme.js#L4-L90)
+- [theme.js:59-103](file://frontend/src/stores/theme.js#L59-L103)
 
 ### Application Initialization Sequence
-The application now initializes the theme system before authentication with enhanced background management:
-- Theme initialization occurs first to ensure immediate visual feedback
-- Background application waits for DOM readiness with timeout
-- Authentication state restoration happens after theme and background are applied
+The application now initializes the theme system with immediate database-backed persistence:
+- Theme initialization occurs first with immediate light mode application
+- Authentication state restoration happens after theme initialization
+- User preferences are applied immediately upon authentication, overriding default theme settings
 - Plugin registry initialization follows authentication restoration
-- **New**: User background preference synchronization from profile to theme store
+- **Enhanced**: Real-time persistence through backend APIs for immediate theme synchronization
+- **New**: User preference synchronization from database to theme store for immediate visual feedback
 
-**Updated** New initialization sequence prioritizes theme and background application for better user experience
+**Updated** New initialization sequence prioritizes immediate theme application with database-backed persistence
 
 ```mermaid
 sequenceDiagram
 participant INIT as "initApp()"
 participant THEME as "Theme Store"
 participant AUTH as "Auth Store"
-INIT->>THEME : initTheme()
-THEME-->>INIT : Theme applied (default : light)
-THEME->>THEME : setTimeout(applyBackground, 100)
+participant API as "Backend API"
+INIT->>THEME : initTheme() - Apply Light Mode
+THEME-->>INIT : Light mode applied immediately
 INIT->>AUTH : fetchUser() (if token exists)
-AUTH-->>INIT : Auth state restored
-THEME->>THEME : Sync user.background_image to theme.store
+AUTH-->>INIT : User data received
+AUTH->>THEME : applyUserPreferences(user)
+THEME->>THEME : Apply user theme & background
+THEME->>API : PUT /api/v1/users/me (persist preferences)
+API-->>THEME : Confirmation with updated user data
 INIT->>INIT : Initialize plugins
 INIT->>INIT : Mount app
 ```
 
 **Diagram sources**
-- [main.js:162-183](file://frontend/src/main.js#L162-L183)
-- [theme.js:61-74](file://frontend/src/stores/theme.js#L61-L74)
+- [main.js:162-176](file://frontend/src/main.js#L162-L176)
+- [theme.js:74-86](file://frontend/src/stores/theme.js#L74-L86)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
 
 **Section sources**
-- [main.js:162-183](file://frontend/src/main.js#L162-L183)
+- [main.js:162-176](file://frontend/src/main.js#L162-L176)
 
 ### Theme Toggle Component
 The theme toggle is a dropdown menu that:
-- Displays a sun/moon icon based on current theme
-- Offers options for light, dark, and system modes
+- Displays a sun/moon/icon based on current theme and system preference
+- Offers options for light, dark, and system modes with immediate persistence
 - Uses Tailwind classes that resolve to CSS variables for colors
+- **Enhanced**: Real-time persistence through backend API calls when theme changes
 
 Behavior:
 - Uses the theme store to determine the current icon and to set the theme
 - Closes the dropdown after a selection is made
+- **New**: Immediate backend synchronization when theme selection changes
+- **Enhanced**: Visual feedback through checkmarks indicating current theme selection
 
 ```mermaid
 sequenceDiagram
@@ -260,18 +283,22 @@ participant U as "User"
 participant TT as "ThemeToggle.vue"
 participant DD as "DropdownMenu.vue"
 participant TS as "useThemeStore"
+participant API as "Backend API"
 U->>TT : Click trigger
 TT->>DD : Open dropdown
 U->>TT : Select option
 TT->>TS : setTheme(mode)
+TS->>TS : Apply theme immediately
+TS->>API : PUT /api/v1/users/me (persist)
+API-->>TS : Confirmation
 TS-->>TT : isDark updated
 TT-->>U : Close dropdown and reflect icon
 ```
 
 **Diagram sources**
-- [ThemeToggle.vue:10-35](file://frontend/src/components/ui/ThemeToggle.vue#L10-L35)
-- [DropdownMenu.vue:27-47](file://frontend/src/components/ui/DropdownMenu.vue#L27-L47)
-- [theme.js:23-27](file://frontend/src/stores/theme.js#L23-L27)
+- [ThemeToggle.vue:20-32](file://frontend/src/components/ui/ThemeToggle.vue#L20-L32)
+- [theme.js:21-24](file://frontend/src/stores/theme.js#L21-L24)
+- [Display.vue:35-51](file://frontend/src/views/settings/Display.vue#L35-L51)
 
 **Section sources**
 - [ThemeToggle.vue:1-36](file://frontend/src/components/ui/ThemeToggle.vue#L1-L36)
@@ -279,12 +306,12 @@ TT-->>U : Close dropdown and reflect icon
 
 ### Tailwind CSS Configuration and CSS Variables
 Tailwind is configured to use a class-based dark mode strategy and to resolve color tokens through CSS variables. The configuration:
-- Enables dark mode using the "class" strategy
-- Extends color palette with CSS variable-based tokens
+- Enables dark mode using the "class" strategy for seamless theme switching
+- Extends color palette with CSS variable-based tokens for semantic theming
 - Adds typography and border radius tokens backed by CSS variables
-- Includes a plugin for animations
+- Includes a plugin for animations and smooth transitions
 
-CSS variables define semantic tokens for both light and dark modes. The "dark" class applied by the theme store switches between these definitions.
+CSS variables define semantic tokens for both light and dark modes. The "dark" class applied by the theme store switches between these definitions. The system includes special handling for background images with transparency effects.
 
 ```mermaid
 graph LR
@@ -292,6 +319,7 @@ CSSVars["CSS Variables<br/>main.css :root/.dark"] --> Tokens["Semantic Tokens<br
 Tokens --> TWConfig["Tailwind Config<br/>tailwind.config.js"]
 TWConfig --> Classes["Utility Classes<br/>bg-primary/text-foreground"]
 Classes --> Components["Components<br/>Button/Card/DropdownMenu"]
+BackgroundEffect["Background Transparency<br/>html.has-bg selectors"] --> Components
 ```
 
 **Diagram sources**
@@ -302,16 +330,16 @@ Classes --> Components["Components<br/>Button/Card/DropdownMenu"]
 - [DropdownMenu.vue:40-46](file://frontend/src/components/ui/DropdownMenu.vue#L40-L46)
 
 **Section sources**
-- [tailwind.config.js:4-56](file://frontend/tailwind.config.js#L4-L56)
-- [main.css:7-52](file://frontend/src/assets/css/main.css#L7-L52)
+- [tailwind.config.js:4-59](file://frontend/tailwind.config.js#L4-L59)
+- [main.css:7-88](file://frontend/src/assets/css/main.css#L7-L88)
 
 ### Theme-Aware Components
 Theme-aware components rely on Tailwind utility classes that resolve to CSS variables. Examples:
 - Button: variant and size classes that depend on primary, secondary, destructive, and accent tokens
-- Card: background and foreground tokens for surface and text
-- DropdownMenu: popover background and text tokens for menu appearance
+- Card: background and foreground tokens for surface and text with transparency effects for background images
+- DropdownMenu: popover background and text tokens for menu appearance with proper contrast
 
-These components automatically adapt to theme changes because they use Tailwind classes that map to CSS variables.
+These components automatically adapt to theme changes because they use Tailwind classes that map to CSS variables. The system includes special handling for background images that makes cards and panels semi-transparent for better visual appeal.
 
 **Section sources**
 - [Button.vue:25-49](file://frontend/src/components/ui/Button.vue#L25-L49)
@@ -320,128 +348,136 @@ These components automatically adapt to theme changes because they use Tailwind 
 
 ### Dynamic Styling and Responsive Patterns
 Dynamic styling is achieved through:
-- CSS variables for semantic tokens
-- Tailwind utilities that resolve to those tokens
+- CSS variables for semantic tokens with light and dark mode definitions
+- Tailwind utilities that resolve to those tokens for seamless theme switching
 - A "dark" class on the root element to switch between light and dark definitions
+- **Enhanced**: Background image support with transparency effects for improved visual appeal
+- **New**: Real-time persistence through backend APIs for immediate theme synchronization
 
 Responsive patterns:
-- Typography scales through Tailwind font utilities
+- Typography scales through Tailwind font utilities with Inter font family
 - Spacing and sizing utilities adapt across breakpoints
 - Component variants (size, variant) provide consistent responsive behavior
 - **New**: Background images use cover, center, and fixed positioning for optimal responsive display
+- **New**: Background transparency effects adjust card and panel opacity for better readability
 
 **Section sources**
-- [main.css:54-63](file://frontend/src/assets/css/main.css#L54-L63)
+- [main.css:78-88](file://frontend/src/assets/css/main.css#L78-L88)
 - [tailwind.config.js:52-54](file://frontend/tailwind.config.js#L52-L54)
 - [Button.vue:37-42](file://frontend/src/components/ui/Button.vue#L37-L42)
 
-## Background Image Management System
+## Database-Backed Theme Persistence
 
-### Background State Management
-The theme store now manages background image state alongside theme preferences:
-- Background state: reactive reference to currently selected background filename
-- Local storage persistence: background image filename stored in localStorage
-- User profile synchronization: background preference synced from user profile data
-- Available backgrounds: configurable list of background image filenames
-- Background application: dynamic CSS property manipulation for the #app-background container
+### Enhanced Theme Persistence Architecture
+The theme system now features comprehensive database-backed persistence with immediate synchronization:
+- **Enhanced**: Database integration through user model with theme and background_image fields
+- **New**: Real-time persistence through PUT /api/v1/users/me endpoint for immediate backend synchronization
+- **Enhanced**: User preference application during authentication flow with immediate visual feedback
+- **New**: System theme detection with automatic switching capability when theme is set to "system"
+- **Enhanced**: Immediate theme application with light mode default, then user preferences override
 
-**New** Comprehensive background management system with persistence and synchronization
+**Updated** Database-backed persistence replaces localStorage with real-time backend synchronization
 
 Implementation details:
-- Background persistence: filename stored in localStorage under 'background' key
-- User synchronization: on mount, checks user.profile for background_image and syncs if localStorage empty
-- Background clearing: removes localStorage entry when null is set
-- Background application: sets backgroundImage, backgroundSize, backgroundPosition, and backgroundAttachment properties
-- Container targeting: applies styles to element with id 'app-background'
+- **Enhanced**: Database fields: theme (String, nullable=True, default='light'), background_image (String, nullable=True)
+- **New**: Real-time persistence: PUT requests to /api/v1/users/me with theme and background data
+- **Enhanced**: User preference application: applyUserPreferences() method synchronizes with database-stored preferences
+- **New**: System theme integration: automatic switching based on system preference when theme is set to "system"
+- **Enhanced**: Immediate application: user preferences applied during authentication, overriding default theme settings
 
 ```mermaid
 flowchart TD
-BGInit["setBackground(filename)"] --> Check{"filename provided?"}
-Check --> |Yes| SaveLocal["localStorage.setItem('background', filename)"]
-Check --> |No| RemoveLocal["localStorage.removeItem('background')"]
-SaveLocal --> ApplyBG["applyBackground()"]
-RemoveLocal --> ApplyBG
-ApplyBG --> Container["document.getElementById('app-background')"]
-Container --> Style["Set background properties:<br/>- backgroundImage<br/>- backgroundSize<br/>- backgroundPosition<br/>- backgroundAttachment"]
-Style --> Result["Background applied successfully"]
+UserSelection["User selects theme/background"] --> ThemeStore["Theme Store<br/>setTheme()/setBackground()"]
+ThemeStore --> ApplyTheme["applyTheme()<br/>Immediate UI Update"]
+ApplyTheme --> APICall["PUT /api/v1/users/me<br/>Real-time Persistence"]
+APICall --> Database["Database Update<br/>User Model"]
+Database --> Response["Backend Response<br/>Updated User Data"]
+Response --> ThemeStore2["Theme Store<br/>applyUserPreferences()"]
+ThemeStore2 --> FinalUpdate["Final UI Update<br/>With User Preferences"]
 ```
 
 **Diagram sources**
-- [theme.js:29-59](file://frontend/src/stores/theme.js#L29-L59)
+- [Display.vue:35-90](file://frontend/src/views/settings/Display.vue#L35-L90)
+- [theme.js:21-29](file://frontend/src/stores/theme.js#L21-L29)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
 
 **Section sources**
-- [theme.js:5-6](file://frontend/src/stores/theme.js#L5-L6)
-- [theme.js:29-59](file://frontend/src/stores/theme.js#L29-L59)
+- [theme.js:74-86](file://frontend/src/stores/theme.js#L74-L86)
+- [Display.vue:35-90](file://frontend/src/views/settings/Display.vue#L35-L90)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
 
-### Background Selection Interface
-The Display settings page provides a comprehensive interface for background management:
-- Background gallery: grid layout displaying available background images
-- Selection feedback: visual indicators showing currently selected background
-- User profile integration: automatic synchronization with user's background preference
-- Save confirmation: visual feedback when background is successfully saved
-- Clear functionality: option to remove background selection
+### Authentication Integration and User Preference Application
+The authentication system now seamlessly integrates with the theme system:
+- **Enhanced**: User preference application during login process with immediate visual feedback
+- **New**: Real-time persistence through backend APIs for immediate theme synchronization
+- **Enhanced**: Session restoration with user preference application from database
+- **New**: Immediate theme application before authentication state restoration for better user experience
 
-**New** Dedicated background selection interface with user profile integration
+**New** Authentication integration provides seamless theme application with database-backed persistence
 
 Features:
-- Background grid: responsive grid (2-4 columns based on screen size)
-- Image preview: thumbnail images with aspect ratio preservation
-- Selection indicator: checkmark overlay for selected background
-- Filename display: white text overlay with background for filename visibility
-- Save mechanism: PUT request to /api/v1/users/me/background endpoint
-- Clear button: removes background selection and updates user profile
+- **Enhanced**: Login process: applyUserPreferences() called immediately after successful authentication
+- **New**: Real-time persistence: theme and background preferences saved to database during user interaction
+- **Enhanced**: Session restoration: user preferences applied during fetchUser() process
+- **New**: Immediate application: user preferences override default theme settings without delay
 
 **Section sources**
-- [Display.vue:15-70](file://frontend/src/views/settings/Display.vue#L15-L70)
-- [Display.vue:150-182](file://frontend/src/views/settings/Display.vue#L150-L182)
+- [auth.js:54-55](file://frontend/src/stores/auth.js#L54-L55)
+- [main.js:169-176](file://frontend/src/main.js#L169-L176)
 
-### Background Container Integration
-The dashboard layout provides the container element for background application:
-- Container element: #app-background div with flex layout and overflow handling
-- Background application: theme store applies background styles to this container
-- Responsive behavior: maintains layout integrity across different screen sizes
-- Content isolation: background appears behind layout elements while content remains accessible
+### Backend API Endpoints for Theme Persistence
+The backend provides comprehensive API endpoints for theme and background persistence:
+- **New**: PUT /api/v1/users/me - Update user profile including theme and background preferences
+- **New**: PUT /api/v1/users/me/background - Update user background image preference
+- **Enhanced**: GET /api/v1/users/me/backgrounds-list - Retrieve available background images
+- **Enhanced**: User service integration for theme and background preference updates
 
-**New** Centralized background container with responsive design integration
+**New** Backend API endpoints provide comprehensive theme and background persistence capabilities
 
-Implementation:
-- Container location: main layout wrapper with id 'app-background'
-- Background properties: cover, center, fixed positioning for optimal visual effect
-- Layout compatibility: works with sidebar, header, and main content areas
-- Performance optimization: fixed attachment prevents parallax scrolling issues
+Endpoint details:
+- **New**: PUT /api/v1/users/me: Updates theme, background_image, and other user preferences
+- **New**: PUT /api/v1/users/me/background: Updates only background image preference
+- **Enhanced**: GET /api/v1/users/me/backgrounds-list: Returns available background images from filesystem
+- **Enhanced**: User service integration: Handles database updates for theme preferences
+- **Enhanced**: File system integration: Searches for background images in nginx static directory
 
 **Section sources**
-- [DashboardLayout.vue:29-30](file://frontend/src/layouts/DashboardLayout.vue#L29-L30)
-- [DashboardLayout.vue:19-21](file://frontend/src/layouts/DashboardLayout.vue#L19-L21)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
+- [users.py:39-47](file://backend/app/api/v1/endpoints/users.py#L39-L47)
+- [users.py:65-86](file://backend/app/api/v1/endpoints/users.py#L65-L86)
 
 ### Database Schema Integration
-The user model now includes background image support:
-- Database field: background_image column in users table
-- Data type: string with maximum length of 255 characters
-- Nullable support: allows null values for users without background preference
-- Migration support: alembic migration adds background_image column to existing users table
+The user model now includes comprehensive theme and background support:
+- **Enhanced**: Database fields: theme (String, nullable=True, default='light'), background_image (String, nullable=True)
+- **Enhanced**: Data type support: String fields with maximum length of 255 characters
+- **Enhanced**: Default values: theme defaults to 'light' if not specified
+- **Enhanced**: Nullable support: Allows null values for users without theme or background preferences
+- **Enhanced**: Migration support: Alembic migration adds theme and background_image columns to existing users table
 
-**New** Backend support for background image persistence
+**Enhanced** Database schema provides comprehensive theme and background persistence support
 
 Schema details:
-- Column definition: String(255), nullable=True
-- Default value: None (no background selected)
-- Storage format: filename string (e.g., 'bg1.avif', 'custom-bg.jpg')
-- API integration: REST endpoint for updating user background preference
+- **Enhanced**: theme column: String(20), nullable=True, default='light'
+- **Enhanced**: background_image column: String(255), nullable=True
+- **Enhanced**: Default values: theme='light', background_image=None
+- **Enhanced**: Storage format: theme string ('light', 'dark', 'system'), background filename string
+- **Enhanced**: API integration: REST endpoints for updating user theme and background preferences
 
 **Section sources**
-- [user.py:17](file://backend/app/models/user.py#L17)
-- [002_add_background_image_to_users.py:22](file://backend/alembic/versions/002_add_background_image_to_users.py#L22)
+- [user.py:17-18](file://backend/app/models/user.py#L17-L18)
+- [user.py:35-36](file://backend/app/models/user.py#L35-L36)
 
 ## Dependency Analysis
-The theme system depends on:
-- Vue 3 reactivity and Pinia for state management
-- Tailwind CSS for utility classes and dark mode
+The enhanced theme system depends on:
+- Vue 3 reactivity and Pinia for state management with database integration
+- Tailwind CSS for utility classes and dark mode with CSS variable support
 - PostCSS for processing Tailwind and vendor prefixes
-- Lucide icons for theme toggle visuals
+- Lucide icons for theme toggle visuals with system theme support
 - Class merging utilities for component composition
-- **New**: User authentication store for profile synchronization
-- **New**: REST API endpoints for background preference persistence
+- **Enhanced**: User authentication store for profile synchronization and immediate theme application
+- **New**: REST API endpoints for theme and background preference persistence
+- **Enhanced**: Database integration for persistent theme and background preferences
+- **Enhanced**: Backend services for user preference management
 
 ```mermaid
 graph TB
@@ -454,7 +490,10 @@ TW --> PostCSS["PostCSS/Autoprefixer"]
 Icons["Lucide Icons"] --> TT["ThemeToggle"]
 Utils["clsx/twMerge"] --> Components
 API["REST API"] --> AUTH
-DB["Database"] --> API
+API --> DB["Database"]
+DB --> UserModel["User Model"]
+UserModel --> ThemeField["theme Field"]
+UserModel --> BackgroundField["background_image Field"]
 ```
 
 **Diagram sources**
@@ -470,53 +509,58 @@ DB["Database"] --> API
 - [utils.js:1-6](file://frontend/src/lib/utils.js#L1-L6)
 
 ## Performance Considerations
-- CSS variable usage minimizes style recalculation and enables efficient theme switching
-- Applying a single "dark" class to the root element avoids cascading style updates across the DOM
-- Tailwind utilities are generated at build time, reducing runtime overhead
-- Media query listeners are attached once during initialization to avoid repeated event binding
-- **Enhanced**: Automatic theme initialization occurs before authentication, reducing perceived latency and improving user experience
-- **New**: Background application uses setTimeout with 100ms delay to ensure DOM readiness
-- **New**: Background images use fixed positioning to prevent layout recalculations during scroll
-- **New**: Background persistence uses localStorage for fast retrieval without network requests
+- **Enhanced**: CSS variable usage minimizes style recalculation and enables efficient theme switching
+- **Enhanced**: Applying a single "dark" class to the root element avoids cascading style updates across the DOM
+- **Enhanced**: Tailwind utilities are generated at build time, reducing runtime overhead
+- **Enhanced**: Media query listeners are attached once during initialization to avoid repeated event binding
+- **Enhanced**: Immediate theme initialization occurs before authentication, reducing perceived latency and improving user experience
+- **Enhanced**: Database-backed persistence provides reliable theme storage without localStorage limitations
+- **New**: Real-time persistence through backend APIs ensures immediate theme synchronization across sessions
+- **Enhanced**: User preference application during authentication eliminates theme flicker and provides instant visual feedback
+- **Enhanced**: Background images use fixed positioning to prevent layout recalculations during scroll
+- **Enhanced**: Database queries for theme preferences are cached and applied efficiently during authentication
 
 ## Accessibility Considerations
 Color contrast:
-- Ensure sufficient contrast between foreground and background tokens in both light and dark modes
-- Test contrast ratios for interactive elements (buttons, links) against their backgrounds
-- **New**: Background images should not interfere with text readability; consider overlay effects for optimal contrast
+- **Enhanced**: Ensure sufficient contrast between foreground and background tokens in both light and dark modes
+- **Enhanced**: Test contrast ratios for interactive elements (buttons, links) against their backgrounds
+- **Enhanced**: Background images should not interfere with text readability; system theme detection helps maintain contrast
+- **Enhanced**: Cards and panels use transparency effects that maintain readability with background images
 
 Typography:
-- Maintain readable font sizes and line heights across themes
-- Prefer system fonts and ensure fallbacks for accessibility
-- **New**: Background images should not obscure text content; test with various background choices
+- **Enhanced**: Maintain readable font sizes and line heights across themes with Inter font family
+- **Enhanced**: Prefer system fonts and ensure fallbacks for accessibility
+- **Enhanced**: Background images should not obscure text content; transparency effects improve readability
 
 Visual design:
-- Provide clear affordances for theme selection (icons, labels)
-- Respect user preferences and system settings
-- **New**: Background selection should be keyboard accessible and screen-reader friendly
-- **New**: Ensure sufficient contrast between background images and UI elements
+- **Enhanced**: Provide clear affordances for theme selection (icons, labels) with system theme support
+- **Enhanced**: Respect user preferences and system settings with automatic switching capability
+- **Enhanced**: Background selection should be keyboard accessible and screen-reader friendly
+- **Enhanced**: Ensure sufficient contrast between background images and UI elements with transparency effects
 
 ## Extending the Theme System
 To add custom color schemes:
-- Define new CSS variables in the appropriate scope (root or .dark)
+- Define new CSS variables in the appropriate scope (root or .dark) with semantic naming
 - Extend Tailwind's color palette in the configuration to reference the new variables
-- Add new theme options in the theme toggle component
+- Add new theme options in the theme toggle component with proper icon support
 - Update the theme store to handle the new mode if needed
 
 To add custom tokens:
-- Add new semantic tokens to the CSS variable definitions
-- Reference the tokens in Tailwind's theme extension
-- Use the tokens in component classes
+- Add new semantic tokens to the CSS variable definitions with proper light/dark mode support
+- Reference the tokens in Tailwind's theme extension for consistent utility classes
+- Use the tokens in component classes for seamless theme switching
 
 To support additional modes:
 - Extend the theme store logic to compute effective theme for new modes
-- Update the UI to expose the new option
+- Update the UI to expose the new option with proper icon and label
+- Implement real-time persistence through backend API endpoints
 
-**New** To extend background management:
-- Add new background image filenames to the backgrounds array in Display.vue
-- Update the availableBackgrounds array in theme.js with dynamic population
-- Consider implementing background upload functionality for custom images
-- Add background preview generation and caching mechanisms
+**New** To extend database-backed theme persistence:
+- Add new database fields to the User model with appropriate constraints
+- Update the user service to handle new preference fields
+- Add new API endpoints for managing additional theme preferences
+- Update the theme store to handle new preference types
+- Implement real-time persistence through backend API calls
 
 **Section sources**
 - [main.css:7-52](file://frontend/src/assets/css/main.css#L7-L52)
@@ -527,25 +571,21 @@ To support additional modes:
 
 ## Troubleshooting Guide
 Common issues and resolutions:
-- Theme does not persist across reloads: verify local storage key and initialization logic
-- **Enhanced**: Theme not applying on initial load: check that `initTheme()` is called before authentication restoration
-- **New**: Default theme not light mode: verify the automatic default setting logic in `initTheme()`
-- **New**: Background not appearing: check that #app-background element exists and `applyBackground()` is called after DOM readiness
-- **New**: Background not persisting: verify localStorage 'background' key and `setBackground()` function
-- **New**: Background not syncing from user profile: check authentication store user data and `onMounted()` synchronization logic
-- **New**: Background images not loading: verify nginx configuration serves files from /backgrounds/ directory
-- Dark mode not applying: check that the "dark" class is present on the root element
-- Colors appear incorrect: confirm CSS variable definitions for both light and dark modes
-- System theme changes not reflected: ensure media query listener is registered and effective theme computation is correct
-- **Enhanced**: Authentication conflicts with theme: verify the initialization sequence in `initApp()`
+- **Enhanced**: Theme does not persist across reloads: verify database-backed persistence through /api/v1/users/me endpoint
+- **Enhanced**: Theme not applying on initial load: check that `initTheme()` applies light mode immediately, then user preferences override
+- **Enhanced**: User preferences not applied: verify authentication flow calls `applyUserPreferences()` with user data
+- **Enhanced**: Real-time persistence failing: check backend API endpoints are reachable and user is authenticated
+- **Enhanced**: Database connection issues: verify database migration has been applied and user model includes theme fields
+- **Enhanced**: System theme not switching: ensure media query listener is registered and theme is set to "system"
+- **Enhanced**: Authentication conflicts with theme: verify the initialization sequence in `initApp()` applies user preferences after authentication
+- **Enhanced**: Background images not loading: verify nginx configuration serves files from /backgrounds/ directory and database has background_image values
 
 **Section sources**
-- [theme.js:5-8](file://frontend/src/stores/theme.js#L5-L8)
-- [theme.js:61-74](file://frontend/src/stores/theme.js#L61-L74)
-- [theme.js:48-59](file://frontend/src/stores/theme.js#L48-L59)
+- [theme.js:59-86](file://frontend/src/stores/theme.js#L59-L86)
+- [auth.js:54-55](file://frontend/src/stores/auth.js#L54-L55)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
 - [main.css:31-51](file://frontend/src/assets/css/main.css#L31-L51)
-- [main.js:162-183](file://frontend/src/main.js#L162-L183)
-- [Display.vue:26-31](file://frontend/src/views/settings/Display.vue#L26-L31)
+- [main.js:162-176](file://frontend/src/main.js#L162-L176)
 
 ## Conclusion
-The enhanced theming system leverages CSS variables, Tailwind utilities, and a centralized theme store to deliver a seamless light/dark theme experience with advanced background image management. The new automatic initialization ensures users see the correct theme immediately upon application startup, even when no user preference is detected. The background management system provides comprehensive functionality including dynamic background application, localStorage persistence, user profile synchronization, and responsive styling integration. It respects user preferences, persists selections, and adapts to system changes. The pre-authentication initialization sequence improves user experience by eliminating theme flicker. The background container system ensures optimal visual presentation across different screen sizes and devices. Components remain theme-aware through Tailwind classes that resolve to semantic tokens, ensuring consistent styling across modes. The system is extensible, allowing new color schemes and tokens with minimal effort, and the enhanced initialization process provides a robust foundation for future theme system enhancements. The addition of background image management creates a more personalized and visually appealing user experience while maintaining performance and accessibility standards.
+The enhanced theming system leverages CSS variables, Tailwind utilities, and a centralized theme store with database-backed persistence to deliver a seamless light/dark/system theme experience. The system has been significantly improved with real-time persistence through backend APIs, immediate user preference application during authentication, and comprehensive database integration. The new architecture ensures that user preferences are immediately applied upon login, overriding default theme settings, and provides reliable persistence through the database layer. The theme toggle component now features real-time persistence, system theme detection with automatic switching, and immediate backend synchronization. The display settings interface provides comprehensive theme and background customization with immediate persistence to user profiles. The authentication flow seamlessly integrates with the theme system, applying user preferences immediately upon successful authentication. The database schema includes comprehensive theme and background support with proper constraints and default values. The system maintains excellent performance through CSS variable usage, efficient theme switching, and immediate user preference application. The enhanced accessibility features ensure proper color contrast, typography, and visual design across all theme modes. The system is highly extensible, allowing new color schemes, tokens, and theme modes with minimal effort, while the database-backed persistence provides a robust foundation for future theme system enhancements. The addition of database-backed persistence creates a more reliable and scalable theming system that respects user preferences, persists selections reliably, and adapts to system changes seamlessly.

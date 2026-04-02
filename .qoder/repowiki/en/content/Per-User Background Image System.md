@@ -24,11 +24,12 @@
 
 ## Update Summary
 **Changes Made**
-- Enhanced glassmorphism styling system with dynamic background image selection
-- Implemented backdrop blur effects and translucent elements for modern UI
-- Added eight new background image options (bg7.webp, bg8.jpg) with advanced CSS techniques
-- Improved theme management with enhanced CSS variable support and visual effects
-- Optimized visual styling with semi-transparent elements and blurred backgrounds
+- Enhanced background management system with integrated theme persistence
+- Added three distinct theme modes (light, dark, system) with automatic switching
+- Implemented database-backed preference storage for both theme and background image
+- Integrated theme persistence with user profile updates
+- Added automatic theme detection based on system preferences
+- Enhanced user experience with synchronized theme and background preferences
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -46,15 +47,15 @@
 
 ## Introduction
 
-The Per-User Background Image System is a feature that allows individual users to customize their dashboard experience by selecting personalized background images from a predefined collection. This system integrates seamlessly with the existing Single Sign-On (SSO) infrastructure, providing users with a tailored visual experience while maintaining security and performance standards.
+The Per-User Background Image System is a comprehensive feature that allows individual users to customize their dashboard experience through personalized background images and theme preferences. This system has been significantly enhanced with integrated theme persistence, supporting three distinct theme modes (light, dark, system) with automatic switching and database-backed preference storage.
 
-The system consists of three main components: a PostgreSQL database storing user preferences, a FastAPI backend serving user management APIs, and a Vue.js frontend enabling user interaction with background selection capabilities. The implementation follows modern web development practices with proper authentication, authorization, and responsive design principles.
+The system consists of three main components: a PostgreSQL database storing user preferences, a FastAPI backend serving user management APIs, and a Vue.js frontend enabling user interaction with both background selection and theme management capabilities. The implementation follows modern web development practices with proper authentication, authorization, and responsive design principles.
 
-**Updated** Enhanced with new background images (bg7.webp, bg8.jpg) and sophisticated glassmorphism effects featuring backdrop blur, translucent elements, and advanced CSS techniques for modern visual styling.
+**Updated** Enhanced with integrated theme persistence system that automatically saves user theme preferences to the database, supports three theme modes with automatic system detection, and provides seamless synchronization between theme and background image preferences.
 
 ## System Architecture
 
-The Per-User Background Image System follows a client-server architecture with clear separation of concerns between frontend presentation, backend business logic, and database persistence.
+The Per-User Background Image System follows a client-server architecture with clear separation of concerns between frontend presentation, backend business logic, and database persistence. The system now includes comprehensive theme management alongside background image functionality.
 
 ```mermaid
 graph TB
@@ -65,6 +66,8 @@ UI[Vue Components]
 CSS[Enhanced CSS Styling]
 Card[Card Components]
 CardContent[Card Content Components]
+ThemeStore[Theme Store]
+AuthStore[Auth Store]
 end
 subgraph "Backend Layer"
 API[FastAPI Server]
@@ -91,6 +94,9 @@ CSS --> FE
 CSS --> Store
 Card --> UI
 CardContent --> UI
+ThemeStore --> AuthStore
+ThemeStore --> UI
+AuthStore --> API
 ```
 
 **Diagram sources**
@@ -99,12 +105,14 @@ CardContent --> UI
 - [nginx.conf:1-20](file://frontend/nginx.conf#L1-20)
 - [Card.vue:1-14](file://frontend/src/components/ui/Card.vue#L1-14)
 - [CardContent.vue:1-14](file://frontend/src/components/ui/CardContent.vue#L1-14)
+- [theme.js:1-105](file://frontend/src/stores/theme.js#L1-105)
+- [auth.js:1-202](file://frontend/src/stores/auth.js#L1-202)
 
-The architecture ensures scalability, maintainability, and security through proper separation of concerns and standardized communication protocols.
+The architecture ensures scalability, maintainability, and security through proper separation of concerns and standardized communication protocols, now including comprehensive theme management capabilities.
 
 ## Database Schema Design
 
-The database schema extends the existing User model to include background image preferences. The design maintains backward compatibility while adding the new functionality.
+The database schema has been enhanced to support both background image preferences and theme persistence. The design maintains backward compatibility while adding comprehensive user customization capabilities.
 
 ```mermaid
 erDiagram
@@ -117,6 +125,7 @@ string hashed_password
 string role
 string avatar_url
 string background_image
+string theme
 boolean is_active
 timestamp created_at
 timestamp updated_at
@@ -135,19 +144,19 @@ USERS ||--o{ REFRESH_TOKENS : has
 - [user.py:7-25](file://backend/app/models/user.py#L7-L25)
 - [002_add_background_image_to_users.py:21-26](file://backend/alembic/versions/002_add_background_image_to_users.py#L21-L26)
 
-The schema modification adds a `background_image` column to the users table, allowing users to store their preferred background image filename. The column supports null values, enabling users to opt-out of background customization.
+The schema modification adds both `background_image` and `theme` columns to the users table, allowing users to store their preferred background image filename and theme preference. The theme column defaults to 'light' and supports 'dark' and 'system' modes, with automatic system theme detection.
 
 **Section sources**
-- [user.py:16-17](file://backend/app/models/user.py#L16-L17)
+- [user.py:16-18](file://backend/app/models/user.py#L16-L18)
 - [002_add_background_image_to_users.py:21-26](file://backend/alembic/versions/002_add_background_image_to_users.py#L21-L26)
 
 ## Backend Implementation
 
-The backend implementation provides comprehensive user management capabilities with specialized endpoints for background image management.
+The backend implementation provides comprehensive user management capabilities with specialized endpoints for both background image and theme management, ensuring secure and efficient operations.
 
-### User Model Enhancement
+### Enhanced User Model
 
-The User model includes the `background_image` field alongside existing user attributes, supporting both individual user customization and system-wide themes.
+The User model now includes both `background_image` and `theme` fields alongside existing user attributes, supporting comprehensive user customization preferences.
 
 ```mermaid
 classDiagram
@@ -160,6 +169,7 @@ class User {
 +string role
 +string avatar_url
 +string background_image
++string theme
 +boolean is_active
 +datetime created_at
 +datetime updated_at
@@ -180,6 +190,7 @@ class UserUpdate {
 +string password
 +string avatar_url
 +string background_image
++string theme
 }
 class UserResponse {
 +integer id
@@ -189,6 +200,7 @@ class UserResponse {
 +string role
 +string avatar_url
 +string background_image
++string theme
 +boolean is_active
 +datetime created_at
 +datetime updated_at
@@ -202,9 +214,9 @@ User <|-- UserResponse
 - [user.py:7-39](file://backend/app/models/user.py#L7-L39)
 - [user.py:6-37](file://backend/app/schemas/user.py#L6-L37)
 
-### API Endpoint Implementation
+### Unified Profile Management Endpoint
 
-The backend exposes dedicated endpoints for user background management, ensuring secure and efficient operations.
+The backend now provides a unified endpoint for managing all user display preferences, including both theme and background image settings.
 
 ```mermaid
 sequenceDiagram
@@ -212,18 +224,18 @@ participant Client as "Client Application"
 participant API as "Users API"
 participant Service as "User Service"
 participant DB as "Database"
-Client->>API : PUT /api/v1/users/me/background
+Client->>API : PUT /api/v1/users/me
 API->>API : Validate Authentication
-API->>Service : update_user(background_image)
-Service->>DB : UPDATE users SET background_image = ?
+API->>Service : update_user(theme, background_image)
+Service->>DB : UPDATE users SET theme = ?, background_image = ?
 DB-->>Service : Success
 Service-->>API : Updated User
-API-->>Client : UserResponse with background_image
-Note over Client,DB : Background image preference persisted
+API-->>Client : UserResponse with theme and background_image
+Note over Client,DB : Both theme and background preferences persisted
 ```
 
 **Diagram sources**
-- [users.py:39-47](file://backend/app/api/v1/endpoints/users.py#L39-L47)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
 - [user_service.py:46-58](file://backend/app/services/user_service.py#L46-L58)
 
 **Section sources**
@@ -232,11 +244,11 @@ Note over Client,DB : Background image preference persisted
 
 ## Frontend Implementation
 
-The frontend provides an intuitive interface for users to select and manage their background preferences, integrating seamlessly with the existing theme system.
+The frontend provides an intuitive interface for users to select and manage both background preferences and theme settings, with seamless integration between the two systems.
 
-### Background Selection Interface
+### Enhanced Display Settings Interface
 
-The Display.vue component offers a comprehensive background selection interface with real-time preview and validation capabilities.
+The Display.vue component now offers comprehensive theme management alongside background selection, with real-time preview and validation capabilities.
 
 ```mermaid
 flowchart TD
@@ -253,7 +265,10 @@ SendRequest --> UpdateUI["Update Local State"]
 UpdateUI --> SaveSuccess{"Save Successful?"}
 SaveSuccess --> |Yes| ShowSuccess["Show Success Message"]
 SaveSuccess --> |No| ShowError
-ShowSuccess --> End([Operation Complete])
+ShowSuccess --> ThemeSelection["User Selects Theme"]
+ThemeSelection --> SaveTheme["Save Theme Preference"]
+SaveTheme --> UpdateAuth["Update Auth Store"]
+UpdateAuth --> End([Operation Complete])
 ShowError --> End
 ```
 
@@ -261,9 +276,9 @@ ShowError --> End
 - [Display.vue:33-70](file://frontend/src/views/settings/Display.vue#L33-L70)
 - [theme.js:29-59](file://frontend/src/stores/theme.js#L29-L59)
 
-### Theme Management Integration
+### Integrated Theme Management System
 
-The theme store manages both color themes and background images, providing a unified approach to user customization.
+The theme store now manages both color themes and background images with automatic persistence to user profiles, providing a unified approach to user customization.
 
 ```mermaid
 classDiagram
@@ -280,6 +295,7 @@ class ThemeStore {
 +applyTheme() void
 +applyBackground() void
 +initTheme() void
++applyUserPreferences(user) void
 }
 class AuthStore {
 +object user
@@ -303,47 +319,47 @@ ThemeStore --> AuthStore : "applies user preferences"
 
 ## API Endpoints
 
-The system provides RESTful endpoints for comprehensive user background management functionality.
+The system provides RESTful endpoints for comprehensive user background and theme management functionality, with unified preference management.
 
-### Background Management Endpoints
+### Enhanced Background and Theme Management Endpoints
 
 | Endpoint | Method | Description | Authentication | Response |
 |----------|--------|-------------|----------------|----------|
 | `/api/v1/users/me/background` | PUT | Update current user's background image | User | UserResponse |
 | `/api/v1/users/me/backgrounds-list` | GET | Get available background images | User | Array of filenames |
 | `/api/v1/users/me/avatar` | PUT | Update current user's avatar | User | UserResponse |
+| `/api/v1/users/me` | PUT | Update user profile (theme, background, etc.) | User | UserResponse |
 
-### Background Discovery Mechanism
+### Unified Profile Management
 
-The background discovery endpoint intelligently locates available images through multiple sources, ensuring compatibility across different deployment environments.
+The unified profile management endpoint allows users to update multiple preferences simultaneously, including theme and background image settings.
 
 ```mermaid
 flowchart TD
-Request[/GET /api/v1/users/me/backgrounds-list/] --> CheckNginx["Check /usr/share/nginx/html/backgrounds"]
-CheckNginx --> NginxExists{"Directory Exists?"}
-NginxExists --> |Yes| ScanNginx["Scan Nginx Static Directory"]
-NginxExists --> |No| CheckLocal["Check Local Development Path"]
-CheckLocal --> LocalExists{"Directory Exists?"}
-LocalExists --> |Yes| ScanLocal["Scan Local Public Directory"]
-LocalExists --> |No| ReturnEmpty["Return Empty Array"]
-ScanNginx --> FilterFiles["Filter by Allowed Extensions"]
-ScanLocal --> FilterFiles
-FilterFiles --> ReturnList["Return Background List"]
+Request[/PUT /api/v1/users/me/] --> ValidateFields["Validate Allowed Fields"]
+ValidateFields --> ExtractData["Extract theme and background_image"]
+ExtractData --> UpdateUser["Call user_service.update_user"]
+UpdateUser --> PersistDB["Persist to Database"]
+PersistDB --> ReturnUser["Return Updated User"]
+ReturnUser --> UpdateFrontend["Update Frontend State"]
+UpdateFrontend --> ApplyTheme["Apply Theme Changes"]
+ApplyTheme --> ApplyBackground["Apply Background Changes"]
+ApplyBackground --> Complete["Operation Complete"]
 ```
 
 **Diagram sources**
-- [users.py:50-71](file://backend/app/api/v1/endpoints/users.py#L50-L71)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
 
 **Section sources**
 - [users.py:39-71](file://backend/app/api/v1/endpoints/users.py#L39-L71)
 
 ## Security Model
 
-The system implements robust security measures to protect user data and prevent unauthorized access to background management functionality.
+The system implements robust security measures to protect user data and prevent unauthorized access to background management and theme functionality.
 
-### Authentication and Authorization
+### Enhanced Authentication and Authorization
 
-The security model leverages JWT tokens with role-based access control to ensure only authorized users can modify their background preferences.
+The security model leverages JWT tokens with role-based access control to ensure only authorized users can modify their background preferences and theme settings.
 
 ```mermaid
 sequenceDiagram
@@ -368,7 +384,7 @@ Note over Client,DB : User authenticated with role-based permissions
 
 ### Role-Based Access Control
 
-The system implements hierarchical permissions where superusers have elevated privileges while regular users can only manage their own preferences.
+The system implements hierarchical permissions where superusers have elevated privileges while regular users can only manage their own preferences, including both background images and theme settings.
 
 **Section sources**
 - [security.py:82-110](file://backend/app/core/security.py#L82-L110)
@@ -376,11 +392,11 @@ The system implements hierarchical permissions where superusers have elevated pr
 
 ## Deployment Configuration
 
-The system supports flexible deployment configurations through Docker containers and Nginx reverse proxy setup.
+The system supports flexible deployment configurations through Docker containers and Nginx reverse proxy setup, with enhanced static asset serving for background images.
 
 ### Container Orchestration
 
-The docker-compose configuration orchestrates three interconnected services: PostgreSQL database, FastAPI backend, and Vue.js frontend with Nginx serving static assets.
+The docker-compose configuration orchestrates three interconnected services: PostgreSQL database, FastAPI backend, and Vue.js frontend with Nginx serving static assets including background images.
 
 ```mermaid
 graph LR
@@ -401,9 +417,9 @@ Backend --> DB
 - [docker-compose.yml:1-53](file://docker-compose.yml#L1-L53)
 - [Dockerfile:1-13](file://frontend/Dockerfile#L1-L13)
 
-### Static Asset Serving
+### Enhanced Static Asset Serving
 
-Nginx serves static background images efficiently, reducing load on the backend server and improving response times for client requests.
+Nginx serves static background images efficiently, reducing load on the backend server and improving response times for client requests, now including comprehensive theme and background image support.
 
 **Section sources**
 - [docker-compose.yml:1-53](file://docker-compose.yml#L1-L53)
@@ -412,9 +428,9 @@ Nginx serves static background images efficiently, reducing load on the backend 
 
 ## User Experience Flow
 
-The user experience follows a streamlined process for discovering, selecting, and applying background preferences.
+The user experience follows a streamlined process for discovering, selecting, and applying both background preferences and theme settings.
 
-### Background Selection Workflow
+### Enhanced Background and Theme Selection Workflow
 
 ```mermaid
 stateDiagram-v2
@@ -424,23 +440,26 @@ CheckingPreferences --> DisplayGrid : Backgrounds Available
 CheckingPreferences --> DisplayGrid : Use Defaults
 DisplayGrid --> Previewing : Hover Over Image
 Previewing --> Selected : Click Image
-Selected --> Saving : Apply Changes
+Selected --> Saving : Apply Background
 Saving --> Success : Request Successful
 Saving --> Error : Request Failed
-Success --> DisplayGrid : Update UI
+Success --> ThemeSelection : Update Theme
+ThemeSelection --> SaveTheme : Apply Theme Preference
+SaveTheme --> UpdateAuth : Update Auth Store
+UpdateAuth --> Complete : Apply Theme Changes
 Error --> DisplayGrid : Show Error Message
 DisplayGrid --> [*] : Complete
 ```
 
-The workflow ensures smooth user interaction with immediate feedback and error handling throughout the selection process.
+The workflow ensures smooth user interaction with immediate feedback and error handling throughout the selection process, now including comprehensive theme management capabilities.
 
 ## Visual Styling Enhancements
 
-**Updated** The system now features sophisticated glassmorphism styling with dynamic background image integration, backdrop blur effects, and translucent UI elements.
+The system now features sophisticated visual styling with integrated theme management and dynamic background image application, creating a cohesive user experience.
 
-### Enhanced Background Application System
+### Enhanced Theme and Background Integration System
 
-The theme management system now applies advanced visual effects when background images are active, creating a modern glass-like appearance with backdrop blur and translucency.
+The theme management system now applies advanced visual effects when background images are active, creating a modern glass-like appearance with backdrop blur and translucent UI elements, while maintaining theme consistency.
 
 ```mermaid
 flowchart TD
@@ -462,9 +481,9 @@ ResetStyles --> EffectComplete
 - [theme.js:44-61](file://frontend/src/stores/theme.js#L44-L61)
 - [main.css:78-87](file://frontend/src/assets/css/main.css#L78-L87)
 
-### CSS Variable Integration with Glassmorphism
+### Advanced CSS Variable Integration with Theme Persistence
 
-The system utilizes CSS custom properties for dynamic theming, enabling seamless transitions between light, dark, and system themes with advanced backdrop filter effects.
+The system utilizes CSS custom properties for dynamic theming, enabling seamless transitions between light, dark, and system themes with advanced backdrop filter effects, now with persistent theme storage.
 
 ```mermaid
 classDiagram
@@ -498,6 +517,7 @@ class GlassmorphismEffects {
 +backdrop-filter : blur(12px)
 +background : rgba(255, 255, 255, 0.18)
 +border : 1px solid rgba(255, 255, 255, 0.2)
++box-shadow : 0 8px 32px rgba(31, 38, 135, 0.1)
 }
 CSSVariables <|-- DarkTheme
 CSSVariables <|-- GlassmorphismEffects
@@ -506,42 +526,47 @@ CSSVariables <|-- GlassmorphismEffects
 **Diagram sources**
 - [main.css:8-51](file://frontend/src/assets/css/main.css#L8-L51)
 
-### Advanced Glassmorphism Styling System
+### Comprehensive Theme Management with Automatic Persistence
 
-The system implements sophisticated visual effects that transform the user interface when background images are applied, creating a modern glass-like appearance.
+The system implements sophisticated visual effects that transform the user interface when background images are applied, creating a modern glass-like appearance, while maintaining theme consistency and automatic persistence.
 
 ```mermaid
 classDiagram
-class GlassmorphismCard {
-+background : rgba(255, 255, 255, 0.18) !important
-+backdrop-filter : blur(12px)
-+border : 1px solid rgba(255, 255, 255, 0.2)
-+box-shadow : 0 8px 32px rgba(31, 38, 135, 0.1)
+class ThemeManagement {
++string theme
++string background
++string systemTheme
++effectiveTheme computed
++isDark computed
++hasBackground computed
++setTheme(newTheme) void
++setBackground(filename) void
++applyTheme() void
++applyBackground() void
++applyUserPreferences(user) void
 }
-class TranslucentElements {
-+html.has-bg .bg-card
-+html.has-bg .bg-background
-+html.has-bg .border-b
-+html.has-bg .border-r
+class PersistentPreferences {
++theme stored in database
++background_image stored in database
++automatic sync on login
++real-time updates
 }
-class ModernUIComponents {
-+Card Component with glass effect
-+Card Content with transparency
-+Button with subtle opacity
-+Navigation with backdrop blur
+class AutomaticDetection {
++systemTheme detected
++automatic switching
++user preference override
 }
-GlassmorphismCard --> TranslucentElements
-TranslucentElements --> ModernUIComponents
+ThemeManagement --> PersistentPreferences
+ThemeManagement --> AutomaticDetection
 ```
 
 **Diagram sources**
-- [main.css:78-87](file://frontend/src/assets/css/main.css#L78-L87)
-- [Card.vue:1-14](file://frontend/src/components/ui/Card.vue#L1-14)
-- [CardContent.vue:1-14](file://frontend/src/components/ui/CardContent.vue#L1-14)
+- [theme.js:4-90](file://frontend/src/stores/theme.js#L4-L90)
+- [auth.js:5-204](file://frontend/src/stores/auth.js#L5-L204)
 
-### New Background Image Support with Advanced Formats
+### Enhanced Background Image Support with Advanced Formats
 
-The system now supports additional image formats and enhanced visual quality with the addition of new background images, including modern formats optimized for glassmorphism effects.
+The system now supports additional image formats and enhanced visual quality with the addition of new background images, including modern formats optimized for glassmorphism effects, while maintaining comprehensive theme management capabilities.
 
 **Section sources**
 - [Display.vue:17-26](file://frontend/src/views/settings/Display.vue#L17-L26)
@@ -550,12 +575,12 @@ The system now supports additional image formats and enhanced visual quality wit
 
 ## Troubleshooting Guide
 
-Common issues and their solutions for the Per-User Background Image System.
+Common issues and their solutions for the enhanced Per-User Background and Theme Management System.
 
 ### Database Migration Issues
 
-**Problem**: Background image column missing from users table
-**Solution**: Run Alembic migration to add the column
+**Problem**: Background image and theme columns missing from users table
+**Solution**: Run Alembic migration to add both columns
 ```bash
 alembic upgrade head
 ```
@@ -577,15 +602,18 @@ frontend/public/backgrounds/
 **Problem**: Images load but don't appear in UI
 **Solution**: Check browser console for CORS errors and verify nginx configuration
 
-**Updated** New background images (bg7.webp, bg8.jpg) may require verification of file extensions and format support. Glassmorphism effects require proper CSS variable definitions and backdrop filter support.
+**Updated** New background images (bg7.webp, bg8.jpg) may require verification of file extensions and format support. Glassmorphism effects require proper CSS variable definitions and backdrop filter support. Theme persistence requires proper database column configuration.
 
-### Authentication Problems
+### Authentication and Theme Persistence Problems
 
-**Problem**: Users cannot save background preferences
+**Problem**: Users cannot save background preferences or theme settings
 **Solution**: Verify JWT token validity and user authentication status
 
-**Problem**: Background preferences not persisting
-**Solution**: Check database write permissions and connection status
+**Problem**: Background preferences or theme settings not persisting
+**Solution**: Check database write permissions and connection status, verify theme column exists
+
+**Problem**: Theme settings revert after page reload
+**Solution**: Ensure theme persistence endpoint is working and database column is properly configured
 
 ### Visual Styling Issues
 
@@ -598,21 +626,24 @@ frontend/public/backgrounds/
 **Problem**: Translucent elements not visible
 **Solution**: Check that CSS selectors `.bg-card`, `.bg-background`, `.border-b`, `.border-r` are properly targeting elements under `html.has-bg` context
 
+**Problem**: Theme switching not working
+**Solution**: Verify theme store is properly initialized, system theme detection is working, and theme persistence is functioning correctly
+
 ## Conclusion
 
-The Per-User Background Image System successfully integrates customizable visual preferences into the existing SSO infrastructure with sophisticated glassmorphism styling. The implementation demonstrates excellent separation of concerns, robust security practices, and cutting-edge user experience design principles.
+The enhanced Per-User Background and Theme Management System successfully integrates comprehensive customization capabilities into the existing SSO infrastructure with sophisticated theme management and persistent preferences. The implementation demonstrates excellent separation of concerns, robust security practices, and cutting-edge user experience design principles.
 
 Key achievements include:
 
-- **Scalable Architecture**: Clean separation between frontend, backend, and database layers
-- **Security-First Design**: Comprehensive authentication and authorization mechanisms
+- **Comprehensive Architecture**: Clean separation between frontend, backend, and database layers with integrated theme management
+- **Security-First Design**: Comprehensive authentication and authorization mechanisms with role-based access control
 - **Advanced Visual Experience**: Sophisticated glassmorphism effects with backdrop blur and translucent elements
+- **Persistent Theme Management**: Database-backed theme preferences with automatic system detection and switching
 - **Modern Image Support**: Expanded background image formats including webp and jpg with optimized quality
-- **Enhanced Theme Management**: Dynamic CSS variable support with advanced visual effects
-- **User Experience**: Intuitive interface with real-time feedback and validation
-- **Deployment Flexibility**: Support for various deployment scenarios through Docker containers
-- **Performance Optimization**: Efficient static asset serving through Nginx proxy
+- **Unified User Experience**: Seamless integration between theme and background management with real-time persistence
+- **Enhanced Deployment Flexibility**: Support for various deployment scenarios through Docker containers with comprehensive static asset serving
+- **Performance Optimization**: Efficient static asset serving through Nginx proxy with theme-aware caching
 
-The system provides a solid foundation for future enhancements while maintaining backward compatibility and system stability. The modular design allows for easy extension of background management features and integration with additional customization options.
+The system provides a solid foundation for future enhancements while maintaining backward compatibility and system stability. The modular design allows for easy extension of customization features and integration with additional personalization options, now with comprehensive theme persistence and automatic system theme detection.
 
-**Updated** Recent enhancements include expanded background image support with high-quality formats (bg7.webp, bg8.jpg), sophisticated glassmorphism styling with backdrop blur effects, translucent UI elements, and advanced CSS techniques for modern visual experiences when background images are applied.
+**Updated** Recent enhancements include comprehensive theme management system with three distinct theme modes (light, dark, system), automatic theme persistence to database, integrated theme and background management, system theme detection, and seamless user preference synchronization across sessions.

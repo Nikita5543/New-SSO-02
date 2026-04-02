@@ -14,17 +14,19 @@
 - [002_add_background_image_to_users.py](file://backend/alembic/versions/002_add_background_image_to_users.py)
 - [Avatar.vue](file://frontend/src/components/ui/Avatar.vue)
 - [Profile.vue](file://frontend/src/views/settings/Profile.vue)
+- [Display.vue](file://frontend/src/views/settings/Display.vue)
+- [theme.js](file://frontend/src/stores/theme.js)
 - [auth.js](file://frontend/src/stores/auth.js)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added new user background management endpoints: PUT /api/v1/users/me/background and GET /api/v1/users/me/backgrounds-list
-- Enhanced UserResponse schema with background_image field
-- Updated UserUpdate schema with background_image field
-- Added background_image field to User model with database migration support
-- Integrated background image retrieval from both nginx static directory and local development paths
-- Enhanced user profile management with background customization options
+- Added new unified PUT /api/v1/users/me endpoint for comprehensive user profile updates
+- Enhanced UserUpdate schema with theme field for color theme preferences
+- Added theme field to User model with database support
+- Updated UserResponse schema with theme field for complete profile representation
+- Enhanced existing user management capabilities with unified update functionality
+- Integrated theme preferences with frontend theme store and display settings
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -38,17 +40,17 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document provides comprehensive API documentation for user management endpoints within the NOC Vision platform. It covers HTTP methods, URL patterns, request/response schemas, authorization requirements, role-based access control, and practical usage examples for user CRUD operations, bulk operations, user search/filtering, avatar management, and background management functionality. The documentation focuses on the `/api/v1/users/` endpoint group and related authentication endpoints that support user lifecycle management, including new avatar management capabilities and background customization for enhanced user profile personalization.
+This document provides comprehensive API documentation for user management endpoints within the NOC Vision platform. It covers HTTP methods, URL patterns, request/response schemas, authorization requirements, role-based access control, and practical usage examples for user CRUD operations, bulk operations, user search/filtering, avatar management, background management, and theme preferences functionality. The documentation focuses on the `/api/v1/users/` endpoint group and related authentication endpoints that support user lifecycle management, including new unified profile update capabilities and comprehensive user customization options.
 
 ## Project Structure
 The user management functionality is organized under the FastAPI application with modular routing and schema-driven validation. The key components include:
-- Endpoint definitions for user operations, permission management, avatar management, and background management
-- Pydantic models for request/response schemas with avatar and background support
-- SQLAlchemy models for persistence with avatar URL and background image storage
+- Endpoint definitions for user operations, permission management, avatar management, background management, and unified profile updates
+- Pydantic models for request/response schemas with avatar, background, and theme support
+- SQLAlchemy models for persistence with avatar URL, background image, and theme storage
 - Security utilities for authentication, authorization, and plugin access control
 - Router configuration for API versioning
-- Frontend integration for avatar selection, upload, and background customization
-- Database migration support for background image field
+- Frontend integration for avatar selection, upload, background customization, and theme preferences
+- Database migration support for background image and theme fields
 
 ```mermaid
 graph TB
@@ -65,13 +67,18 @@ C --> J["Common Schemas<br/>schemas/common.py"]
 K["Security Utilities<br/>core/security.py"] --> C
 K --> D
 L["Frontend Avatar Component<br/>Avatar.vue"] --> M["Profile View<br/>Profile.vue"]
-N["Auth Store<br/>auth.js"] --> O["Avatar Management<br/>users/me/avatar"]
-P["Background Image Migration<br/>002_add_background_image_to_users.py"] --> G
-Q["Background Management<br/>users/me/background"] --> C
-R["Background List<br/>users/me/backgrounds-list"] --> C
+N["Frontend Theme Store<br/>theme.js"] --> O["Display Settings<br/>Display.vue"]
+P["Theme Preferences<br/>users/me"] --> C
+Q["Background Image Migration<br/>002_add_background_image_to_users.py"] --> G
+R["Background Management<br/>users/me/background"] --> C
+S["Background List<br/>users/me/backgrounds-list"] --> C
+T["Unified Profile Update<br/>users/me"] --> C
 M --> O
-M --> Q
-M --> R
+O --> P
+O --> Q
+O --> R
+O --> S
+P --> T
 ```
 
 **Diagram sources**
@@ -81,6 +88,8 @@ M --> R
 - [auth.py:17](file://backend/app/api/v1/endpoints/auth.py#L17)
 - [Avatar.vue:1-58](file://frontend/src/components/ui/Avatar.vue#L1-L58)
 - [Profile.vue:1-199](file://frontend/src/views/settings/Profile.vue#L1-L199)
+- [Display.vue:1-202](file://frontend/src/views/settings/Display.vue#L1-L202)
+- [theme.js:1-104](file://frontend/src/stores/theme.js#L1-L104)
 - [auth.js:1-198](file://frontend/src/stores/auth.js#L1-L198)
 - [002_add_background_image_to_users.py:21-22](file://backend/alembic/versions/002_add_background_image_to_users.py#L21-L22)
 
@@ -105,14 +114,15 @@ This section outlines the essential building blocks for user management operatio
 - Timestamp tracking for created/updated records
 - **Updated**: Avatar URL field with system avatar support (system:1, system:2, system:3)
 - **Updated**: Background image field for user desktop customization
+- **Updated**: Theme field for color theme preferences (light, dark, system)
 
 ### Request/Response Schemas
-- User creation with username, email, password, full name, role, optional avatar URL, and optional background image
-- User updates with selective field updates including avatar URL and background image
-- User response with comprehensive profile information including avatar URL and background image
+- User creation with username, email, password, full name, role, optional avatar URL, optional background image, and optional theme
+- User updates with selective field updates including avatar URL, background image, and theme preferences
+- User response with comprehensive profile information including avatar URL, background image, and theme preferences
 - Status responses for deletion operations
 - Permission response with role-based access information
-- **Updated**: Avatar URL and background image fields in all schemas for profile customization
+- **Updated**: Avatar URL, background image, and theme fields in all schemas for comprehensive profile customization
 
 **Section sources**
 - [security.py:13](file://backend/app/core/security.py#L13)
@@ -134,7 +144,7 @@ Client->>API : HTTP Request
 API->>Endpoint : Route to Users Endpoint
 Endpoint->>Security : Validate JWT Token & Check Permissions
 Security-->>Endpoint : Authorized User Context
-Endpoint->>Service : Business Logic Call (including avatar/background update)
+Endpoint->>Service : Business Logic Call (including unified profile update)
 Service->>DB : Database Operation
 DB-->>Service : Data Result
 Service-->>Endpoint : Processed Data
@@ -152,12 +162,28 @@ The architecture enforces:
 - Plugin access control for different system sections
 - Schema validation at the endpoint level
 - Database abstraction through SQLAlchemy ORM
-- **Updated**: Avatar URL and background image validation and storage capabilities
+- **Updated**: Unified profile update functionality with comprehensive field validation
+- **Updated**: Theme preferences integration with frontend theme store
 
 ## Detailed Component Analysis
 
 ### Endpoint Definitions and URL Patterns
-The user management endpoints follow RESTful conventions with the base path `/api/v1/users` and include new permission endpoints, avatar management functionality, and background management endpoints:
+The user management endpoints follow RESTful conventions with the base path `/api/v1/users` and include new permission endpoints, avatar management functionality, background management endpoints, and unified profile update capabilities:
+
+#### PUT /api/v1/users/me
+- **Purpose**: Unified profile update for current user (theme, background, avatar, email, full name, password)
+- **Method**: PUT
+- **Request Body**: UserUpdate schema with allowed fields: theme, background_image, full_name, email, avatar_url, password
+- **Response**: UserResponse object with updated profile information
+- **Authorization**: Requires valid JWT token (any authenticated user)
+- **Validation**: Only allowed fields are processed; password updates trigger re-hashing
+- **Response Fields**:
+  - `theme`: Color theme preference (light, dark, system)
+  - `background_image`: Background image filename or null
+  - `avatar_url`: Updated avatar URL or system avatar identifier
+  - `email`: Updated email address
+  - `full_name`: Updated full name
+  - `password`: Hashed password (only when provided)
 
 #### PUT /api/v1/users/me/avatar
 - **Purpose**: Update the current user's avatar
@@ -175,9 +201,9 @@ The user management endpoints follow RESTful conventions with the base path `/ap
 - **Request Body**: `{ background_image: string }`
 - **Response**: UserResponse object with updated background image
 - **Authorization**: Requires valid JWT token (any authenticated user)
-- **Validation**: Background image must be a valid filename from the available backgrounds list
+- **Validation**: Background image must be a valid filename from the available backgrounds list or null to clear
 - **Response Fields**:
-  - `background_image`: Updated background image filename
+  - `background_image`: Updated background image filename or null
 
 #### GET /api/v1/users/me/backgrounds-list
 - **Purpose**: Retrieve list of available background images
@@ -259,6 +285,7 @@ The user management endpoints follow RESTful conventions with the base path `/ap
 - [users.py:27-35](file://backend/app/api/v1/endpoints/users.py#L27-L35)
 - [users.py:38-49](file://backend/app/api/v1/endpoints/users.py#L38-L49)
 - [users.py:49-72](file://backend/app/api/v1/endpoints/users.py#L49-L72)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
 - [users.py:15-22](file://backend/app/api/v1/endpoints/users.py#L15-L22)
 - [users.py:74-86](file://backend/app/api/v1/endpoints/users.py#L74-L86)
 - [users.py:88-97](file://backend/app/api/v1/endpoints/users.py#L88-L97)
@@ -276,8 +303,6 @@ Fields for user registration and creation:
 - `password`: String (required)
 - `full_name`: String (optional)
 - `role`: String (default: "user")
-- `avatar_url`: String (optional)
-- `background_image`: String (optional)
 
 Validation rules:
 - Username must be unique
@@ -285,8 +310,6 @@ Validation rules:
 - Password must meet security requirements
 - Role must be either "superuser", "admin", or "user"
 - Superusers can only be created by other superusers
-- **Updated**: Avatar URL validation for custom URLs or system avatar formats
-- **Updated**: Background image validation for valid filenames
 
 #### UserUpdate Schema
 Fields for partial user updates:
@@ -297,12 +320,14 @@ Fields for partial user updates:
 - `password`: String (optional)
 - `avatar_url`: String (optional)
 - `background_image`: String (optional)
+- `theme`: String (optional, default: "light")
 
 Behavior:
 - Only provided fields are updated
 - Password updates trigger re-hashing
 - Role changes require superuser privileges
 - Cannot assign superuser role without superuser privileges
+- **Updated**: Theme field for color theme preferences (light, dark, system)
 - **Updated**: Avatar URL updates for profile customization
 - **Updated**: Background image updates for desktop customization
 
@@ -315,6 +340,7 @@ Complete user profile representation:
 - `role`: String ("superuser", "admin", or "user")
 - `avatar_url`: String (nullable)
 - `background_image`: String (nullable)
+- `theme`: String (nullable, default: "light")
 - `is_active`: Boolean
 - `created_at`: DateTime (nullable)
 - `updated_at`: DateTime (nullable)
@@ -339,6 +365,51 @@ Available background images list:
 - [user.py:14-19](file://backend/app/schemas/user.py#L14-L19)
 - [user.py:22-32](file://backend/app/schemas/user.py#L22-L32)
 - [common.py:5-7](file://backend/app/schemas/common.py#L5-L7)
+
+### Unified Profile Update Functionality
+
+#### PUT /api/v1/users/me Endpoint
+The new unified profile update endpoint provides comprehensive user profile management in a single operation:
+
+##### Allowed Fields
+The endpoint processes only the following allowed fields:
+- `theme`: Color theme preference (light, dark, system)
+- `background_image`: Background image filename or null to clear
+- `full_name`: User's full name
+- `email`: User's email address
+- `avatar_url`: Avatar URL or system avatar format
+- `password`: New password (hashed automatically)
+
+##### Field Processing Logic
+```mermaid
+flowchart TD
+Start([Profile Update Request]) --> Extract["Extract UserUpdate Data"]
+Extract --> Filter["Filter Allowed Fields"]
+Filter --> CheckPassword{"Password Provided?"}
+CheckPassword --> |Yes| Hash["Hash New Password"]
+CheckPassword --> |No| Skip["Skip Password Update"]
+Hash --> SetFields["Set Allowed Fields"]
+Skip --> SetFields
+SetFields --> ClearNulls["Clear Null Fields"]
+ClearNulls --> UpdateDB["Update Database"]
+UpdateDB --> Return["Return Updated User"]
+```
+
+**Diagram sources**
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
+- [user_service.py:46-58](file://backend/app/services/user_service.py#L46-L58)
+
+##### Frontend Integration
+The frontend integrates with the unified endpoint through:
+- Theme store synchronization with user profile
+- Background image management with automatic saving
+- Real-time profile updates without page reload
+- Consistent user experience across all profile settings
+
+**Section sources**
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
+- [Display.vue:35-51](file://frontend/src/views/settings/Display.vue#L35-L51)
+- [theme.js:74-86](file://frontend/src/stores/theme.js#L74-L86)
 
 ### Background Management Functionality
 
@@ -411,6 +482,43 @@ The frontend provides comprehensive avatar management:
 - [Profile.vue:18-23](file://frontend/src/views/settings/Profile.vue#L18-L23)
 - [Profile.vue:46-57](file://frontend/src/views/settings/Profile.vue#L46-L57)
 
+### Theme Preferences Management
+
+#### Theme Field Implementation
+The system provides comprehensive theme preferences for user interface customization:
+
+##### Theme Values
+- `light`: Light color scheme
+- `dark`: Dark color scheme  
+- `system`: Follow system color scheme preference
+
+##### Theme Storage
+- Database field: `theme` (String, max 20 characters)
+- Nullable field with default value "light"
+- Stored as string values for easy processing
+
+##### Theme Synchronization
+The theme system synchronizes across:
+- Backend user profile storage
+- Frontend theme store state
+- Real-time UI updates without page reload
+- System theme detection and follow-up
+
+##### Frontend Integration
+The theme store provides:
+- Automatic theme detection based on system preferences
+- Real-time theme switching with immediate UI updates
+- Persistent theme preferences synchronized with user profile
+- Responsive theme application across all components
+
+**Section sources**
+- [user.py:17-18](file://backend/app/models/user.py#L17-L18)
+- [user.py:32-33](file://backend/app/models/user.py#L32-L33)
+- [user.py:21-22](file://backend/app/schemas/user.py#L21-L22)
+- [user.py:34-35](file://backend/app/schemas/user.py#L34-L35)
+- [Display.vue:35-51](file://frontend/src/views/settings/Display.vue#L35-L51)
+- [theme.js:74-86](file://frontend/src/stores/theme.js#L74-L86)
+
 ### Authorization Requirements and Role-Based Access Control
 
 #### Authentication Flow
@@ -423,6 +531,7 @@ All user management endpoints require valid JWT authentication:
 #### Enhanced Role-Based Access Control Matrix
 | Endpoint | Required Role | Additional Restrictions |
 |----------|---------------|------------------------|
+| PUT /users/me | Any authenticated user | N/A |
 | PUT /users/me/avatar | Any authenticated user | N/A |
 | PUT /users/me/background | Any authenticated user | N/A |
 | GET /users/me/backgrounds-list | Any authenticated user | N/A |
@@ -445,11 +554,13 @@ CheckRole --> |Superuser| CheckLastSuperuser{"Last Superuser?"}
 CheckRole --> |Admin| CheckAdmin["Admin Access"]
 CheckRole --> |User| CheckSelf{"Accessing Self?"}
 CheckLastSuperuser --> |Yes| CheckSelf
-CheckLastSuperuser --> |No| CheckAvatar{"Avatar/Background Update?"}
-CheckSelf --> |Yes| CheckAvatar
+CheckLastSuperuser --> |No| CheckUnified{"Unified Update?"}
+CheckSelf --> |Yes| CheckUnified
 CheckSelf --> |No| Forbidden
-CheckAvatar --> |Yes| Proceed["Proceed to Avatar/Background Update"]
-CheckAvatar --> |No| CheckUserOp{"User Operation?"}
+CheckUnified --> |Yes| CheckAllowed{"Allowed Field?"}
+CheckUnified --> |No| CheckUserOp{"User Operation?"}
+CheckAllowed --> |Yes| Proceed["Proceed to Update"]
+CheckAllowed --> |No| Forbidden
 CheckUserOp --> |Yes| CheckPrivileges["Check Privileges"]
 CheckUserOp --> |No| Proceed
 CheckPrivileges --> |Sufficient| Proceed
@@ -516,6 +627,7 @@ Deny --> End
 - Superuser privilege validation for role assignments
 - **Updated**: Avatar URL validation for custom URLs and system avatar formats
 - **Updated**: Background image validation for valid filenames and supported formats
+- **Updated**: Theme validation for allowed values (light, dark, system)
 
 #### Enhanced Security Measures
 - JWT token expiration (configurable)
@@ -527,12 +639,43 @@ Deny --> End
 - Plugin access control enforcement
 - **Updated**: Avatar URL validation and sanitization
 - **Updated**: Background image filename validation and path safety
+- **Updated**: Theme field validation and sanitization
 
 **Section sources**
 - [security.py:16-28](file://backend/app/core/security.py#L16-L28)
 - [user_service.py:46-58](file://backend/app/services/user_service.py#L46-L58)
 
 ### Practical Usage Examples
+
+#### Unified Profile Update Examples
+
+##### Update Theme Preference
+```javascript
+// PUT /api/v1/users/me
+const updateTheme = {
+  theme: "dark"
+};
+```
+
+##### Update Multiple Profile Fields
+```javascript
+// PUT /api/v1/users/me
+const updateProfile = {
+  theme: "system",
+  background_image: "nature_001.jpg",
+  full_name: "John Smith",
+  email: "john.smith@example.com"
+  // password field omitted for partial update
+};
+```
+
+##### Clear Background Preference
+```javascript
+// PUT /api/v1/users/me
+const clearBackground = {
+  background_image: null
+};
+```
 
 #### Avatar Management Examples
 
@@ -637,7 +780,7 @@ Current implementation supports:
 - No built-in filtering capabilities
 
 Future enhancements could include:
-- Query parameters for filtering by role, status, avatar type, background type
+- Query parameters for filtering by role, status, avatar type, background type, theme
 - Sorting options (created_at, username)
 - Advanced search operators
 
@@ -645,6 +788,7 @@ Future enhancements could include:
 - [users.py:27-35](file://backend/app/api/v1/endpoints/users.py#L27-L35)
 - [users.py:38-49](file://backend/app/api/v1/endpoints/users.py#L38-L49)
 - [users.py:49-72](file://backend/app/api/v1/endpoints/users.py#L49-L72)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
 - [users.py:17-18](file://backend/app/api/v1/endpoints/users.py#L17-L18)
 - [users.py:40-47](file://backend/app/api/v1/endpoints/users.py#L40-L47)
 - [users.py:50-71](file://backend/app/api/v1/endpoints/users.py#L50-L71)
@@ -657,28 +801,31 @@ graph TB
 subgraph "API Layer"
 UsersEndpoint["Users Endpoint"]
 AuthEndpoint["Auth Endpoint"]
-end
+UnifiedEndpoint["Unified Profile Update"]
+End
 subgraph "Service Layer"
 UserService["User Service"]
 AuthService["Auth Service"]
-end
+End
 subgraph "Data Layer"
 UserModel["User Model"]
 DB["Database"]
-end
+End
 subgraph "Security Layer"
 SecurityUtils["Security Utilities"]
 JWT["JWT Handler"]
 PluginAccess["Plugin Access Control"]
-end
+End
 subgraph "Frontend Layer"
 AvatarComponent["Avatar Component"]
 ProfileView["Profile View"]
 AuthStore["Auth Store"]
 BackgroundComponent["Background Component"]
-end
+ThemeStore["Theme Store"]
+End
 UsersEndpoint --> UserService
 AuthEndpoint --> AuthService
+UnifiedEndpoint --> UserService
 UserService --> UserModel
 AuthService --> UserModel
 UsersEndpoint --> SecurityUtils
@@ -688,6 +835,7 @@ SecurityUtils --> PluginAccess
 UserModel --> DB
 AvatarComponent --> ProfileView
 BackgroundComponent --> ProfileView
+ThemeStore --> UnifiedEndpoint
 ProfileView --> AuthStore
 ```
 
@@ -698,6 +846,8 @@ ProfileView --> AuthStore
 - [security.py:13](file://backend/app/core/security.py#L13)
 - [Avatar.vue:1-58](file://frontend/src/components/ui/Avatar.vue#L1-L58)
 - [Profile.vue:1-199](file://frontend/src/views/settings/Profile.vue#L1-L199)
+- [Display.vue:1-202](file://frontend/src/views/settings/Display.vue#L1-L202)
+- [theme.js:1-104](file://frontend/src/stores/theme.js#L1-L104)
 - [auth.js:1-198](file://frontend/src/stores/auth.js#L1-L198)
 
 Key dependencies:
@@ -709,6 +859,8 @@ Key dependencies:
 - Enhanced security utilities for role-based access control
 - **Updated**: Frontend avatar component integration
 - **Updated**: Background image management integration
+- **Updated**: Theme preferences store integration
+- **Updated**: Unified profile update endpoint integration
 
 **Section sources**
 - [users.py:1-10](file://backend/app/api/v1/endpoints/users.py#L1-L10)
@@ -723,7 +875,9 @@ Key dependencies:
 - Superuser count checks: Efficient database queries prevent orphan superuser scenarios
 - **Updated**: Avatar URL storage optimization for minimal database overhead
 - **Updated**: Background image filename storage optimization for minimal database overhead
+- **Updated**: Theme field storage optimization for minimal database overhead
 - **Updated**: Background directory scanning optimized with early termination on first found directory
+- **Updated**: Unified profile update endpoint reduces multiple API calls for comprehensive updates
 
 ## Troubleshooting Guide
 
@@ -731,7 +885,7 @@ Key dependencies:
 - **401 Unauthorized**: Invalid or missing JWT token
 - **403 Forbidden**: Insufficient permissions, inactive user, or superuser-only access
 - **404 Not Found**: User does not exist
-- **400 Bad Request**: Duplicate username/email, self-deletion attempt, last superuser removal, invalid avatar URL format, or invalid background image filename
+- **400 Bad Request**: Duplicate username/email, self-deletion attempt, last superuser removal, invalid avatar URL format, invalid background image filename, or invalid theme value
 
 ### Authentication Issues
 - Verify token format: Must be Bearer token
@@ -747,13 +901,22 @@ Key dependencies:
 - Superuser validation: Ensure proper privilege escalation
 - **Updated**: Avatar URL validation: Ensure valid URL format or system avatar format
 - **Updated**: Background image validation: Ensure filename exists in available backgrounds list
+- **Updated**: Theme validation: Ensure theme is one of "light", "dark", or "system"
 
 ### Permission Issues
 - Check user role: Verify current user has appropriate permissions
 - Plugin access: Ensure requested section is accessible
 - Superuser restrictions: Some operations are restricted to superusers only
+- **Updated**: Unified update restrictions: Only allowed fields can be updated
 - **Updated**: Avatar updates: Any authenticated user can update their own avatar
 - **Updated**: Background updates: Any authenticated user can update their own background preferences
+- **Updated**: Theme updates: Any authenticated user can update their own theme preference
+
+### Unified Profile Update Issues
+- **Field Not Allowed**: Only theme, background_image, full_name, email, avatar_url, password are allowed
+- **Password Hashing**: Password updates are automatically hashed, cannot be retrieved in plain text
+- **Partial Updates**: Only provided fields are updated, others remain unchanged
+- **Theme Validation**: Ensure theme value is one of "light", "dark", or "system"
 
 ### Avatar Management Issues
 - **Invalid Avatar URL**: Ensure URL is valid HTTP/HTTPS or follows system avatar format
@@ -768,17 +931,27 @@ Key dependencies:
 - **Background Preview Issues**: Check that background files are accessible from static directory
 - **Development vs Production**: Backgrounds-list searches different paths in development vs production environments
 
+### Theme Preferences Issues
+- **Invalid Theme Value**: Ensure theme is one of "light", "dark", or "system"
+- **Theme Synchronization**: Theme changes are immediately reflected in UI but may take time to sync with user profile
+- **System Theme Detection**: System theme follows OS preferences, requires browser support for prefers-color-scheme
+
 **Section sources**
 - [users.py:32-36](file://backend/app/api/v1/endpoints/users.py#L32-L36)
 - [users.py:46-49](file://backend/app/api/v1/endpoints/users.py#L46-L49)
 - [users.py:79-80](file://backend/app/api/v1/endpoints/users.py#L79-L80)
 - [users.py:49-72](file://backend/app/api/v1/endpoints/users.py#L49-L72)
+- [users.py:50-62](file://backend/app/api/v1/endpoints/users.py#L50-L62)
 
 ## Conclusion
-The user management endpoints provide a robust foundation for user lifecycle operations within the NOC Vision platform. The implementation emphasizes security through JWT authentication, enhanced role-based access control with superuser privileges, and comprehensive data validation. The addition of new permission endpoints, plugin access control, avatar management functionality, and background management functionality provides comprehensive user profile customization capabilities. 
+The user management endpoints provide a robust foundation for user lifecycle operations within the NOC Vision platform. The implementation emphasizes security through JWT authentication, enhanced role-based access control with superuser privileges, and comprehensive data validation. The addition of new permission endpoints, plugin access control, avatar management functionality, background management functionality, and unified profile update capabilities provides comprehensive user profile customization and management capabilities.
 
-The new background management endpoints (PUT /api/v1/users/me/background and GET /api/v1/users/me/backgrounds-list) enable users to customize their desktop experience with personalized background images, while the existing avatar management endpoints (PUT /api/v1/users/me/avatar) continue to support profile picture customization. The system intelligently manages background images by searching for available files in both production nginx static directories and development directories, supporting multiple image formats (jpg, jpeg, png, webp, gif, avif).
+The new unified PUT /api/v1/users/me endpoint represents a significant enhancement to the user management system, consolidating multiple profile update operations into a single, comprehensive endpoint. This endpoint allows users to update theme preferences, background images, avatar URLs, email addresses, full names, and passwords in a single request, reducing API complexity and improving user experience.
 
-The PUT /api/v1/users/me/background endpoint allows users to set their preferred background image by filename, while the GET /api/v1/users/me/backgrounds-list endpoint provides a dynamic list of available background images based on the current environment. The frontend integration provides intuitive background selection and preview functionality, complementing the existing avatar management capabilities.
+The system intelligently manages user preferences by storing theme settings, background images, and avatar URLs in the database while providing real-time synchronization with the frontend theme store. The unified endpoint processes only allowed fields, ensuring data integrity and preventing unauthorized modifications to protected user attributes.
 
-The current implementation focuses on individual user operations with enhanced security measures, including prevention of last superuser removal, proper privilege escalation, avatar URL validation, background image filename validation, and comprehensive input sanitization. The modular design ensures maintainability and extensibility for evolving user management requirements, with clear separation between user management, authentication, permission control, avatar management, and background management functionality.
+The enhanced UserUpdate schema now includes theme field support with validation for "light", "dark", or "system" values, while the UserResponse schema provides complete profile information including all customizable fields. The database model has been extended to support theme preferences alongside existing avatar and background image fields.
+
+The frontend integration provides seamless user experience through the theme store, background management components, and unified profile update functionality. Users can now manage all their profile preferences through a single endpoint while maintaining the security and validation benefits of the existing system architecture.
+
+The current implementation focuses on individual user operations with enhanced security measures, including prevention of last superuser removal, proper privilege escalation, avatar URL validation, background image filename validation, theme field validation, and comprehensive input sanitization. The modular design ensures maintainability and extensibility for evolving user management requirements, with clear separation between user management, authentication, permission control, avatar management, background management, and unified profile update functionality.
